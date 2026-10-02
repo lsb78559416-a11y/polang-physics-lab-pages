@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>第一实验室 · 引擎之心 —— 简谐振动的密码</title>
+<!-- 舰桥进度内核：全站解锁状态的唯一真源（见 fleet.js） -->
+<script src="fleet.js"></script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<style>
+/* ============================================================
+   第一实验室 · 引擎之心 —— 简谐振动的密码
+   独立单关：活塞质点的运动轨迹分析 + 控制台参数标定 + 点火
+   ============================================================ */
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#0b1418;}
+body{font-family:"Consolas","Courier New","Microsoft YaHei",monospace;color:#cfe6ee;
+     -webkit-font-smoothing:antialiased;user-select:none;}
+#scene{position:fixed;inset:0;z-index:0;}
+#scene canvas{display:block;}
+.lbl2d{font-size:11px;color:#7fe3f5;text-shadow:0 0 6px rgba(0,0,0,.9);white-space:nowrap;pointer-events:none;}
+
+/* ---------- 通用面板 ---------- */
+.panel{background:linear-gradient(180deg,rgba(18,38,45,.93),rgba(9,22,28,.90));
+  border:1px solid rgba(120,200,220,.22);border-radius:10px;
+  box-shadow:0 8px 26px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.03);
+  backdrop-filter:blur(6px);padding:10px 12px;}
+.panel-t{font-size:11px;letter-spacing:2px;color:#6fd0e2;margin-bottom:7px;
+  border-bottom:1px solid rgba(120,200,220,.18);padding-bottom:5px;}
+
+/* ---------- 左上：标题 + 铭牌 ---------- */
+#topLeft{position:fixed;left:16px;top:14px;width:326px;z-index:10;}
+#topLeft h1{margin:0;font-size:17px;color:#ffd166;letter-spacing:1px;}
+#topLeft .sub{font-size:11px;color:#8fb6c2;margin-top:3px;}
+.plate{margin-top:9px;display:grid;grid-template-columns:auto 1fr auto 1fr auto 1fr;gap:2px 6px;
+  font-size:11px;align-items:baseline;}
+.plate .k{color:#8fb6c2;}
+.plate .v{color:#7ef0c2;font-weight:700;}
+.plate .u{color:#6f929c;}
+#btnPDA{margin-top:8px;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;
+  border:1px solid rgba(120,200,220,.35);background:rgba(20,60,72,.6);color:#bfeaf5;}
+#btnPDA:hover{background:rgba(30,90,108,.75);}
+
+/* ---------- 左中：诊断 ---------- */
+#diag{position:fixed;left:16px;top:196px;width:326px;z-index:10;}
+.drow{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;margin:5px 0;}
+.drow .nm{color:#a8c8d2;}
+.drow .st{font-weight:700;font-size:11px;padding:1px 7px;border-radius:5px;}
+.bad{color:#ff8f7a;background:rgba(255,90,70,.14);border:1px solid rgba(255,90,70,.4);}
+.ok{color:#7ef0c2;background:rgba(60,230,170,.12);border:1px solid rgba(60,230,170,.38);}
+.big{font-size:20px;font-weight:700;color:#ffd166;}
+.meter{margin:7px 0 3px;}
+.meter .mh{display:flex;justify-content:space-between;font-size:11px;color:#a8c8d2;}
+.mbar{height:7px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:3px;position:relative;}
+.mfill{height:100%;width:0%;border-radius:4px;transition:width .18s linear;}
+.dzone{position:absolute;right:0;top:0;bottom:0;background:rgba(255,90,70,.22);}
+
+/* ---------- 顶部中：无线电 ---------- */
+#radio{position:fixed;left:50%;transform:translateX(-50%);top:16px;z-index:12;display:none;max-width:520px;}
+.rbox{background:rgba(10,26,32,.94);border:1px solid rgba(120,200,220,.3);border-radius:22px;
+  padding:9px 16px;font-size:12.5px;color:#d8f2fa;box-shadow:0 6px 20px rgba(0,0,0,.5);}
+.rbox .who{color:#ffd166;font-weight:700;margin-right:8px;}
+
+/* ---------- 右上：示波器 ---------- */
+#scopeBox{position:fixed;right:16px;top:14px;width:452px;z-index:10;}
+#scopeCv{display:block;width:428px;height:250px;border-radius:6px;background:#081418;
+  border:1px solid rgba(120,200,220,.18);cursor:crosshair;}
+.sread{margin-top:7px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:11px;}
+.sread div{background:rgba(255,255,255,.045);border-radius:5px;padding:4px 6px;text-align:center;}
+.sread .k{color:#8fb6c2;display:block;font-size:10px;}
+.sread .v{color:#ffd166;font-weight:700;}
+.sleg{display:flex;gap:12px;font-size:10.5px;color:#8fb6c2;margin-top:6px;flex-wrap:wrap;}
+.sleg i{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:4px;}
+
+/* ---------- 右中：旋转矢量 ---------- */
+#phasorBox{position:fixed;right:16px;top:392px;width:452px;z-index:10;}
+.pwrap{display:flex;gap:10px;align-items:center;}
+#phasorCv{display:block;width:150px;height:150px;border-radius:6px;background:#081418;
+  border:1px solid rgba(120,200,220,.18);}
+.pcells{flex:1;display:grid;grid-template-columns:1fr;gap:5px;}
+.pcell{background:rgba(255,255,255,.045);border-radius:5px;padding:4px 8px;font-size:11px;
+  display:flex;justify-content:space-between;}
+.pcell .k{color:#8fb6c2;}
+.pcell .v{color:#7ef0c2;font-weight:700;}
+.pcell .v.warn{color:#ff8f7a;}
+
+/* ---------- 右下：测量日志 ---------- */
+#logBox{position:fixed;right:16px;top:592px;width:452px;max-height:210px;z-index:10;overflow:hidden;}
+#logList{font-size:11px;line-height:1.65;color:#a8c8d2;max-height:160px;overflow-y:auto;padding-right:4px;}
+#logList::-webkit-scrollbar{width:5px;}
+#logList::-webkit-scrollbar-thumb{background:rgba(120,200,220,.3);border-radius:3px;}
+.lg{display:flex;justify-content:space-between;border-bottom:1px dashed rgba(120,200,220,.12);padding:2px 0;}
+.lg .t{color:#6f929c;}
+.lg .pass{color:#7ef0c2;}
+.lg .fail{color:#ff8f7a;}
+
+/* ---------- 任务引航条 ---------- */
+#missionBar{position:fixed;left:16px;right:486px;bottom:216px;z-index:11;}
+.mbar2{background:linear-gradient(180deg,rgba(18,38,45,.95),rgba(9,22,28,.92));
+  border:1px solid rgba(120,200,220,.26);border-left:3px solid #ffd166;border-radius:8px;padding:8px 14px;}
+.ml{font-size:13px;color:#e6f6fb;}
+.ml .step{display:inline-block;background:#ffd166;color:#1a2a1e;border-radius:4px;
+  padding:0 6px;font-weight:700;font-size:11px;margin-right:8px;}
+.pl{font-size:11px;color:#7fb6c6;margin-top:4px;}
+.pl b{color:#7ef0c2;}
+
+/* ---------- 底部控制台 ---------- */
+#console{position:fixed;left:16px;right:486px;bottom:14px;z-index:12;
+  max-height:46vh;overflow-y:auto;}
+#console::-webkit-scrollbar{width:6px;}
+#console::-webkit-scrollbar-thumb{background:rgba(120,200,220,.3);border-radius:3px;}
+@media (max-height:760px){ #logBox{display:none;} }
+@media (max-width:1180px){ #logBox{display:none;} }
+.cgrid{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;}
+.cgrp{background:rgba(255,255,255,.035);border:1px solid rgba(120,200,220,.16);border-radius:8px;padding:7px 10px;}
+.cgrp .gt{font-size:10.5px;color:#6fd0e2;letter-spacing:1px;margin-bottom:4px;}
+.knob{display:flex;align-items:center;gap:6px;margin:3px 0;}
+.knob .nm{font-size:11px;color:#a8c8d2;width:74px;flex:none;}
+.knob input[type=range]{width:130px;height:4px;-webkit-appearance:none;appearance:none;
+  background:linear-gradient(90deg,#2a5a68,#3f8ea0);border-radius:3px;outline:none;}
+.knob input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;
+  border-radius:50%;background:#ffd166;cursor:pointer;box-shadow:0 0 6px rgba(255,209,102,.6);}
+.knob input[type=range]::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;
+  background:#ffd166;cursor:pointer;}
+.knob .vv{font-size:11px;color:#ffd166;font-weight:700;width:62px;flex:none;text-align:right;}
+.tiny{font-size:10px;padding:1px 5px;border-radius:4px;cursor:pointer;
+  border:1px solid rgba(120,200,220,.3);background:rgba(20,60,72,.5);color:#bfeaf5;}
+.tiny:hover{background:rgba(30,90,108,.8);}
+.swrow{display:flex;gap:6px;flex-wrap:wrap;}
+.sw{font-size:11px;padding:5px 9px;border-radius:6px;cursor:pointer;
+  border:1px solid rgba(255,140,110,.4);background:rgba(60,26,20,.5);color:#ffb9a6;}
+.sw.on{border-color:rgba(80,230,180,.5);background:rgba(20,70,58,.6);color:#7ef0c2;}
+.spr{display:flex;gap:5px;}
+.spr button{font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;
+  border:1px solid rgba(120,200,220,.3);background:rgba(20,60,72,.5);color:#bfeaf5;}
+.spr button.sel{border-color:#ffd166;background:rgba(90,70,20,.7);color:#ffd166;}
+.brow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.btn{font-family:inherit;font-size:12px;padding:7px 14px;border-radius:7px;cursor:pointer;
+  border:1px solid rgba(120,200,220,.35);background:rgba(22,64,78,.75);color:#dff4fa;transition:.15s;}
+.btn:hover:not(:disabled){background:rgba(34,100,120,.9);}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+.btn.go{border-color:#ffd166;background:rgba(120,88,20,.8);color:#ffe9b0;}
+.btn.go:hover:not(:disabled){background:rgba(160,118,26,.95);}
+.btn.fire{border-color:#ff8f5c;background:rgba(140,58,26,.85);color:#ffd9c6;}
+.btn.fire:hover:not(:disabled){background:rgba(180,74,32,.95);}
+#hintLine{font-size:11.5px;color:#8fb6c2;margin-top:7px;min-height:15px;}
+#hintLine b{color:#ffd166;}
+
+/* ---------- 简谐性判定 ---------- */
+#quizBox{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:40;display:none;width:460px;}
+.qcard{background:linear-gradient(180deg,rgba(20,44,52,.98),rgba(10,24,30,.98));
+  border:1px solid rgba(255,209,102,.4);border-radius:12px;padding:18px 20px;
+  box-shadow:0 20px 60px rgba(0,0,0,.7);}
+.qcard h3{margin:0 0 8px;font-size:15px;color:#ffd166;}
+.qcard p{margin:0 0 12px;font-size:12px;color:#a8c8d2;line-height:1.7;}
+.qopt{display:block;width:100%;text-align:left;font-family:inherit;font-size:12.5px;margin:6px 0;
+  padding:9px 12px;border-radius:7px;cursor:pointer;border:1px solid rgba(120,200,220,.28);
+  background:rgba(255,255,255,.04);color:#dff4fa;}
+.qopt:hover{background:rgba(47,211,238,.14);border-color:#2fd3ee;}
+.qopt.wrong{border-color:#ff6b5e;background:rgba(255,90,70,.16);color:#ffb9a6;}
+
+/* ---------- PDA 抽屉 ---------- */
+#pdaDrawer{position:fixed;left:0;top:0;bottom:0;width:392px;z-index:50;transform:translateX(-102%);
+  transition:transform .3s ease;background:linear-gradient(180deg,#12262d,#0a171d);
+  border-right:1px solid rgba(120,200,220,.25);padding:18px 20px;overflow-y:auto;}
+#pdaDrawer.open{transform:translateX(0);}
+#pdaDrawer h3{margin:0 0 12px;color:#ffd166;font-size:15px;}
+.pdaclose{position:absolute;right:12px;top:12px;cursor:pointer;color:#8fb6c2;font-size:16px;}
+.pdarow{font-size:12px;line-height:1.8;color:#c3dde5;border-bottom:1px dashed rgba(120,200,220,.13);padding:7px 0;}
+.pdarow b{color:#ffd166;}
+.pdanote{margin-top:14px;font-size:11.5px;color:#9fc0cb;background:rgba(255,209,102,.08);
+  border-left:3px solid #ffd166;padding:9px 12px;border-radius:0 6px 6px 0;line-height:1.7;}
+.pdanote .w{color:#ff8f7a;font-weight:700;}
+
+/* ---------- 开场简报 ---------- */
+#intro{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 45%,#16323c 0%,#081318 62%,#04090c 100%);}
+#intro.hide{display:none;}
+#introBg{position:absolute;inset:0;opacity:.55;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.03) 0 2px,transparent 2px 46px),
+    repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 2px,transparent 2px 46px);}
+#introGlow{position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 42%,rgba(255,170,90,.16),transparent 46%),
+             radial-gradient(circle at 50% 78%,rgba(47,211,238,.13),transparent 52%);}
+#introScrim{position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 50%,transparent 42%,rgba(0,0,0,.72) 100%);}
+.iplaque{position:absolute;left:50%;transform:translateX(-50%);top:26px;text-align:center;}
+.iplaque .a{font-size:15px;color:#ffd166;letter-spacing:4px;}
+.iplaque .b{font-size:10px;color:#7fb6c6;letter-spacing:3px;margin-top:3px;}
+#introArt{position:absolute;right:8%;bottom:0;width:340px;height:76%;opacity:.96;}
+.iwrap{position:relative;z-index:2;width:min(680px,72vw);}
+.icard{background:linear-gradient(180deg,rgba(20,44,52,.96),rgba(9,22,28,.97));
+  border:1px solid rgba(120,200,220,.28);border-radius:14px;padding:18px 22px 14px;
+  box-shadow:0 24px 70px rgba(0,0,0,.66);}
+.ihead{display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(120,200,220,.16);padding-bottom:10px;}
+.iavatar{width:46px;height:46px;border-radius:50%;background:linear-gradient(160deg,#c97a3a,#8a4a20);
+  display:flex;align-items:center;justify-content:center;font-size:26px;
+  border:2px solid rgba(255,209,102,.5);box-shadow:0 0 18px rgba(255,170,80,.3);}
+.iwho{font-size:15px;color:#ffd166;font-weight:700;}
+.irole{font-size:11px;color:#8fb6c2;margin-top:2px;}
+.itag{margin-left:auto;font-size:10.5px;color:#ff8f5c;border:1px solid rgba(255,143,92,.45);
+  border-radius:5px;padding:3px 8px;}
+.ibody{font-size:13.5px;line-height:1.95;color:#dff0f6;min-height:132px;padding:14px 2px 8px;}
+.ibody b{color:#ffd166;}
+.ibody .hl{color:#7ef0c2;}
+.iprog{height:4px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;}
+.iprog .b{height:100%;width:0;background:linear-gradient(90deg,#2fd3ee,#ffd166);transition:width .3s;}
+.ifoot{display:flex;align-items:center;justify-content:space-between;margin-top:10px;}
+#btnNext{font-family:inherit;font-size:12.5px;padding:7px 18px;border-radius:7px;cursor:pointer;
+  border:1px solid #ffd166;background:rgba(120,88,20,.8);color:#ffe9b0;}
+#btnNext:hover{background:rgba(160,118,26,.95);}
+.icount{font-size:11px;color:#7fb6c6;margin-left:12px;}
+#btnSkip{font-size:11.5px;color:#7fb6c6;cursor:pointer;}
+#btnSkip:hover{color:#ffd166;}
+
+/* ---------- 胜利 ---------- */
+#winOverlay{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+  background:rgba(4,10,14,.82);backdrop-filter:blur(3px);}
+.wcard{width:min(560px,88vw);background:linear-gradient(180deg,rgba(22,50,58,.98),rgba(9,22,28,.99));
+  border:1px solid rgba(255,209,102,.42);border-radius:16px;padding:26px 30px;text-align:center;
+  box-shadow:0 26px 80px rgba(0,0,0,.75);}
+.wcard .big{font-size:52px;}
+.wcard h2{margin:6px 0 2px;color:#ffd166;font-size:22px;letter-spacing:2px;}
+.wcard .code{font-size:11px;color:#7fb6c6;letter-spacing:3px;}
+.wcard p{font-size:12.5px;color:#c3dde5;line-height:1.85;margin:14px 0;}
+.calib{margin-top:16px;text-align:left;font-size:12px;line-height:1.9;color:#c3dde5;
+  background:rgba(255,255,255,.04);border:1px solid rgba(120,200,220,.2);border-radius:8px;padding:12px 14px;}
+.calib b{color:#7ef0c2;}
+
+/* ---------- 错误卡 ---------- */
+/* 3D 加载失败：顶部横幅（原来是全屏不透明遮罩，会把开场简报和控制台全盖住） */
+#errMsg{position:fixed;left:0;right:0;top:0;z-index:95;display:none;padding:10px 16px;
+  background:rgba(10,18,22,.96);border-bottom:1px solid rgba(255,179,160,.34);
+  box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.ecard{max-width:1120px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  color:#cdeef8;font-size:12.5px;line-height:1.75;text-align:left}
+.ecard h2{margin:0;font-size:13.5px;color:#ffb3a0;white-space:nowrap}
+.ecard p{margin:0}
+.ecard b{color:#7ef0c2}
+</style>
+</head>
+<body>
+
+<div id="scene"></div>
+
+<!-- 左上：标题 + 引擎铭牌 -->
+<div class="panel" id="topLeft">
+  <h1>▣ 第一实验室 · 引擎之心</h1>
+  <div class="sub">星海号动力舱 · 主活塞运动学标定 · ACT 01</div>
+  <div class="plate">
+    <span class="k">铭牌 A*</span><span class="v" id="plateA">0.60</span><span class="u">m</span>
+    <span class="k">f*</span><span class="v" id="plateF">1.20</span><span class="u">Hz</span>
+  </div>
+  <div class="plate">
+    <span class="k">φ*</span><span class="v" id="platePhi">-30°</span><span class="u"></span>
+    <span class="k">T*</span><span class="v" id="plateT">0.833</span><span class="u">s</span>
+  </div>
+  <button id="btnPDA">📓 物理便签</button>
+</div>
+
+<!-- 左中：诊断面板 -->
+<div class="panel" id="diag">
+  <div class="panel-t">活塞运动诊断 · DIAGNOSIS</div>
+  <div class="drow"><span class="nm">① 等幅性（阻尼衰减）</span><span class="st bad" id="stDamp">衰减严重</span></div>
+  <div class="drow"><span class="nm">② 波形纯度（谐波失真）</span><span class="st bad" id="stHarm">失真 12%</span></div>
+  <div class="drow"><span class="nm">③ 周期稳定性（频漂）</span><span class="st bad" id="stDrift">周期抖动</span></div>
+  <div class="meter">
+    <div class="mh"><span>合成波形失真度 THD</span><span id="thdVal">--</span></div>
+    <div class="mbar"><div class="dzone" style="width:60%"></div><div class="mfill" id="thdFill" style="background:linear-gradient(90deg,#7ef0c2,#ffd166,#ff6b5e)"></div></div>
+  </div>
+  <div class="meter">
+    <div class="mh"><span>峰值加速度 a_max = ω²A</span><span id="accVal">--</span></div>
+    <div class="mbar"><div class="dzone" style="width:25%"></div><div class="mfill" id="accFill" style="background:linear-gradient(90deg,#7ef0c2,#ffd166,#ff6b5e)"></div></div>
+  </div>
+  <div class="drow" style="margin-top:8px;border-top:1px solid rgba(120,200,220,.15);padding-top:8px">
+    <span class="nm">三要素契合度</span><span class="big" id="fitVal">0%</span>
+  </div>
+</div>
+
+<!-- 顶部中：无线电 -->
+<div id="radio"><div class="rbox"><span class="who">📻 阿洛</span><span id="radioText">…</span></div></div>
+
+<!-- 右上：示波器 -->
+<div class="panel" id="scopeBox">
+  <div class="panel-t">位移-时间示波 · x(t) / v(t)</div>
+  <canvas id="scopeCv" width="856" height="500"></canvas>
+  <div class="sread">
+    <div><span class="k">振幅 A</span><span class="v" id="rdA">--</span></div>
+    <div><span class="k">周期 T</span><span class="v" id="rdT">--</span></div>
+    <div><span class="k">频率 f</span><span class="v" id="rdF">--</span></div>
+    <div><span class="k">初相 φ</span><span class="v" id="rdPhi">--</span></div>
+  </div>
+  <div class="sleg">
+    <span><i style="background:#ffd166"></i>x(t) 实测位移</span>
+    <span><i style="background:#2fd3ee"></i>v(t)/ω 速度</span>
+    <span><i style="background:#8fa0a8"></i>铭牌目标模板</span>
+    <span style="margin-left:auto"><button class="tiny" id="btnMeasure">⊕ 测周期</button></span>
+  </div>
+</div>
+
+<!-- 右中：旋转矢量 -->
+<div class="panel" id="phasorBox">
+  <div class="panel-t">旋转矢量表示 · A / ω / φ</div>
+  <div class="pwrap">
+    <canvas id="phasorCv" width="300" height="300"></canvas>
+    <div class="pcells">
+      <div class="pcell"><span class="k">振幅 A（最大位移）</span><span class="v" id="pcA">--</span></div>
+      <div class="pcell"><span class="k">角频率 ω = 2πf</span><span class="v" id="pcW">--</span></div>
+      <div class="pcell"><span class="k">初相 φ（t=0 相位）</span><span class="v" id="pcPhi">--</span></div>
+      <div class="pcell"><span class="k">周期 T = 2π/ω</span><span class="v" id="pcT">--</span></div>
+      <div class="pcell"><span class="k">速度幅值 v_max = ωA</span><span class="v" id="pcV">--</span></div>
+      <div class="pcell"><span class="k">最大加速度 ω²A</span><span class="v" id="pcAcc">--</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 右下：测量日志 -->
+<div class="panel" id="logBox">
+  <div class="panel-t">标定日志 · LOG</div>
+  <div id="logList"><div class="lg"><span class="t">等待第一次释放…</span></div></div>
+</div>
+
+<!-- 任务引航条 -->
+<div id="missionBar"><div class="mbar2">
+  <div class="ml" id="missionLine"><span class="step">STEP 1/9</span> …</div>
+  <div class="pl" id="principleLine"></div>
+</div></div>
+
+<!-- 底部控制台 -->
+<div class="panel" id="console">
+  <div class="cgrid">
+    <div class="cgrp">
+      <div class="gt">振动三要素 · 设定</div>
+      <div class="knob"><span class="nm">提拉行程 A</span>
+        <button class="tiny" id="aMinus">◀</button>
+        <input type="range" id="railA" min="0.15" max="0.85" step="0.005" value="0.40">
+        <button class="tiny" id="aPlus">▶</button><span class="vv" id="valA">0.400 m</span></div>
+      <div class="knob"><span class="nm">释放正时 φ</span>
+        <button class="tiny" id="pMinus">◀</button>
+        <input type="range" id="railPhi" min="-180" max="180" step="1" value="0">
+        <button class="tiny" id="pPlus">▶</button><span class="vv" id="valPhi">0°</span></div>
+      <div class="knob"><span class="nm">配重 m</span>
+        <button class="tiny" id="mMinus">◀</button>
+        <input type="range" id="railM" min="60" max="400" step="0.5" value="100">
+        <button class="tiny" id="mPlus">▶</button><span class="vv" id="valM">100 kg</span></div>
+    </div>
+    <div class="cgrp">
+      <div class="gt">弹簧组 · 决定刚度 k</div>
+      <div class="spr" id="springRow"></div>
+      <div class="spr" style="margin-top:5px" id="joinRow">
+        <button id="btnSeries">串联（更软）</button><button id="btnParallel">并联（更硬）</button>
+      </div>
+      <div style="font-size:11px;color:#8fb6c2;margin-top:5px">
+        k_eq = <b style="color:#ffd166" id="kdsp">--</b> N/m　·　f₀ = <b style="color:#7ef0c2" id="f0dsp">--</b> Hz
+      </div>
+    </div>
+    <div class="cgrp">
+      <div class="gt">故障排除 · 三处修复</div>
+      <div class="swrow">
+        <button class="sw" id="swDamp">① 磁悬浮补偿环</button>
+        <button class="sw" id="swHarm">② 缸壁精密研磨</button>
+        <button class="sw" id="swLock">③ 转速锁相环</button>
+      </div>
+      <div style="font-size:10.5px;color:#6f929c;margin-top:5px;line-height:1.5">
+        分别消除：阻尼衰减 / 波形失真 / 周期抖动
+      </div>
+    </div>
+    <div class="cgrp">
+      <div class="gt">操作</div>
+      <div class="brow">
+        <button class="btn" id="btnRelease">↻ 释放活塞</button>
+        <button class="btn go" id="btnSubmit" disabled>✓ 提交判定</button>
+        <button class="btn fire" id="btnIgnite" disabled>🔥 点火</button>
+        <button class="btn" id="btnReset">↺ 重置</button>
+      </div>
+    </div>
+  </div>
+  <div id="hintLine">── 系统待命：先看清楚活塞质点到底在怎么动 ──</div>
+</div>
+
+<!-- 简谐性判定问答 -->
+<div id="quizBox"><div class="qcard">
+  <h3>▣ 终检：这是简谐振动吗？</h3>
+  <p>示波器已同时画出位移 <b style="color:#ffd166">x(t)</b> 与速度 <b style="color:#2fd3ee">v(t)/ω</b>（速度按 ω 归一化，与位移同量纲）。<br>
+  对 <b style="color:#ffd166">x(t) = A·cos(ωt + φ)</b> 而言，速度 <b style="color:#2fd3ee">v(t) = −Aω·sin(ωt + φ)</b>。二者的相位关系是什么？</p>
+  <button class="qopt" data-ok="0">A. v(t) 与 x(t) 同相（相位差 0°）</button>
+  <button class="qopt" data-ok="1">B. v(t) 超前 x(t) 90°（即 T/4）</button>
+  <button class="qopt" data-ok="0">C. v(t) 落后 x(t) 90°（即 T/4）</button>
+  <button class="qopt" data-ok="0">D. v(t) 与 x(t) 反相（相位差 180°）</button>
+  <div id="quizMsg" style="font-size:12px;margin-top:10px;min-height:18px;"></div>
+</div></div>
+
+<!-- PDA 抽屉 -->
+<div id="pdaDrawer">
+  <span class="pdaclose" id="pdaClose">✕</span>
+  <h3>动力舱 · 物理便签</h3>
+  <div class="pdarow"><b>简谐振动的定义</b>：物体偏离平衡位置的位移随时间按<b>余弦（或正弦）</b>规律变化，且<b>等幅、无耗散</b>。</div>
+  <div class="pdarow"><b>振动学方程</b>：<b>x(t) = A·cos(ωt + φ)</b><br>
+    A 振幅 · ω 角频率 · φ 初相 —— 称为简谐振动的<b>三要素</b>。</div>
+  <div class="pdarow"><b>振幅 A</b>：偏离平衡位置的最大距离，由<b>初始条件</b>（你把活塞拉开多远）决定，与 k、m <b>无关</b>。</div>
+  <div class="pdarow"><b>周期 T 与频率 f</b>：T = 2π/ω，f = 1/T。<br>
+    对弹簧-质量系统 <b>ω = √(k/m)</b> —— 弹簧越硬 k↑ 越快，配重越重 m↑ 越慢。</div>
+  <div class="pdarow"><b>初相 φ</b>：t = 0 时的相位，决定活塞从行程中的<b>哪个位置</b>开始运动。</div>
+  <div class="pdarow"><b>速度</b> v = dx/dt = <b>−Aω·sin(ωt+φ)</b>，v_max = ωA，<b>超前位移 90°</b>。<br>
+    <b>加速度</b> a = d²x/dt² = <b>−ω²·x</b>，a_max = ω²A，<b>与位移反相</b> —— 这正是「回复力 ∝ −x」的标志。</div>
+  <div class="pdarow"><b>旋转矢量法</b>：一个长度为 A、以角速度 ω 匀速旋转的矢量，其在 x 轴上的<b>投影</b>就是 x(t)；t=0 时的夹角就是初相 φ。</div>
+  <div class="pdarow"><b>总机械能</b> E = ½kA² = ½mω²A²，理想简谐振动中<b>守恒</b>（这正是"等幅"的原因）。</div>
+  <div class="pdarow"><b>串并联</b>：并联 k = k₁+k₂（更硬→更快）；串联 1/k = 1/k₁+1/k₂（更软→更慢）。</div>
+  <div class="pdanote"><span class="w">⚠ 前任技师手记：</span>「别盯着铭牌死调。先看波形：<b>等幅吗？纯正弦吗？周期均匀吗？</b>三样都干净了，再去对 A、f、φ 三个数。还有，活塞冲程加速度 ω²A 超过 40 m/s² 会撞缸盖 —— 大振幅配高转速是找死。」</div>
+</div>
+
+<!-- 开场简报 -->
+<div id="intro">
+  <div id="introBg"></div><div id="introGlow"></div><div id="introScrim"></div>
+  <div class="iplaque"><div class="a">星 海 号 · 动 力 舱</div><div class="b">ENGINE COMPARTMENT · DECK C</div></div>
+  <svg id="introArt" viewBox="0 0 340 420" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="gMet" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#5d7078"/><stop offset="1" stop-color="#22313a"/>
+      </linearGradient>
+      <linearGradient id="gHot" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffb35c"/><stop offset="1" stop-color="#8a3a12"/>
+      </linearGradient>
+    </defs>
+    <!-- 气缸外壳 -->
+    <rect x="96" y="70" width="148" height="300" rx="10" fill="url(#gMet)" stroke="#8fb6c2" stroke-width="2" opacity=".92"/>
+    <rect x="112" y="86" width="116" height="268" rx="6" fill="#0c1a20" stroke="#2fd3ee" stroke-width="1.2" opacity=".8"/>
+    <!-- 刻度 -->
+    <g stroke="#7fb6c6" stroke-width="1" opacity=".55">
+      <line x1="112" y1="120" x2="124" y2="120"/><line x1="112" y1="160" x2="124" y2="160"/>
+      <line x1="112" y1="200" x2="128" y2="200"/><line x1="112" y1="240" x2="124" y2="240"/>
+      <line x1="112" y1="280" x2="124" y2="280"/><line x1="112" y1="320" x2="124" y2="320"/>
+    </g>
+    <!-- 活塞 -->
+    <rect x="118" y="150" width="104" height="46" rx="5" fill="url(#gHot)" stroke="#ffd166" stroke-width="1.6"/>
+    <rect x="118" y="163" width="104" height="5" fill="#1b232a" opacity=".7"/>
+    <rect x="118" y="177" width="104" height="5" fill="#1b232a" opacity=".7"/>
+    <!-- 活塞杆 -->
+    <rect x="164" y="40" width="12" height="112" rx="3" fill="#9fb3bd"/>
+    <!-- 顶部弹簧组 -->
+    <path d="M170 40 q-16 -8 0 -16 q16 -8 0 -16 q-16 -8 0 -16" stroke="#cfad52" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <rect x="130" y="4" width="80" height="12" rx="3" fill="#3a4a46"/>
+    <!-- 底座 -->
+    <rect x="80" y="366" width="180" height="26" rx="5" fill="#2b3a40" stroke="#8fb6c2" stroke-width="1.4"/>
+    <circle cx="170" cy="410" r="16" fill="#1a262c" stroke="#2fd3ee" stroke-width="1.2" opacity=".7"/>
+    <!-- 火花 -->
+    <g opacity=".85">
+      <circle cx="146" cy="200" r="3" fill="#ffd166"/><circle cx="196" cy="228" r="2.4" fill="#ff8f5c"/>
+      <circle cx="140" cy="256" r="2" fill="#2fd3ee"/><circle cx="200" cy="288" r="2.6" fill="#ffd166"/>
+      <circle cx="158" cy="312" r="2" fill="#ff8f5c"/>
+    </g>
+  </svg>
+  <div class="iwrap">
+    <div class="icard">
+      <div class="ihead">
+        <div class="iavatar">🦊</div>
+        <div><div class="iwho">阿洛</div><div class="irole">星海号 · 随船机械师</div></div>
+        <div class="itag">下水前紧急协议 · ACT 01</div>
+      </div>
+      <div class="ibody" id="briefBody"></div>
+      <div class="iprog"><div class="b" id="progBar"></div></div>
+      <div class="ifoot">
+        <div style="display:flex;align-items:center">
+          <button id="btnNext">继续 ▸</button><span class="icount" id="beatCount"></span>
+        </div>
+        <span id="btnSkip">跳过简报 »</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 胜利 -->
+<div id="winOverlay"><div class="wcard">
+  <div class="big">🔥</div>
+  <h2>简谐 · 点火</h2>
+  <div class="code">SHM LOCKED · ENGINE IGNITED</div>
+  <p>活塞以完美的简谐振动往复 —— <b>等幅、纯正弦、速度超前四分之一周期</b>。<br>
+  六缸依次爆燃，星海号的主引擎第一次发出平稳的低鸣。明早，她就可以出港了。</p>
+  <div class="calib" id="calibContent"></div>
+  <div style="margin-top:18px">
+    <button class="btn" id="btnReplay">↺ 重玩本关</button>
+    <button class="btn go" id="btnBackHome" style="margin-left:10px">◀ 返回舱室</button>
+  </div>
+</div></div>
+
+<!-- 错误 -->
+<div id="errMsg"><div class="ecard">
+  <h2>⚠ 3D 引擎加载失败</h2>
+  <p>本关的 3D 活塞需要 <b>WebGL</b> 并<b>联网加载 3D 引擎</b>。物理计算、示波器与全部判定<b>都不依赖 3D</b>，可以刷新重试，或直接用 2D 示波器模式闯关。</p>
+  <button class="btn" id="btnRetry">↻ 刷新重试</button>
+  <button class="btn go" id="btnNo3D">以 2D 示波器模式继续</button>
+</div></div>
+
+<script type="module">
+/* ============================================================
+   第一实验室 · 引擎之心 —— 简谐振动的密码
+   核心：分析活塞质点的运动轨迹 x(t)，标定三要素 A / T(f) / φ，
+        排除三类故障（阻尼衰减 / 谐波失真 / 周期频漂），点燃引擎。
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const TAU = Math.PI*2;
+
+/* ================================================================
+   常量：引擎铭牌（目标三要素）
+   ================================================================ */
+const TGT = { A:0.60, f:1.20, phi:-30 };          // 振幅 m / 频率 Hz / 初相 度
+const TOL = { A:0.03, f:0.02, phi:5 };            // 容差：3% / 2% / 5°
+const ACC_LIMIT = 40;                             // 峰值加速度上限 m/s^2（超过会撞缸盖）
+const SPRINGS = {
+  s1:{ name:'波纹软簧', k:3000 },
+  s2:{ name:'中段钢簧', k:5000 },
+  s3:{ name:'高强合金', k:8000 }
+};
+const WIN_T = 6.0;                                // 示波器时间窗（秒）
+
+/* ================================================================
+   状态
+   ================================================================ */
+const S = {
+  A:0.40, phi:0, m:100,
+  sel:['s1'], join:'series',
+  zeta:0.16, eps:0.30, drift:1,        // 阻尼比 / 非线性余隙 / 频漂开关
+  keq:3000, f0:0, w:0,
+  t:0, released:false, running:false,
+  measured:false, measT:0, measF:0, measA:0, measPhi:0,
+  quizPass:false, win:false, igniting:0
+};
+
+function recompute(){
+  const ids = S.sel;
+  let k = 0;
+  if(ids.length === 1) k = SPRINGS[ids[0]].k;
+  else if(ids.length === 2){
+    const a = SPRINGS[ids[0]].k, b = SPRINGS[ids[1]].k;
+    k = (S.join === 'series') ? (a*b)/(a+b) : (a+b);
+  }
+  S.keq = k;
+  const w = (k>0 && S.m>0) ? Math.sqrt(k/S.m) : 0;
+  S.w = w;
+  S.f0 = w/TAU;
+}
+
+/* ================================================================
+   物理模型：活塞质点的位移 x(t)
+   理想简谐：x = A·cos(ωt + φ)
+   实际（含三类故障）：
+     ① 阻尼      → 包络 e^(−ζω₀t) 衰减，不再等幅
+     ② 缸壁余隙  → 三次谐波 (cos3ψ)，波形削尖失真
+     ③ 转速频漂  → 相位抖动，周期忽长忽短
+   ================================================================ */
+function xAt(t){
+  if(!S.released || S.w === 0) return 0;
+  const w0 = S.w;
+  const wd = w0*Math.sqrt(Math.max(0, 1 - S.zeta*S.zeta));
+  let psi = wd*t + S.phi*Math.PI/180;
+  if(S.drift){
+    psi += 0.55*(Math.sin(TAU*0.37*t)*0.6 + Math.sin(TAU*0.91*t + 1.3)*0.4);
+  }
+  const env = Math.exp(-S.zeta*w0*t);
+  const b = S.eps*0.45;                       // 三次谐波相对幅值
+  const wave = (Math.cos(psi) + b*Math.cos(3*psi))/(1+b);
+  return S.A*env*wave;
+}
+/* 速度（按 ω 归一化，与位移同量纲：v/ω = −A·sin(...)） */
+function vNormAt(t){
+  const h = 0.0015, w = S.w || 1;
+  return (xAt(t+h) - xAt(t-h))/(2*h)/w;
+}
+/* 目标模板 */
+function tgtAt(t){ return TGT.A*Math.cos(TAU*TGT.f*t + TGT.phi*Math.PI/180); }
+
+/* 谐波失真度（合成显示用） */
+function thdNow(){
+  const b = S.eps*0.45;
+  const d = S.drift ? 0.06 : 0;
+  return Math.sqrt(b*b + d*d)*100;
+}
+/* 峰值加速度 */
+function accNow(){ return S.w*S.w*S.A; }
+
+/* ================================================================
+   波形分析：抓峰值 → 测 T / A / φ
+   ================================================================ */
+function analyze(){
+  const N = 3000, dt = WIN_T/N;
+  const xs = new Float64Array(N+1);
+  for(let i=0;i<=N;i++) xs[i] = xAt(i*dt);
+  const peaks = [];
+  if(xs[0] > 0.12*S.A && xs[0] >= xs[1]) peaks.push({t:0, v:xs[0]});   // 初相为 0 时 t=0 即为峰
+  for(let i=1;i<N;i++){
+    if(xs[i] > 0.12*S.A && xs[i] > xs[i-1] && xs[i] >= xs[i+1]) peaks.push({t:i*dt, v:xs[i]});
+  }
+  const res = { T:0, f:0, A:0, phi:0, peaks:peaks.slice(0,4) };
+  if(peaks.length >= 2){
+    res.T = peaks[1].t - peaks[0].t;
+    res.f = res.T>0 ? 1/res.T : 0;
+  }
+  if(peaks.length >= 1) res.A = peaks[0].v;
+  const x0 = xs[0], v0 = vNormAt(0);
+  res.phi = Math.atan2(-v0, x0)*180/Math.PI;
+  return res;
+}
+
+/* ================================================================
+   示波器
+   ================================================================ */
+const scv = $('scopeCv'), sg = scv.getContext('2d');
+const SW = scv.width, SH = scv.height;
+const PADX = 44, PADY = 30;
+const PX0 = PADX, PX1 = SW-14, PY0 = PADY, PY1 = SH-26;
+const t2x = t => PX0 + (t/WIN_T)*(PX1-PX0);
+const v2y = v => (PY0+PY1)/2 - v*((PY1-PY0)/2)/1.0;   // 纵轴 ±1.0 m
+
+function drawScope(){
+  sg.clearRect(0,0,SW,SH);
+  sg.fillStyle = '#081418'; sg.fillRect(0,0,SW,SH);
+
+  /* 网格：每格 0.2 s × 0.2 m */
+  sg.lineWidth = 1.6;
+  for(let s=0; s<=WIN_T*5; s++){
+    const x = t2x(s*0.2);
+    sg.strokeStyle = (s%5===0) ? 'rgba(120,200,220,0.20)' : 'rgba(120,200,220,0.075)';
+    sg.beginPath(); sg.moveTo(x,PY0); sg.lineTo(x,PY1); sg.stroke();
+  }
+  for(let u=-5; u<=5; u++){
+    const y = v2y(u*0.2);
+    sg.strokeStyle = (u===0) ? 'rgba(120,200,220,0.32)' : 'rgba(120,200,220,0.075)';
+    sg.beginPath(); sg.moveTo(PX0,y); sg.lineTo(PX1,y); sg.stroke();
+  }
+  /* 边框与轴标 */
+  sg.strokeStyle = 'rgba(120,200,220,0.35)'; sg.lineWidth = 2; sg.strokeRect(PX0,PY0,PX1-PX0,PY1-PY0);
+  sg.fillStyle = '#6f929c'; sg.font = '24px Consolas, monospace';
+  sg.fillText('x / m', 4, 20);
+  for(let s=0; s<=WIN_T; s++) sg.fillText(s+'s', t2x(s)-9, PY1+22);
+  sg.fillText('+1.0', 4, v2y(1.0)+6); sg.fillText('0', 16, v2y(0)+6); sg.fillText('-1.0', 0, v2y(-1.0)+6);
+
+  /* 铭牌目标模板 */
+  sg.strokeStyle = 'rgba(143,160,168,0.75)'; sg.lineWidth = 2.5; sg.setLineDash([9,7]);
+  sg.beginPath();
+  for(let i=0;i<=560;i++){ const t=i/560*WIN_T; const x=t2x(t), y=v2y(tgtAt(t)); i?sg.lineTo(x,y):sg.moveTo(x,y); }
+  sg.stroke(); sg.setLineDash([]);
+
+  if(!S.released){
+    sg.fillStyle = '#4d6b76'; sg.font = '30px Consolas, monospace';
+    sg.fillText('活塞夹持中 —— 按【释放活塞】开始采样', PX0+40, (PY0+PY1)/2);
+  } else {
+    /* v(t)/ω */
+    sg.strokeStyle = '#2fd3ee'; sg.lineWidth = 3.2;
+    sg.beginPath();
+    for(let i=0;i<=560;i++){ const t=i/560*WIN_T; const x=t2x(t), y=v2y(vNormAt(t)); i?sg.lineTo(x,y):sg.moveTo(x,y); }
+    sg.stroke();
+    /* x(t) */
+    sg.strokeStyle = '#ffd166'; sg.lineWidth = 4.2;
+    sg.beginPath();
+    for(let i=0;i<=560;i++){ const t=i/560*WIN_T; const x=t2x(t), y=v2y(xAt(t)); i?sg.lineTo(x,y):sg.moveTo(x,y); }
+    sg.stroke();
+
+    /* 实时游标（活塞当前时刻） */
+    const tt = S.t % WIN_T;
+    sg.strokeStyle = 'rgba(255,255,255,0.35)'; sg.lineWidth = 2;
+    sg.beginPath(); sg.moveTo(t2x(tt),PY0); sg.lineTo(t2x(tt),PY1); sg.stroke();
+    sg.fillStyle = '#fff';
+    sg.beginPath(); sg.arc(t2x(tt), v2y(xAt(S.t)), 4.5, 0, TAU); sg.fill();
+
+    /* 周期标注 */
+    if(S.measured && S.an && S.an.peaks.length>=2){
+      const p0 = S.an.peaks[0], p1 = S.an.peaks[1];
+      [[p0,'①'],[p1,'②']].forEach(([p,tag])=>{
+        const x = t2x(p.t), y = v2y(p.v);
+        sg.strokeStyle = '#7ef0c2'; sg.lineWidth = 2.5;
+        sg.beginPath(); sg.arc(x,y,9,0,TAU); sg.stroke();
+        sg.fillStyle = '#7ef0c2'; sg.font = '24px Consolas, monospace';
+        sg.fillText(tag, x-6, y-14);
+      });
+      const xa = t2x(p0.t), xb = t2x(p1.t), yb = PY0+16;
+      sg.strokeStyle = '#7ef0c2'; sg.lineWidth = 2.5;
+      sg.beginPath(); sg.moveTo(xa,yb); sg.lineTo(xb,yb); sg.stroke();
+      sg.beginPath(); sg.moveTo(xa,yb-5); sg.lineTo(xa,yb+5); sg.moveTo(xb,yb-5); sg.lineTo(xb,yb+5); sg.stroke();
+      sg.fillStyle = '#7ef0c2'; sg.font = '24px Consolas, monospace';
+      sg.fillText('T = '+(p1.t-p0.t).toFixed(3)+' s   f = 1/T = '+(1/(p1.t-p0.t)).toFixed(3)+' Hz', xa+8, yb-8);
+    }
+  }
+}
+
+/* ================================================================
+   旋转矢量（相量图）
+   ================================================================ */
+const pcv = $('phasorCv'), pg = pcv.getContext('2d');
+function drawPhasor(){
+  const W = pcv.width, H = pcv.height, cx = W/2, cy = H/2, R = 112;
+  pg.clearRect(0,0,W,H);
+  pg.fillStyle = '#081418'; pg.fillRect(0,0,W,H);
+  /* 坐标轴 */
+  pg.strokeStyle = 'rgba(120,200,220,0.22)'; pg.lineWidth = 1.5;
+  pg.beginPath(); pg.moveTo(10,cy); pg.lineTo(W-10,cy); pg.moveTo(cx,10); pg.lineTo(cx,H-10); pg.stroke();
+  /* 参考圆（半径 = 当前设定振幅） */
+  const rr = R*clamp(S.A/0.85, 0.15, 1);
+  pg.strokeStyle = 'rgba(255,209,102,0.28)'; pg.setLineDash([4,4]);
+  pg.beginPath(); pg.arc(cx,cy,rr,0,TAU); pg.stroke(); pg.setLineDash([]);
+  /* 铭牌目标振幅圆 */
+  const rt = R*clamp(TGT.A/0.85, 0, 1);
+  pg.strokeStyle = 'rgba(126,240,194,0.35)'; pg.setLineDash([2,5]);
+  pg.beginPath(); pg.arc(cx,cy,rt,0,TAU); pg.stroke(); pg.setLineDash([]);
+
+  const psi = S.released ? (S.w*S.t + S.phi*Math.PI/180) : (S.phi*Math.PI/180);
+  const ex = cx + rr*Math.cos(psi), ey = cy - rr*Math.sin(psi);
+  /* 投影 */
+  pg.strokeStyle = 'rgba(47,211,238,0.55)'; pg.lineWidth = 1.5; pg.setLineDash([3,3]);
+  pg.beginPath(); pg.moveTo(cx,cy); pg.lineTo(ex,cy); pg.moveTo(ex,cy); pg.lineTo(ex,ey); pg.stroke();
+  pg.setLineDash([]);
+  /* 矢量 */
+  pg.strokeStyle = '#ffd166'; pg.lineWidth = 3.5;
+  pg.beginPath(); pg.moveTo(cx,cy); pg.lineTo(ex,ey); pg.stroke();
+  pg.fillStyle = '#ffd166';
+  pg.beginPath(); pg.arc(ex,ey,5,0,TAU); pg.fill();
+  pg.beginPath(); pg.arc(cx,cy,3.5,0,TAU); pg.fill();
+  /* 投影点 */
+  pg.fillStyle = '#2fd3ee'; pg.beginPath(); pg.arc(ex,cy,6,0,TAU); pg.fill();
+  /* 初相角弧 */
+  if(Math.abs(S.phi) > 0.5){
+    pg.strokeStyle = 'rgba(255,143,92,0.8)'; pg.lineWidth = 2;
+    pg.beginPath(); pg.arc(cx,cy,34, -S.phi*Math.PI/180, 0, S.phi>0); pg.stroke();
+    pg.fillStyle = '#ff8f5c'; pg.font = '30px Consolas, monospace';
+    pg.fillText('φ', cx+38, cy - (S.phi>0? 12 : -4));
+  }
+  pg.fillStyle = '#6f929c'; pg.font = '28px Consolas, monospace';
+  pg.fillText('x 轴投影 = x(t)', 8, H-8);
+}
+
+/* ================================================================
+   读数 / 诊断 / 契合度
+   ================================================================ */
+function refreshReadout(){
+  const an = S.an = analyze();
+  const A = S.released ? an.A : S.A;
+  const f = S.released ? (an.f || S.f0) : S.f0;
+  const T = f>0 ? 1/f : 0;
+  const phi = S.released ? an.phi : S.phi;
+
+  $('rdA').textContent = S.released ? A.toFixed(3)+' m' : '--';
+  $('rdT').textContent = S.released && T ? T.toFixed(3)+' s' : '--';
+  $('rdF').textContent = S.released && f ? f.toFixed(3)+' Hz' : '--';
+  $('rdPhi').textContent = S.released ? phi.toFixed(1)+'°' : '--';
+
+  $('pcA').textContent = A.toFixed(3)+' m';
+  $('pcW').textContent = S.w.toFixed(3)+' rad/s';
+  $('pcPhi').textContent = phi.toFixed(1)+'°';
+  $('pcT').textContent = T ? T.toFixed(3)+' s' : '--';
+  $('pcV').textContent = (S.w*A).toFixed(2)+' m/s';
+  $('pcAcc').textContent = (S.w*S.w*A).toFixed(1)+' m/s²';
+
+  /* 三项诊断 */
+  const dOK = S.zeta === 0, hOK = S.eps === 0, lOK = S.drift === 0;
+  const stD = $('stDamp'), stH = $('stHarm'), stL = $('stDrift');
+  stD.className = 'st ' + (dOK?'ok':'bad');
+  stD.textContent = dOK ? '等幅 ✓' : ('衰减 '+(S.zeta*100).toFixed(0)+'%');
+  stH.className = 'st ' + (hOK?'ok':'bad');
+  stH.textContent = hOK ? '纯正弦 ✓' : ('失真 '+(S.eps*0.45*100).toFixed(1)+'%');
+  stL.className = 'st ' + (lOK?'ok':'bad');
+  stL.textContent = lOK ? '周期稳定 ✓' : '周期抖动';
+
+  const thd = thdNow();
+  $('thdVal').textContent = thd.toFixed(1)+' %';
+  $('thdFill').style.width = clamp(thd/25*100, 0, 100)+'%';
+  const ac = accNow();
+  $('accVal').textContent = ac.toFixed(1)+' m/s²';
+  $('accFill').style.width = clamp(ac/55*100, 0, 100)+'%';
+  $('accVal').style.color = ac > ACC_LIMIT ? '#ff8f7a' : '#a8c8d2';
+
+  /* 三要素契合度 */
+  const eA = Math.abs(A-TGT.A)/TGT.A, eF = Math.abs(f-TGT.f)/TGT.f, eP = Math.abs(((phi-TGT.phi+540)%360)-180)/180;
+  const sA = clamp(1-eA/(TOL.A*4),0,1), sF = clamp(1-eF/(TOL.f*4),0,1), sP = clamp(1-Math.abs(((phi-TGT.phi+540)%360)-180)/(TOL.phi*8),0,1);
+  const fit = Math.round((sA+sF+sP)/3*100);
+  $('fitVal').textContent = fit+'%';
+  $('fitVal').style.color = fit>=95 ? '#7ef0c2' : (fit>=70 ? '#ffd166' : '#ff8f7a');
+
+  $('kdsp').textContent = S.keq.toFixed(0);
+  $('f0dsp').textContent = S.f0.toFixed(3);
+}
+
+/* ================================================================
+   合格判定
+   ================================================================ */
+function evaluate(){
+  const an = S.an || analyze();
+  const A = an.A, f = an.f || S.f0, phi = an.phi;
+  const dphi = ((phi - TGT.phi + 540)%360) - 180;
+  const ac = accNow();
+  return {
+    A:A, f:f, phi:phi, acc:ac,
+    okA: Math.abs(A-TGT.A)/TGT.A <= TOL.A,
+    okF: Math.abs(f-TGT.f)/TGT.f <= TOL.f,
+    okP: Math.abs(dphi) <= TOL.phi,
+    okD: S.zeta === 0, okH: S.eps === 0, okL: S.drift === 0,
+    okAcc: ac <= ACC_LIMIT,
+    get ok(){ return this.okA && this.okF && this.okP && this.okD && this.okH && this.okL && this.okAcc; }
+  };
+}
+
+/* ================================================================
+   任务引导
+   ================================================================ */
+const STEPS = [
+  { txt:'按【<b>↻ 释放活塞</b>】，看示波器上活塞质点的位移曲线 —— 它现在是<b>混乱</b>的：幅值在缩、波形不是纯正弦、周期还不均匀。',
+    pri:'简谐振动的定义：<b>x(t) 必须是等幅的纯余弦</b>。任何衰减、失真、周期抖动，都说明它还不是简谐振动。',
+    done:()=>S.released },
+  { txt:'点【<b>⊕ 测周期</b>】：示波器会抓出相邻两个波峰，量出周期 <b>T</b>，并算出 <b>f = 1/T</b>。',
+    pri:'周期 <b>T</b> = 相邻两个波峰的时间差；频率 <b>f = 1/T</b>，角频率 <b>ω = 2πf</b>。',
+    done:()=>S.measured },
+  { txt:'毛病①：幅值在<b>衰减</b> —— 阻尼把能量吃掉了。简谐振动必须<b>等幅</b>。开【<b>① 磁悬浮补偿环</b>】。',
+    pri:'阻尼振动 <b>x = A·e<sup>−ζω₀t</sup>·cos(ω<sub>d</sub>t+φ)</b>：包络指数衰减，机械能不再守恒 —— 它不是简谐振动。',
+    done:()=>S.zeta === 0 },
+  { txt:'毛病②：波形<b>不是纯正弦</b> —— 缸壁余隙引入三次谐波，波峰被削尖。开【<b>② 缸壁精密研磨</b>】。',
+    pri:'纯简谐波<b>只含一个频率分量</b>；三次谐波叠加会让峰值变尖 —— 即便周期正确，也不是简谐振动。',
+    done:()=>S.eps === 0 },
+  { txt:'毛病③：周期<b>忽长忽短</b> —— 转速在漂，连 T 都测不准。开【<b>③ 转速锁相环</b>】。',
+    pri:'周期必须<b>恒定</b>：同样长的时间里波峰数必须一样多，否则 f 无从谈起。',
+    done:()=>S.drift === 0 },
+  { txt:'现在把频率对上铭牌 <b>f* = 1.20 Hz</b>：换<b>弹簧组</b>或调<b>配重 m</b>。',
+    pri:'<b>ω = √(k/m)</b>，<b>f = ω/2π</b>。要 f = 1.20 Hz 需 <b>k/m ≈ 56.9</b>；并联 k=k₁+k₂ 更硬更快，串联 1/k=1/k₁+1/k₂ 更软更慢。',
+    done:()=>Math.abs(S.f0-TGT.f)/TGT.f <= TOL.f },
+  { txt:'把<b>提拉行程 A</b> 调到 <b>0.60 m</b>、<b>释放正时 φ</b> 调到 <b>−30°</b>（示波器读数达标即可）。',
+    pri:'<b>振幅 A</b> 由初始条件（拉开多远）决定，与 k、m <b>无关</b>；<b>初相 φ</b> 决定 t=0 时活塞在行程中的哪个位置。',
+    done:()=>{ const e=evaluate(); return e.okA && e.okP; } },
+  { txt:'按【<b>✓ 提交判定</b>】，让控制台逐项核对三要素。',
+    pri:'三要素齐了，运动方程就唯一确定：<b>x(t) = A·cos(ωt + φ)</b>。',
+    done:()=>S.submitted },
+  { txt:'终检问答：<b>v(t)</b> 与 <b>x(t)</b> 的相位关系是什么？答对才能点火。',
+    pri:'<b>v = dx/dt = −Aω·sin(ωt+φ)</b>，即 <b>Aω·cos(ωt+φ+90°)</b> —— 速度超前位移 <b>90°</b>（四分之一周期）。',
+    done:()=>S.quizPass },
+  { txt:'全部达标 —— 按【<b>🔥 点火</b>】点燃主引擎！',
+    pri:'<b>a = d²x/dt² = −ω²x</b>：加速度与位移成正比且反向 —— 这正是简谐振动的动力学判据。',
+    done:()=>S.win }
+];
+let guideStep = 0;
+function renderMission(){
+  const st = STEPS[guideStep];
+  $('missionLine').innerHTML = '<span class="step">STEP '+Math.min(guideStep+1,9)+'/9</span> '+st.txt;
+  $('principleLine').innerHTML = st.pri;
+}
+function tickGuide(){
+  let cur = 0;
+  for(let i=0;i<STEPS.length;i++){ if(!STEPS[i].done()){ cur = i; break; } cur = Math.min(i+1, STEPS.length-1); if(i===STEPS.length-1) cur = STEPS.length-1; }
+  if(cur !== guideStep){ guideStep = cur; renderMission(); radio(STEP_HINT[cur] || ''); }
+}
+const STEP_HINT = [
+  '先按下释放，看清楚这活塞到底在怎么动。',
+  '数格子太慢了 —— 用测周期按钮，让机器替你数。',
+  '幅值一直在缩，能量跑哪去了？阻尼。',
+  '波峰被削尖了，这不是纯正弦。',
+  '周期忽长忽短，那就没有确定的 f。',
+  '铭牌要 1.20 Hz：k/m 得凑到 56.9 左右。',
+  'A 到 0.60，φ 到 −30°，看着示波器读数拧。',
+  '三样都干净了？提交让控制台核一遍。',
+  '最后一问：速度与位移差多少相位？',
+  '点火！'
+];
+
+/* ================================================================
+   无线电
+   ================================================================ */
+let radioTimer = null;
+function radio(msg){
+  if(!msg) return;
+  $('radioText').innerHTML = msg;
+  $('radio').style.display = 'block';
+  clearTimeout(radioTimer);
+  radioTimer = setTimeout(()=>{ $('radio').style.display = 'none'; }, 5200);
+}
+function hint(t){ $('hintLine').innerHTML = t; }
+
+/* ================================================================
+   日志
+   ================================================================ */
+function logLine(tag, ok, detail){
+  const el = document.createElement('div');
+  el.className = 'lg';
+  el.innerHTML = '<span class="t">'+tag+'</span><span class="'+(ok?'pass':'fail')+'">'+detail+'</span>';
+  const box = $('logList');
+  if(box.firstChild && box.children.length === 1 && box.textContent.indexOf('等待') >= 0) box.innerHTML = '';
+  box.insertBefore(el, box.firstChild);
+}
+
+/* ================================================================
+   控制台交互
+   ================================================================ */
+function fmtA(){ $('valA').textContent = S.A.toFixed(3)+' m'; }
+function fmtM(){ $('valM').textContent = S.m.toFixed(1)+' kg'; }
+function fmtPhi(){ $('valPhi').textContent = S.phi.toFixed(0)+'°'; }
+
+function bindRail(id, get, set, fmt, step){
+  const el = $(id);
+  el.addEventListener('input', ()=>{ set(parseFloat(el.value)); fmt(); recompute(); refreshReadout(); tickGuide(); });
+  return el;
+}
+const railA = bindRail('railA', ()=>S.A, v=>S.A=v, fmtA);
+const railM = bindRail('railM', ()=>S.m, v=>S.m=v, fmtM);
+const railPhi = bindRail('railPhi', ()=>S.phi, v=>S.phi=v, fmtPhi);
+function nudge(rail, d){
+  const el = $(rail);
+  el.value = clamp(parseFloat(el.value) + d, parseFloat(el.min), parseFloat(el.max));
+  el.dispatchEvent(new Event('input'));
+}
+$('aMinus').onclick = ()=>nudge('railA', -0.005);
+$('aPlus').onclick  = ()=>nudge('railA',  0.005);
+$('mMinus').onclick = ()=>nudge('railM', -0.5);
+$('mPlus').onclick  = ()=>nudge('railM',  0.5);
+$('pMinus').onclick = ()=>nudge('railPhi', -1);
+$('pPlus').onclick  = ()=>nudge('railPhi',  1);
+
+/* 弹簧组 */
+function renderSprings(){
+  const row = $('springRow');
+  row.innerHTML = '';
+  Object.keys(SPRINGS).forEach(id=>{
+    const b = document.createElement('button');
+    b.textContent = SPRINGS[id].name+' k='+SPRINGS[id].k;
+    if(S.sel.indexOf(id) >= 0) b.className = 'sel';
+    b.onclick = ()=>{
+      const i = S.sel.indexOf(id);
+      if(i >= 0){ if(S.sel.length > 1) S.sel.splice(i,1); }
+      else { S.sel.push(id); if(S.sel.length > 2) S.sel.shift(); }
+      renderSprings(); recompute(); refreshReadout(); tickGuide();
+      tone(520, 0.08, 'square', 0.18);
+    };
+    row.appendChild(b);
+  });
+  $('btnSeries').className = (S.join==='series') ? 'sel' : '';
+  $('btnParallel').className = (S.join==='parallel') ? 'sel' : '';
+}
+$('btnSeries').onclick = ()=>{ S.join='series'; renderSprings(); recompute(); refreshReadout(); tickGuide(); };
+$('btnParallel').onclick = ()=>{ S.join='parallel'; renderSprings(); recompute(); refreshReadout(); tickGuide(); };
+
+/* 三处修复开关 */
+function renderSwitches(){
+  $('swDamp').className = 'sw' + (S.zeta===0 ? ' on' : '');
+  $('swHarm').className = 'sw' + (S.eps===0 ? ' on' : '');
+  $('swLock').className = 'sw' + (S.drift===0 ? ' on' : '');
+  $('swDamp').textContent = '① 磁悬浮补偿环 ' + (S.zeta===0 ? '（已开·等幅）' : '（未开）');
+  $('swHarm').textContent = '② 缸壁精密研磨 ' + (S.eps===0 ? '（已开·纯净）' : '（未开）');
+  $('swLock').textContent = '③ 转速锁相环 ' + (S.drift===0 ? '（已开·锁相）' : '（未开）');
+}
+$('swDamp').onclick = ()=>{
+  S.zeta = S.zeta===0 ? 0.16 : 0;
+  renderSwitches(); refreshReadout(); tickGuide();
+  radio(S.zeta===0 ? '磁悬浮起来了 —— 包络拉平，这才是等幅振动。' : '补偿环关了，能量又开始漏。');
+  tone(S.zeta===0?660:300, 0.12, 'sine', 0.2);
+};
+$('swHarm').onclick = ()=>{
+  S.eps = S.eps===0 ? 0.30 : 0;
+  renderSwitches(); refreshReadout(); tickGuide();
+  radio(S.eps===0 ? '缸壁磨平了 —— 三次谐波没了，波峰回到圆润的正弦。' : '余隙又回来了，波峰开始发尖。');
+  tone(S.eps===0?720:280, 0.12, 'sine', 0.2);
+};
+$('swLock').onclick = ()=>{
+  S.drift = S.drift===0 ? 1 : 0;
+  renderSwitches(); refreshReadout(); tickGuide();
+  radio(S.drift===0 ? '锁相环咬住了 —— 周期终于恒定，T 才测得准。' : '转速又开始漂，周期忽长忽短。');
+  tone(S.drift===0?780:260, 0.12, 'sine', 0.2);
+};
+
+/* 释放 / 重置 */
+function doRelease(){
+  S.released = true; S.t = 0; S.measured = false; S.submitted = false;
+  $('btnSubmit').disabled = false;
+  refreshReadout(); tickGuide();
+  radio('开了！盯着示波器 —— 先看幅值、再看波形、最后看周期。');
+  tone(180, 0.25, 'sawtooth', 0.16);
+}
+$('btnRelease').onclick = doRelease;
+$('btnReset').onclick = ()=>{
+  S.released = false; S.t = 0; S.measured = false; S.submitted = false; S.quizPass = false; S.win = false; S.igniting = 0;
+  S.zeta = 0.16; S.eps = 0.30; S.drift = 1;
+  $('btnSubmit').disabled = false; $('btnIgnite').disabled = true;
+  $('winOverlay').style.display = 'none'; $('quizBox').style.display = 'none';
+  $('logList').innerHTML = '<div class="lg"><span class="t">装置已重置</span></div>';
+  guideStep = 0; renderMission(); renderSwitches(); refreshReadout();
+  hint('── 装置已复位：三类故障重新出现，重新走一遍流程 ──');
+};
+
+/* 测周期 */
+$('btnMeasure').onclick = ()=>{
+  if(!S.released){ hint('先按【<b>↻ 释放活塞</b>】才能采样。'); return; }
+  const an = analyze();
+  S.an = an; S.measured = true;
+  if(an.peaks.length >= 2){
+    S.measT = an.peaks[1].t - an.peaks[0].t;
+    S.measF = 1/S.measT;
+    hint('测得 <b>T = '+S.measT.toFixed(3)+' s</b> → <b>f = 1/T = '+S.measF.toFixed(3)+' Hz</b>；铭牌要求 <b>1.20 Hz</b>。');
+    logLine('测量', true, 'T='+S.measT.toFixed(3)+'s  f='+S.measF.toFixed(3)+'Hz');
+    radio('T='+S.measT.toFixed(3)+' s，那 f 就是 1/T='+S.measF.toFixed(3)+' Hz。跟铭牌 1.20 差多少？');
+  } else {
+    hint('没抓到两个完整波峰 —— 衰减太快或周期太长，先排除故障再测。');
+    logLine('测量', false, '波峰不足');
+  }
+  refreshReadout(); tickGuide();
+};
+
+/* 提交判定 */
+$('btnSubmit').onclick = ()=>{
+  if(!S.released){ hint('先按【<b>↻ 释放活塞</b>】。'); return; }
+  const e = evaluate();
+  S.submitted = true;
+  const bad = [];
+  if(!e.okD) bad.push('① 幅值仍在衰减（未开磁悬浮补偿环）');
+  if(!e.okH) bad.push('② 波形仍有谐波失真（未开缸壁研磨）');
+  if(!e.okL) bad.push('③ 周期仍在抖动（未开转速锁相）');
+  if(!e.okF) bad.push('频率 f = '+e.f.toFixed(3)+' Hz，需 1.20±2% Hz');
+  if(!e.okA) bad.push('振幅 A = '+e.A.toFixed(3)+' m，需 0.60±3% m');
+  if(!e.okP) bad.push('初相 φ = '+e.phi.toFixed(1)+'°，需 −30±5°');
+  if(!e.okAcc) bad.push('峰值加速度 '+e.acc.toFixed(1)+' m/s² 超限（≤40，会撞缸盖）');
+
+  if(e.ok){
+    hint('<b style="color:#7ef0c2">全部合格 ✓</b> —— 三要素全中，波形干净。进入终检问答。');
+    logLine('提交', true, 'A='+e.A.toFixed(3)+' f='+e.f.toFixed(3)+' φ='+e.phi.toFixed(1)+'°');
+    radio('漂亮 —— 干净的正弦，三要素全中。最后一问，答完就点火。');
+    openQuiz();
+  } else {
+    hint('<b style="color:#ff8f7a">未通过（'+bad.length+' 项）</b>：'+bad.join('；')+'。');
+    logLine('提交', false, bad.length+' 项未达标');
+    radio('还差 '+bad.length+' 项：'+bad[0]+'。');
+  }
+  tickGuide();
+};
+
+/* 简谐性问答 */
+function openQuiz(){
+  $('quizBox').style.display = 'block';
+  $('quizMsg').innerHTML = '';
+  document.querySelectorAll('.qopt').forEach(b=>b.style.borderColor = '');
+}
+document.querySelectorAll('.qopt').forEach(b=>{
+  b.onclick = ()=>{
+    if(b.dataset.ok === '1'){
+      S.quizPass = true;
+      $('quizMsg').innerHTML = '<span style="color:#7ef0c2">✓ 正确。v(t) = −Aω·sin(ωt+φ) = Aω·cos(ωt+φ+90°)，速度超前位移 90°，即 T/4。点火权限已解锁。</span>';
+      $('btnIgnite').disabled = false;
+      radio('答对了 —— 速度和位移差四分之一周期。点火吧！');
+      setTimeout(()=>{ $('quizBox').style.display = 'none'; hint('<b>终检通过</b> —— 按【<b>🔥 点火</b>】点燃主引擎。'); }, 2200);
+    } else {
+      b.classList.add('wrong');
+      $('quizMsg').innerHTML = '<span style="color:#ff8f7a">✗ 不对。把 x=A·cos(ωt+φ) 对 t 求导：v=−Aω·sin(ωt+φ)=Aω·cos(ωt+φ+90°)，相位比位移<span style="color:#ffd166">多 90°</span>。</span>';
+      setTimeout(()=>b.classList.remove('wrong'), 1400);
+    }
+    tickGuide();
+  };
+});
+
+/* 点火 */
+$('btnIgnite').onclick = ()=>{
+  if(!S.quizPass) return;
+  S.win = true; S.igniting = 1.0;
+  tone(60, 1.2, 'sawtooth', 0.3);
+  [392,523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,0.55,'sine',0.16), i*130));
+  radio('六缸依次爆燃 —— 星海号的心脏跳起来了！');
+  setTimeout(showWin, 2200);
+};
+function showWin(){
+  /* 通关 → 通知舰桥：本关标定卡已签发（fleet.js） */
+  try{ if(window.Fleet) window.Fleet.clear(1); }catch(e){}
+  const e = evaluate();
+  const w = S.w, A = e.A;
+  $('calibContent').innerHTML =
+    '<div style="text-align:center;color:#ffd166;margin-bottom:8px">▍ 活塞运动标定卡 · ACT 01</div>'+
+    '振动学方程　<b>x(t) = '+A.toFixed(3)+'·cos('+w.toFixed(3)+'·t '+(TGT.phi<0?'− ':'+ ')+Math.abs(TGT.phi*Math.PI/180).toFixed(3)+')　m</b><br>'+
+    '振幅 A = <b>'+A.toFixed(3)+' m</b>　周期 T = <b>'+(1/e.f).toFixed(3)+' s</b>　频率 f = <b>'+e.f.toFixed(3)+' Hz</b><br>'+
+    '角频率 ω = 2πf = <b>'+w.toFixed(3)+' rad/s</b>　初相 φ = <b>'+TGT.phi.toFixed(1)+'° = '+(TGT.phi*Math.PI/180).toFixed(3)+' rad</b><br>'+
+    '弹簧组 k_eq = <b>'+S.keq.toFixed(0)+' N/m</b>　配重 m = <b>'+S.m.toFixed(1)+' kg</b>　校验 √(k/m) = <b>'+Math.sqrt(S.keq/S.m).toFixed(3)+'</b><br>'+
+    '最大速度 v_max = ωA = <b>'+(w*A).toFixed(2)+' m/s</b>　最大加速度 ω²A = <b>'+(w*w*A).toFixed(1)+' m/s²</b><br>'+
+    '<span style="color:#8fb6c2">—— 三处故障已排除：等幅（无耗散）· 纯正弦（无谐波）· 周期恒定</span>';
+  $('winOverlay').style.display = 'flex';
+  logLine('点火', true, '引擎已点燃');
+  tickGuide();
+}
+$('btnReplay').onclick = ()=>{ $('btnReset').click(); };
+$('btnBackHome').onclick = ()=>{ $('btnReset').click(); $('intro').classList.remove('hide'); };
+
+/* PDA */
+$('btnPDA').onclick = ()=> $('pdaDrawer').classList.add('open');
+$('pdaClose').onclick = ()=> $('pdaDrawer').classList.remove('open');
+
+/* ================================================================
+   音效
+   ================================================================ */
+let audioCtx = null;
+function AC(){ if(!audioCtx){ try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return audioCtx; }
+function tone(f, d, type, vol){
+  const a = AC(); if(!a) return;
+  try{
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type||'sine'; o.frequency.value = f;
+    g.gain.value = vol||0.15;
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + d);
+    o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + d);
+  }catch(e){}
+}
+
+
+/* ================================================================
+   3D 引擎舱（动态加载，失败可降级为纯示波器模式）
+   ================================================================ */
+let THREE = null, HAS3D = false;
+let scene, camera, renderer, controls, labelR;
+let piston = null, pistonMat = null, rod = null, springGrp = null, weight = null;
+let labelX = null, flame = null, flameMat = null;
+let ignLight = null, warnLight = null;
+const FLAME_N = 60;
+let flamePos, flameVel, flameLife;
+
+/* 给任意 Promise 加超时兜底：超时就拿 fallback 继续，不让页面卡在 await 上 */
+function withTimeout(p, ms, fallback){
+  return Promise.race([
+    p,
+    new Promise(res => setTimeout(() => res(fallback), ms || 8000))
+  ]);
+}
+
+async function boot3D(){
+  try{
+    THREE = await import('three');
+    const oc = await import('three/addons/controls/OrbitControls.js');
+    const c2 = await import('three/addons/renderers/CSS2DRenderer.js');
+    window.__OC = oc.OrbitControls; window.__C2 = c2;
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color('#0b1418');
+    scene.fog = new THREE.Fog('#0b1418', 9, 30);
+
+    camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.1, 200);
+    camera.position.set(3.4, 1.7, 6.6);
+
+    renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.domElement.style.display = 'block';
+    $('scene').appendChild(renderer.domElement);
+
+    labelR = new c2.CSS2DRenderer();
+    labelR.setSize(innerWidth, innerHeight);
+    labelR.domElement.style.position = 'absolute';
+    labelR.domElement.style.top = '0px';
+    labelR.domElement.style.left = '0px';
+    labelR.domElement.style.pointerEvents = 'none';
+    $('scene').appendChild(labelR.domElement);
+
+    controls = new oc.OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 0.35, 0);
+    controls.enableDamping = true; controls.dampingFactor = 0.08;
+    controls.minDistance = 3.2; controls.maxDistance = 16;
+    controls.maxPolarAngle = Math.PI*0.52;
+
+    buildRoom();
+    buildEngine();
+    HAS3D = true;
+    window.addEventListener('resize', onResize);
+    return true;
+  }catch(err){
+    console.warn('3D boot failed:', err);
+    return false;
+  }
+}
+
+function onResize(){
+  layout();
+  if(!HAS3D) return;
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  labelR.setSize(innerWidth, innerHeight);
+}
+
+/* ---------- 舱室 ---------- */
+function buildRoom(){
+  scene.add(new THREE.AmbientLight('#5d7f8c', 0.55));
+  const key = new THREE.DirectionalLight('#e8f2f6', 1.15); key.position.set(4, 8, 6); scene.add(key);
+  const rim = new THREE.DirectionalLight('#7fb6d6', 0.55); rim.position.set(-6, 4, -6); scene.add(rim);
+  const spot = new THREE.SpotLight('#fff2dd', 90, 22, Math.PI/7, 0.55, 1.6);
+  spot.position.set(0, 7.4, 1.6); scene.add(spot);
+  const amber = new THREE.PointLight('#ff9a45', 1.1, 16); amber.position.set(-3.2, 2.4, 2.6); scene.add(amber);
+  ignLight = new THREE.PointLight('#ff6a1e', 0, 12); ignLight.position.set(0, 0.2, 0); scene.add(ignLight);
+  warnLight = new THREE.PointLight('#ff3b30', 0, 10); warnLight.position.set(1.8, 1.2, 1.4); scene.add(warnLight);
+
+  const cvTex = (w,h,fn,rx,ry)=>{
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    fn(cv.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(cv);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx||1, ry||1); return t;
+  };
+  const floorTex = cvTex(256,256,(g,w,h)=>{
+    g.fillStyle = '#26333a'; g.fillRect(0,0,w,h);
+    g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 3;
+    for(let i=0;i<=4;i++){ g.beginPath(); g.moveTo(i*64,0); g.lineTo(i*64,h); g.moveTo(0,i*64); g.lineTo(w,i*64); g.stroke(); }
+    g.fillStyle = 'rgba(255,255,255,.05)';
+    for(let i=0;i<220;i++) g.fillRect(Math.random()*w, Math.random()*h, 2, 2);
+    for(let i=0;i<14;i++){ g.fillStyle='rgba(200,220,225,.10)'; g.beginPath(); g.arc(Math.random()*w,Math.random()*h,3+Math.random()*4,0,7); g.fill(); }
+  }, 7, 7);
+  const wallTex = cvTex(256,256,(g,w,h)=>{
+    g.fillStyle = '#2b3a40'; g.fillRect(0,0,w,h);
+    g.fillStyle = 'rgba(0,0,0,.22)';
+    for(let y=0;y<h;y+=64){ g.fillRect(0,y,w,4); }
+    g.fillStyle = 'rgba(210,230,235,.10)';
+    for(let y=8;y<h;y+=64) for(let x=8;x<w;x+=32){ g.beginPath(); g.arc(x,y,2.2,0,7); g.fill(); }
+    g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 2;
+    for(let x=0;x<w;x+=128){ g.beginPath(); g.moveTo(x,0); g.lineTo(x,h); g.stroke(); }
+  }, 6, 3);
+
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(30,30),
+    new THREE.MeshStandardMaterial({map:floorTex, color:'#8fa3ab', roughness:0.94, metalness:0.08}));
+  floor.rotation.x = -Math.PI/2; floor.position.y = -1.75; scene.add(floor);
+
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(30,11),
+    new THREE.MeshStandardMaterial({map:wallTex, color:'#768a90', roughness:0.9, metalness:0.15}));
+  back.position.set(0, 3.7, -6.2); scene.add(back);
+
+  const steel = new THREE.MeshStandardMaterial({color:'#3d4c52', roughness:0.55, metalness:0.75});
+  const dark  = new THREE.MeshStandardMaterial({color:'#26333a', roughness:0.7, metalness:0.6});
+  for(let i=0;i<4;i++){
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 13), steel);
+    beam.position.set(-4.2 + i*2.8, 5.6, 0); scene.add(beam);
+  }
+  for(let i=0;i<2;i++){
+    const col = new THREE.Mesh(new THREE.BoxGeometry(0.34, 7.4, 0.34), dark);
+    col.position.set(i? 4.6 : -4.6, 1.95, -4.6); scene.add(col);
+  }
+  const pipeMat = new THREE.MeshStandardMaterial({color:'#4a5a60', roughness:0.5, metalness:0.8});
+  [[-5.4,1.2],[5.4,2.1]].forEach(([x,y])=>{
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,11,14), pipeMat);
+    p.rotation.z = Math.PI/2; p.position.set(x, y, -5.6); scene.add(p);
+  });
+}
+
+/* ---------- 引擎装置 ---------- */
+const R_CYL = 0.66, H_CYL = 2.6, Y_TOP = 3.1, ROD_L = 1.5;
+const SPR_L0 = Y_TOP - 0.23 - ROD_L;   // 活塞居中时弹簧的自然长度（上端固定于 Y_TOP，下端接活塞杆顶）
+function buildEngine(){
+  const steel = new THREE.MeshStandardMaterial({color:'#48585e', roughness:0.5, metalness:0.8});
+  const brass = new THREE.MeshStandardMaterial({color:'#b8863a', roughness:0.34, metalness:0.92});
+  const dark  = new THREE.MeshStandardMaterial({color:'#22303a', roughness:0.75, metalness:0.5});
+
+  /* 底座 */
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.55, 0.36, 26), dark);
+  base.position.y = -1.6; scene.add(base);
+  const foot = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.22, 3.4), steel);
+  foot.position.y = -1.72; scene.add(foot);
+
+  /* 顶部横梁 */
+  const top = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.34, 0.7), steel);
+  top.position.y = Y_TOP + 0.2; scene.add(top);
+  for(const sx of [-1,1]){
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.2, 4.9, 0.2), steel);
+    post.position.set(sx*1.2, 1.75, 0); scene.add(post);
+  }
+
+  /* 气缸（半透明，可见活塞） */
+  const cyl = new THREE.Mesh(new THREE.CylinderGeometry(R_CYL, R_CYL, H_CYL, 30, 1, true),
+    new THREE.MeshStandardMaterial({color:'#8fd8ea', roughness:0.12, metalness:0.3,
+      transparent:true, opacity:0.16, side:THREE.DoubleSide}));
+  cyl.position.y = 0; scene.add(cyl);
+  const capT = new THREE.Mesh(new THREE.CylinderGeometry(R_CYL+0.1, R_CYL+0.1, 0.18, 30), steel);
+  capT.position.y = H_CYL/2 + 0.05; scene.add(capT);
+  const capB = new THREE.Mesh(new THREE.CylinderGeometry(R_CYL+0.14, R_CYL+0.14, 0.22, 30), steel);
+  capB.position.y = -H_CYL/2 - 0.05; scene.add(capB);
+  for(let i=0;i<3;i++){
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(R_CYL+0.03, 0.045, 8, 30), brass);
+    ring.rotation.x = Math.PI/2; ring.position.y = -0.7 + i*0.7; scene.add(ring);
+  }
+
+  /* 活塞 */
+  pistonMat = new THREE.MeshStandardMaterial({color:'#c08a3e', roughness:0.3, metalness:0.95,
+    emissive:new THREE.Color('#000000')});
+  piston = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(R_CYL-0.05, R_CYL-0.05, 0.46, 26), pistonMat);
+  piston.add(body);
+  for(let i=0;i<3;i++){
+    const r = new THREE.Mesh(new THREE.TorusGeometry(R_CYL-0.02, 0.035, 8, 26),
+      new THREE.MeshStandardMaterial({color:'#2a3138', roughness:0.6, metalness:0.7}));
+    r.rotation.x = Math.PI/2; r.position.y = -0.14 + i*0.14; piston.add(r);
+  }
+  const crown = new THREE.Mesh(new THREE.CylinderGeometry(R_CYL-0.16, R_CYL-0.05, 0.1, 26),
+    new THREE.MeshStandardMaterial({color:'#e0a34e', roughness:0.24, metalness:0.95}));
+  crown.position.y = 0.26; piston.add(crown);
+  scene.add(piston);
+
+  /* 位移标签 */
+  const d = document.createElement('div'); d.className = 'lbl2d'; d.textContent = 'x = 0.000 m';
+  labelX = new window.__C2.CSS2DObject(d); labelX.position.set(0, 0.45, 0); piston.add(labelX);
+
+  /* 活塞杆 */
+  rod = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, ROD_L, 14),
+    new THREE.MeshStandardMaterial({color:'#a9bcc4', roughness:0.24, metalness:0.95}));
+  scene.add(rod);
+
+  /* 弹簧组（螺旋）—— 上端固定于 Y_TOP，下端随活塞伸缩 */
+  springGrp = new THREE.Group(); springGrp.position.y = Y_TOP; scene.add(springGrp);
+  const turns = 6, seg = turns*16, pts = [];
+  for(let i=0;i<=seg;i++){
+    const t = i/seg, a = t*turns*TAU, r = 0.34;
+    pts.push(new THREE.Vector3(Math.cos(a)*r, -t*SPR_L0, Math.sin(a)*r));
+  }
+  const curve = new THREE.CatmullRomCurve3(pts);
+  const geo = new THREE.TubeGeometry(curve, seg*2, 0.045, 8, false);
+  springGrp.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:'#cfad52', roughness:0.28, metalness:0.95})));
+
+  /* 配重块 */
+  weight = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 0.8),
+    new THREE.MeshStandardMaterial({color:'#5a6a72', roughness:0.5, metalness:0.85}));
+  scene.add(weight);
+  const hook = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.0, 10),
+    new THREE.MeshStandardMaterial({color:'#8fa3ab', roughness:0.4, metalness:0.9}));
+  hook.name = 'hook'; scene.add(hook); weight.userData.hook = hook;
+
+  /* 刻度尺 + 目标振幅线 */
+  const markMat = new THREE.MeshBasicMaterial({color:'#7fb6c6'});
+  for(const sx of [-1,1]){
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.035, 2.2, 0.035), markMat);
+    bar.position.set(sx*1.02, 0, 0.75); scene.add(bar);
+    for(let u=-5;u<=5;u++){
+      const tick = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.02, 0.02), markMat);
+      tick.position.set(sx*1.02 + sx*0.08, u*0.2, 0.75); scene.add(tick);
+    }
+  }
+  const tgtMat = new THREE.LineDashedMaterial({color:'#ff6b5e', dashSize:0.09, gapSize:0.07});
+  [TGT.A, -TGT.A].forEach(y=>{
+    const g = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-1.15, y, 0.75), new THREE.Vector3(1.15, y, 0.75)]);
+    const ln = new THREE.Line(g, tgtMat); ln.computeLineDistances(); scene.add(ln);
+  });
+  const d2 = document.createElement('div'); d2.className = 'lbl2d';
+  d2.style.color = '#ff8f7a'; d2.textContent = '±A* = 0.60 m';
+  const lbl = new window.__C2.CSS2DObject(d2); lbl.position.set(1.25, TGT.A, 0.75); scene.add(lbl);
+
+  /* 点火火焰粒子 */
+  flamePos = new Float32Array(FLAME_N*3); flameVel = new Float32Array(FLAME_N*3); flameLife = new Float32Array(FLAME_N);
+  const fg = new THREE.BufferGeometry();
+  fg.setAttribute('position', new THREE.BufferAttribute(flamePos, 3));
+  flameMat = new THREE.PointsMaterial({color:'#ff9a3c', size:0.17, transparent:true, opacity:0.9,
+    blending:THREE.AdditiveBlending, depthWrite:false});
+  flame = new THREE.Points(fg, flameMat); flame.frustumCulled = false; flame.visible = false; scene.add(flame);
+}
+
+/* ---------- 3D 每帧更新 ---------- */
+let shake = 0;
+function update3D(dt, t){
+  const x = S.released ? clamp(xAt(S.t), -1.0, 1.0) : 0;
+  piston.position.y = x;
+  rod.position.y = x + 0.23 + ROD_L/2;
+  springGrp.scale.y = clamp((SPR_L0 - x)/SPR_L0, 0.28, 1.75);
+
+  const ms = 0.30 + (S.m/400)*0.55;
+  weight.scale.set(ms/0.8, ms/0.8, ms/0.8);
+  weight.position.y = x - 1.15;
+  const hook = weight.userData.hook;
+  if(hook) hook.position.y = x - 0.75;
+
+  if(labelX) labelX.element.textContent = 'x = ' + (x>=0?'+':'') + x.toFixed(3) + ' m';
+
+  /* 故障视觉：余隙→活塞暗红闪；未锁相→舱内红灯 */
+  const harm = S.eps > 0, drift = S.drift > 0;
+  pistonMat.emissive.setRGB(harm ? 0.16 + 0.10*Math.sin(t*17) : 0, 0, 0);
+  warnLight.intensity = drift ? 0.7 + 0.5*Math.sin(t*9) : 0;
+
+  /* 点火 */
+  if(S.win || S.igniting > 0){
+    flame.visible = true;
+    ignLight.intensity = 2.4 + 1.4*Math.sin(t*13);
+    ignLight.position.y = x + 0.4;
+    flameMat.opacity = 0.85;
+    for(let i=0;i<FLAME_N;i++){
+      flameLife[i] -= dt;
+      if(flameLife[i] <= 0){
+        flameLife[i] = 0.45 + Math.random()*0.5;
+        flamePos[i*3]   = (Math.random()-0.5)*0.7;
+        flamePos[i*3+1] = x + 0.35;
+        flamePos[i*3+2] = (Math.random()-0.5)*0.7;
+        flameVel[i*3]   = (Math.random()-0.5)*0.5;
+        flameVel[i*3+1] = 0.9 + Math.random()*1.3;
+        flameVel[i*3+2] = (Math.random()-0.5)*0.5;
+      } else {
+        flamePos[i*3]   += flameVel[i*3]*dt;
+        flamePos[i*3+1] += flameVel[i*3+1]*dt;
+        flamePos[i*3+2] += flameVel[i*3+2]*dt;
+        flameVel[i*3+1] *= 0.985;
+      }
+    }
+    flame.geometry.attributes.position.needsUpdate = true;
+    pistonMat.emissive.setRGB(0.85, 0.32, 0.06);
+    shake = Math.max(shake, 0.35);
+  } else {
+    flame.visible = false; ignLight.intensity = 0;
+  }
+
+  /* 抖动（频漂 / 点火） */
+  let sx = 0, sy = 0;
+  if(drift && S.released){ sx += Math.sin(t*23)*0.006; sy += Math.sin(t*19)*0.005; }
+  if(shake > 0){ sx += (Math.random()-0.5)*shake*0.05; sy += (Math.random()-0.5)*shake*0.05; shake = Math.max(0, shake-dt*0.8); }
+  scene.position.set(sx, sy, 0);   // 每帧重设，避免累积漂移
+
+  controls.update();
+  renderer.render(scene, camera);
+  labelR.render(scene, camera);
+}
+
+/* ================================================================
+   开场简报
+   ================================================================ */
+const BRIEF = [
+  '（引擎舱一片忙乱）你可算来了。星海号明早出港，可主引擎的<b>核心动力活塞一直在乱抖</b> —— 抖得连冲程都量不准，点火程序一直被否决。',
+  '我把它从曲轴上脱开了：现在它就是<b class="hl">一个挂在弹簧组下的质点</b>，只在竖直方向上来回跑。你要做的第一件事，是<b>看清它到底怎么动</b>。',
+  '看那块示波器 —— 屏幕上那条黄线，就是<b class="hl">活塞质点的位移 x 随时间 t 的变化</b>。要是它是一条<b>等幅的纯余弦曲线</b>，那就是简谐振动，点火没问题。',
+  '可你瞧：<b>幅值在缩</b>（阻尼在漏能）、<b>波峰发尖</b>（缸壁余隙带来了谐波）、<b>周期忽长忽短</b>（转速在漂）。三样毛病，一样一样修掉。',
+  '修完再按铭牌调三个数：<b class="hl">振幅 A = 0.60 m</b>、<b class="hl">频率 f = 1.20 Hz</b>（周期 T = 0.833 s）、<b class="hl">初相 φ = −30°</b>。三要素齐了，方程 <b class="hl">x(t) = A·cos(ωt+φ)</b> 就锁定了 —— 那就可以点火了。'
+];
+let bi = 0;
+function renderBrief(){
+  $('briefBody').innerHTML = BRIEF[bi];
+  $('progBar').style.width = ((bi+1)/BRIEF.length*100)+'%';
+  $('beatCount').textContent = (bi+1)+' / '+BRIEF.length;
+  $('btnNext').textContent = (bi === BRIEF.length-1) ? '进入舱室 ▸' : '继续 ▸';
+}
+$('btnNext').onclick = ()=>{
+  tone(440, 0.06, 'sine', 0.12);
+  if(bi < BRIEF.length-1){ bi++; renderBrief(); }
+  else { $('intro').classList.add('hide'); startGame(); }
+};
+$('btnSkip').onclick = ()=>{ $('intro').classList.add('hide'); startGame(); };
+
+function startGame(){
+  AC();
+  radio('先看波形，别急着调数字 —— 简谐振动要的是等幅、纯正弦、周期恒定。');
+  renderMission();
+}
+
+/* ================================================================
+   主循环
+   ================================================================ */
+let last = performance.now(), rdTick = 0;
+function animate(){
+  requestAnimationFrame(animate);
+  const now = performance.now();
+  const dt = Math.min(0.05, (now-last)/1000); last = now;
+  if(S.released) S.t += dt;
+
+  drawScope();
+  drawPhasor();
+  if(++rdTick % 5 === 0){ refreshReadout(); tickGuide(); }
+  if(HAS3D) update3D(dt, now/1000);
+}
+
+/* ================================================================
+   自适应布局：任务条贴在控制台上方，日志面板不越界
+   ================================================================ */
+function layout(){
+  const h = Math.min($('console').offsetHeight || 190, Math.round(innerHeight*0.46));
+  $('missionBar').style.bottom = (h + 26) + 'px';
+  $('logBox').style.maxHeight = Math.max(90, innerHeight - 620) + 'px';
+}
+window.addEventListener('resize', layout);
+
+/* ================================================================
+   启动
+   ================================================================ */
+recompute();
+renderSprings(); renderSwitches();
+fmtA(); fmtM(); fmtPhi();
+refreshReadout(); renderMission(); renderBrief(); layout();
+setTimeout(layout, 300);
+
+$('btnRetry').onclick = ()=> location.reload();
+$('btnNo3D').onclick = ()=>{ $('errMsg').style.display = 'none'; };
+
+/* 先让 2D 示波器转起来，再给 3D 6 秒机会：
+   three.js 走 CDN，网络慢/被墙时 await 可能长时间不返回 —— 那样整页会像卡死，
+   连「以 2D 模式继续」的按钮都还没绑上。startAnim 是幂等的，不会开出两条循环。 */
+let __animStarted = false;
+function startAnim(){ if(__animStarted) return; __animStarted = true; animate(); }
+startAnim();
+const ok3d = await withTimeout(boot3D(), 6000, false);
+if(!ok3d){ $('errMsg').style.display = 'block'; }
+startAnim();
+
+/* 键盘便捷操作 */
+window.addEventListener('keydown', e=>{
+  if(e.key === ' '){ e.preventDefault(); if($('intro').classList.contains('hide')) doRelease(); }
+  if(e.key === 'Escape'){ $('quizBox').style.display = 'none'; $('pdaDrawer').classList.remove('open'); }
+});
+
+/* 离线自检导出（与 lab2 的 __lab2 一致） */
+window.__lab1 = { S:S, showWin:showWin, evaluate:evaluate };
+</script>
+<!-- 舰桥导航坞：回舰桥 / 看标定卡进度 -->
+<!-- 导航坞嵌进控制台最上方（不再浮在左下角，避免压住最左边的旋钮/按钮） -->
+<script>try{ window.Fleet && window.Fleet.mountDock({label:'第一实验室', host:'#console', hostFirst:true, hostGap:'0 0 10px'}); }catch(e){}</script>
+</body>
+</html>

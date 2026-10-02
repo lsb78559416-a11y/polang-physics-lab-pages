@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>摸底测评 · 判定你的起点水池</title>
+<style>
+:root{
+  --bg:#050f14; --ink:#dff0f2; --dim:#7fa3ab; --faint:#4d6b73;
+  --cy:#4fe0c8; --am:#ffc857; --rd:#ff5f5f; --sx:#9fd8e8;
+  --panel:rgba(8,22,28,.86); --line:rgba(79,224,200,.22);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;}
+body{min-height:100vh;background:
+  radial-gradient(1100px 560px at 50% -10%,rgba(79,224,200,.08),transparent 62%),var(--bg);}
+
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:17px 26px 13px;border-bottom:1px solid var(--line);position:sticky;top:0;
+  background:rgba(5,15,20,.94);backdrop-filter:blur(6px);z-index:20}
+.brand{font-size:17px;font-weight:700;letter-spacing:1.6px}
+.brand small{display:block;font-size:10px;font-weight:400;letter-spacing:2.6px;color:var(--faint);margin-top:3px}
+.spacer{flex:1}
+.prog{font-size:12px;color:var(--dim);letter-spacing:.5px}
+.prog b{color:var(--cy);font-size:15px}
+
+.wrap{max-width:880px;margin:0 auto;padding:22px 26px 60px}
+
+/* 头图：干船坞 · 四表联调 */
+.photo{position:relative;border:1px solid var(--line);border-radius:13px;overflow:hidden;
+  margin-bottom:16px;background:#04121a}
+.photo img{display:block;width:100%;height:min(34vw,250px);object-fit:cover;object-position:center 46%;
+  filter:saturate(.88) brightness(.92)}
+.photo::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(0deg,rgba(8,22,28,.95) 2%,rgba(8,22,28,.30) 44%,transparent 78%)}
+.photo .cap{position:absolute;left:18px;bottom:12px;z-index:2;font-size:11px;
+  color:#9fd8e8;letter-spacing:1.4px;
+  border:1px solid rgba(159,216,232,.28);border-radius:6px;padding:3px 9px;background:rgba(4,13,18,.5)}
+
+.lead{border:1px solid var(--line);border-left:3px solid var(--cy);border-radius:12px;
+  background:var(--panel);padding:14px 17px;margin-bottom:22px;font-size:13px;line-height:1.9;color:var(--dim)}
+.lead b{color:var(--cy)}
+
+.grp{margin-bottom:26px}
+.grp-h{display:flex;align-items:baseline;gap:10px;margin-bottom:4px;padding-bottom:8px;border-bottom:1px dashed var(--line)}
+.grp-h .k{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--am)}
+.grp-h .t{font-size:15px;font-weight:700;letter-spacing:1px}
+.grp-h .p{margin-left:auto;font-size:11px;color:var(--faint)}
+.grp-n{font-size:11.5px;color:var(--faint);margin:8px 0 12px}
+
+.q{border:1px solid var(--line);border-radius:11px;background:rgba(8,22,28,.55);
+  padding:14px 16px;margin-bottom:11px}
+.q-h{font-size:13.5px;line-height:1.8;margin-bottom:11px}
+.q-h .no{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--faint);margin-right:7px}
+.op{display:block;font-size:12.5px;line-height:1.7;padding:8px 12px;margin:5px 0;border-radius:8px;
+  border:1px solid rgba(79,224,200,.14);cursor:pointer;color:var(--dim);transition:all .14s}
+.op:hover{border-color:rgba(79,224,200,.36);color:var(--ink)}
+.op.sel{border-color:var(--cy);background:rgba(79,224,200,.10);color:var(--ink)}
+.op.right{border-color:var(--cy);background:rgba(79,224,200,.16);color:var(--ink)}
+.op.wrong{border-color:var(--rd);background:rgba(255,95,95,.12);color:#ffd9d4}
+.why{display:none;margin-top:9px;font-size:11.5px;line-height:1.85;color:var(--sx);
+  border-left:2px solid rgba(159,216,232,.4);padding:6px 0 6px 11px}
+.why.show{display:block}
+.why b{color:var(--cy)}
+
+.actions{display:flex;gap:11px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.abtn{font-size:13.5px;padding:11px 22px;border-radius:10px;cursor:pointer;text-decoration:none;
+  border:1px solid var(--line);background:rgba(79,224,200,.10);color:var(--cy);letter-spacing:.6px;font-weight:600}
+.abtn:hover{background:rgba(79,224,200,.2)}
+.abtn.ghost{background:transparent;color:var(--dim);font-weight:400}
+.abtn.ghost:hover{color:var(--ink)}
+.hint{font-size:11.5px;color:var(--faint)}
+
+/* 结果 */
+#result{display:none;margin-top:26px;border:1px solid rgba(255,200,87,.40);border-radius:13px;
+  background:linear-gradient(180deg,rgba(255,200,87,.07),rgba(8,22,28,.90));padding:20px 22px}
+#result.show{display:block}
+.r-t{font-size:19px;font-weight:700;color:var(--am);letter-spacing:1.2px;margin-bottom:6px}
+.r-s{font-size:13px;color:var(--dim);line-height:1.9;margin-bottom:16px}
+.r-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:11px;margin-bottom:16px}
+.r-c{border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:rgba(6,18,24,.6)}
+.r-c .n{font-size:11px;color:var(--faint);margin-bottom:4px}
+.r-c .v{font-size:14px;font-weight:700}
+.r-c .v.ok{color:var(--cy)} .r-c .v.no{color:var(--am)}
+.r-c .bar{height:5px;border-radius:3px;background:rgba(79,224,200,.12);margin-top:8px;overflow:hidden}
+.r-c .bar i{display:block;height:100%;background:var(--cy);border-radius:3px}
+.r-c .bar i.no{background:var(--am)}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">摸底测评<small>BREAKWAVE LAB · PLACEMENT</small></div>
+  <div class="spacer"></div>
+  <div class="prog">已答 <b id="pDone">0</b> / <b id="pAll">12</b></div>
+  <a class="abtn ghost" href="index.html" style="padding:7px 14px;font-size:12px">⇱ 舰桥</a>
+</div>
+
+<div class="wrap">
+  <div class="photo" id="photo"><img src="assets/img/quiz.jpg" alt="干船坞四表联调">
+    <span class="cap">干船坞 · 四表联调 · 振幅 / 波形 / 相量 / 诊断</span></div>
+  <div class="lead" id="lead"></div>
+  <div id="paper"></div>
+
+  <div class="actions">
+    <button class="abtn" id="btnSubmit" type="button">交卷 · 判定起点</button>
+    <button class="abtn ghost" id="btnSkip" type="button">跳过测评 · 从一号池开始</button>
+    <span class="hint" id="hint"></span>
+  </div>
+
+  <div id="result">
+    <div class="r-t" id="rTitle"></div>
+    <div class="r-s" id="rSub"></div>
+    <div class="r-g" id="rGrid"></div>
+    <div class="actions">
+      <a class="abtn" id="btnGo" href="#">进入起点水池 →</a>
+      <a class="abtn ghost" href="index.html">返回舰桥</a>
+      <button class="abtn ghost" id="btnAgain" type="button">↺ 重测</button>
+    </div>
+  </div>
+</div>
+
+<script src="fleet.js"></script>
+<script>
+/* ================================================================================
+   【A 区 · 题库】改题只动这里，逻辑不用碰
+   每组 4 题；组内答对 ≥3 视为「这一层已经会了」（判定规则在 fleet.js 的 setQuiz）
+   ================================================================================ */
+var PAPER = [
+  {
+    k:'A', t:'振动的描述', pool:'对应 1 号池 · 引擎之心',
+    note:'振幅、周期、频率、角频率，以及振动学方程 x = A·cos(ωt+φ)。',
+    qs:[
+      { q:'把弹簧振子的振幅拉到原来的 2 倍，它的周期会怎样？',
+        o:['变成 2 倍','变成一半','不变','变成 4 倍'], a:2,
+        why:'简谐振动的周期 <b>T = 2π√(m/k)</b> 只由系统本身决定，与振幅无关 —— 这叫等时性。' },
+      { q:'质点做简谐振动时，它在哪个位置速度最大？',
+        o:['最大位移处','平衡位置','位移为 A/2 处','各处都一样'], a:1,
+        why:'<b>v = ω√(A²−x²)</b>。x = 0（平衡位置）时速度最大，v_max = ωA；在端点速度为 0。' },
+      { q:'某简谐振动的方程为 x = 0.20·cos(6πt)（SI），它的频率是多少？',
+        o:['6π Hz','3 Hz','6 Hz','0.20 Hz'], a:1,
+        why:'由 <b>ω = 2πf</b> 得 f = ω/2π = 6π/2π = <b>3 Hz</b>。' },
+      { q:'简谐振动中，加速度的方向始终',
+        o:['与速度同向','沿运动方向','指向平衡位置（与位移反向）','恒定不变'], a:2,
+        why:'<b>a = −ω²x</b>：加速度与位移反向，始终指向平衡位置 —— 这就是「回复力」的来历。' }
+    ]
+  },
+  {
+    k:'B', t:'阻尼与共振', pool:'对应 2 号池 · 泥沼绝境',
+    note:'阻尼比 ζ、品质因数 Q、共振频率与相位判据。',
+    qs:[
+      { q:'给振动系统增大阻尼，它的共振频率会',
+        o:['明显升高','略有降低','完全不变','先升后降'], a:1,
+        why:'<b>f_r = f₀√(1−2ζ²)</b>：ζ 增大，共振峰向左（低频）微移；ζ ≥ 0.707 时峰值干脆消失。' },
+      { q:'判断系统是不是真共振，最可靠的判据是',
+        o:['振幅达到最大','驱动频率等于固有频率','相位滞后 90°','速度达到最大'], a:2,
+        why:'振幅峰值会被阻尼拖着偏移，但<b>位移滞后驱动力恰好 90°</b> 这一条不受阻尼影响 —— 这才是真判据。' },
+      { q:'品质因数 Q 越大，幅频响应曲线会',
+        o:['越平坦','越尖锐、峰越高','整体向左平移','完全不变'], a:1,
+        why:'<b>Q = 1/(2ζ)</b>。Q 大即阻尼小，共振峰又高又窄，半功率带宽 Δf ≈ f₀/Q 更窄。' },
+      { q:'其他条件不变，把阻尼比 ζ 调大，稳态振幅的峰值会',
+        o:['增大','减小','不变','先增后减'], a:1,
+        why:'<b>A_max = X₀ / (2ζ√(1−ζ²))</b>：ζ 一大，峰值迅速掉下来 —— 这正是黏液层难撕裂的原因。' }
+    ]
+  },
+  {
+    k:'C', t:'波的传播与干涉', pool:'对应 3～5 号池 · 兴波 / 绕射 / 相消',
+    note:'波速关系、惠更斯原理、相消干涉条件。',
+    qs:[
+      { q:'两列等幅相干波要完全相消，它们的相位差必须是',
+        o:['0','π/2','π（180°）','2π'], a:2,
+        why:'<b>反相</b>时波峰正对波谷，合振幅 = |A₁−A₂| = 0 —— 这就是球鼻艏「让浪去杀浪」的原理。' },
+      { q:'一列波波长 2.0 m、频率 5 Hz，它的波速是',
+        o:['2.5 m/s','10 m/s','0.4 m/s','7 m/s'], a:1,
+        why:'<b>v = λf</b> = 2.0 × 5 = 10 m/s。' },
+      { q:'惠更斯原理说的是',
+        o:['波速与介质无关','波不能绕过障碍物','波面上每一点都可看作次级子波源','两列波相遇后各自保持原形'], a:2,
+        why:'把波面上每点当成<b>次级子波源</b>，再把这些子波包络起来 —— 波的传播、反射、绕射都由此解释。' },
+      { q:'船速提高时，兴波阻力会',
+        o:['线性增大','保持不变','迅速增大（非线性）','先减小后增大'], a:2,
+        why:'航速一上去，船首推起的水墙更高，兴波阻力<b>非线性急剧上升</b> —— 船其实是在爬自己推着走的坡。' }
+    ]
+  }
+];
+
+/* 【A 区 · 文案】 */
+var TXT = {
+  lead:'调度台出卷：<b>12 道题</b>，测你振动和波的家底到底在哪儿。<br>' +
+        '不排名、不计时 —— <b>答完只是给你推荐一个起点</b>。六座水池本来就不上锁，' +
+        '判定「已达标」的池子你照样能进去复习。',
+  hint0:'还有 <b>0</b> 题没答。',
+  done:'已答完，可以交卷。',
+  nc:'（判定规则：每组 4 题、答对 ≥3 视为已达标。六池全开放，判定只影响推荐起点，不影响能不能进。）'
+};
+
+/* ================================================================================
+   【C 区 · 渲染与判定】
+   ================================================================================ */
+var F = window.Fleet;
+var pick = [];        /* pick[gid][qid] = 选项下标 或 -1 */
+
+function el(id){ return document.getElementById(id); }
+function total(){ var n = 0; for(var g = 0; g < PAPER.length; g++) n += PAPER[g].qs.length; return n; }
+
+function build(){
+  var host = el('paper'); host.innerHTML = '';
+  el('lead').innerHTML = TXT.lead;
+  el('pAll').textContent = total();
+  pick = [];
+
+  PAPER.forEach(function(G, gi){
+    pick[gi] = G.qs.map(function(){ return -1; });
+    var d = document.createElement('div'); d.className = 'grp';
+    d.innerHTML = '<div class="grp-h"><span class="k">' + G.k + ' 组</span><span class="t">' + G.t +
+                  '</span><span class="p">' + G.pool + '</span></div>' +
+                  '<div class="grp-n">' + G.note + '</div>';
+    G.qs.forEach(function(Q, qi){
+      var box = document.createElement('div'); box.className = 'q';
+      var h = document.createElement('div'); h.className = 'q-h';
+      h.innerHTML = '<span class="no">' + (gi * 4 + qi + 1) + '.</span>' + Q.q;
+      box.appendChild(h);
+      Q.o.forEach(function(txt, oi){
+        var b = document.createElement('div'); b.className = 'op';
+        b.textContent = String.fromCharCode(65 + oi) + '. ' + txt;
+        b.onclick = function(){
+          pick[gi][qi] = oi;
+          box.querySelectorAll('.op').forEach(function(x){ x.classList.remove('sel'); });
+          b.classList.add('sel');
+          refresh();
+        };
+        box.appendChild(b);
+      });
+      var w = document.createElement('div'); w.className = 'why'; w.innerHTML = Q.why;
+      box.appendChild(w);
+      d.appendChild(box);
+    });
+    host.appendChild(d);
+  });
+  refresh();
+}
+
+function answered(){
+  var n = 0;
+  for(var g = 0; g < pick.length; g++) for(var q = 0; q < pick[g].length; q++) if(pick[g][q] >= 0) n++;
+  return n;
+}
+
+function refresh(){
+  var a = answered(), t = total();
+  el('pDone').textContent = a;
+  el('hint').innerHTML = (a === t) ? TXT.done : TXT.hint0.replace('0', String(t - a));
+}
+
+/* 交卷 */
+function submit(){
+  var t = total();
+  if(answered() < t){
+    alert('还有 ' + (t - answered()) + ' 题没答。');
+    return;
+  }
+  var score = 0, groups = {}, detail = [];
+  PAPER.forEach(function(G, gi){
+    var c = 0;
+    G.qs.forEach(function(Q, qi){
+      var right = (pick[gi][qi] === Q.a);
+      if(right) c++;
+      detail.push({ gi:gi, qi:qi, right:right });
+    });
+    groups[G.k] = c; score += c;
+  });
+
+  /* 标出对错 + 展开解析 */
+  var boxes = el('paper').querySelectorAll('.q');
+  detail.forEach(function(d){
+    var gi = d.gi, qi = d.qi, idx = gi * 4 + qi;
+    var box = boxes[idx]; if(!box) return;
+    var ops = box.querySelectorAll('.op');
+    for(var i = 0; i < ops.length; i++){
+      ops[i].classList.remove('sel');
+      if(i === PAPER[gi].qs[qi].a) ops[i].classList.add('right');
+      else if(i === pick[gi][qi]) ops[i].classList.add('wrong');
+      ops[i].onclick = null; ops[i].style.cursor = 'default';
+    }
+    box.querySelector('.why').classList.add('show');
+  });
+
+  /* 写入进度内核 —— 起点由它判定 */
+  var start = F.setQuiz({ score:score, total:t, groups:groups });
+  showResult(score, t, groups, start);
+}
+
+function showResult(score, t, groups, start){
+  var v = F.verdict();
+  el('rTitle').textContent = v.title;
+  el('rSub').innerHTML = '得分 <b style="color:var(--cy)">' + score + '/' + t + '</b>　' + v.desc +
+    '<br><span style="color:var(--faint);font-size:12px">' + TXT.nc + '</span>';
+
+  var g = el('rGrid'); g.innerHTML = '';
+  PAPER.forEach(function(G){
+    var c = groups[G.k], ok = c >= 3;
+    var d = document.createElement('div'); d.className = 'r-c';
+    d.innerHTML = '<div class="n">' + G.k + ' 组 · ' + G.t + '</div>' +
+      '<div class="v ' + (ok ? 'ok' : 'no') + '">' + c + ' / ' + G.qs.length +
+      (ok ? '　已达标' : '　待补') + '</div>' +
+      '<div class="bar"><i class="' + (ok ? '' : 'no') + '" style="width:' + (c / G.qs.length * 100) + '%"></i></div>';
+    g.appendChild(d);
+  });
+
+  var go = el('btnGo');
+  go.href = F.hrefFor(start);
+  go.textContent = '进入 · 第 ' + start + ' 号池 · ' + F.lab(start).name + ' →';
+
+  el('result').classList.add('show');
+  el('btnSubmit').disabled = true;
+  el('btnSubmit').style.opacity = .45;
+  el('result').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+el('btnSubmit').onclick = submit;
+el('btnSkip').onclick = function(){
+  if(!confirm('跳过测评，默认从一号池开始？（以后可以随时回来重测）')) return;
+  F.skipQuiz(); location.href = 'index.html';
+};
+el('btnAgain').onclick = function(){ location.reload(); };
+
+build();
+
+/* 测试钩子 */
+window.__quiz = {
+  answer: function(gi, qi, oi){ pick[gi][qi] = oi; refresh(); },
+  answerAll: function(right){
+    for(var g = 0; g < PAPER.length; g++) for(var q = 0; q < PAPER[g].qs.length; q++){
+      pick[g][q] = right ? PAPER[g].qs[q].a : (PAPER[g].qs[q].a + 1) % 4;
+    }
+    refresh();
+  },
+  submit: submit,
+  get paper(){ return PAPER; }
+};
+</script>
+</body>
+</html>

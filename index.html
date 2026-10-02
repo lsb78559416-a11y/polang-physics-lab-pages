@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>星海号 · 舰桥 —— 破浪实验室</title>
+<style>
+:root{
+  --bg:#050f14; --ink:#dff0f2; --dim:#7fa3ab; --faint:#4d6b73;
+  --cy:#4fe0c8; --am:#ffc857; --rd:#ff5f5f; --sx:#9fd8e8;
+  --panel:rgba(8,22,28,.86); --line:rgba(79,224,200,.22);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;}
+body{min-height:100vh;background:
+  radial-gradient(1200px 620px at 50% -8%,rgba(79,224,200,.09),transparent 62%),
+  radial-gradient(900px 500px at 88% 110%,rgba(255,200,87,.055),transparent 60%),
+  linear-gradient(135deg,rgba(79,224,200,.028) 0 1px,transparent 1px 44px),
+  linear-gradient(45deg,rgba(159,216,232,.018) 0 1px,transparent 1px 44px),
+  var(--bg);}
+
+/* ---------- 顶栏 ---------- */
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:18px 26px 14px;border-bottom:1px solid var(--line);}
+.brand{font-size:19px;font-weight:700;letter-spacing:2px}
+.brand small{display:block;font-size:10.5px;font-weight:400;letter-spacing:3px;color:var(--faint);margin-top:3px}
+.spacer{flex:1}
+.chip{font-size:11.5px;color:var(--dim);border:1px solid var(--line);border-radius:8px;
+  padding:5px 11px;background:rgba(79,224,200,.05);letter-spacing:.4px}
+.chip b{color:var(--am);font-weight:700}
+.chip.cy b{color:var(--cy)}
+
+/* ---------- 主体 ---------- */
+.wrap{max-width:1160px;margin:0 auto;padding:22px 26px 40px}
+
+/* ---------- 调度台条幅 ---------- */
+.console{display:flex;gap:14px;align-items:flex-start;
+  border:1px solid var(--line);border-left:3px solid var(--cy);border-radius:12px;
+  background:var(--panel);padding:15px 18px;margin-bottom:20px}
+.console .ic{font-size:17px;color:var(--cy);line-height:1.35}
+.console .bd{flex:1;font-size:13.5px;line-height:1.85}
+.console .t1{font-weight:700;color:var(--cy);letter-spacing:.5px}
+.console .t2{color:var(--dim);font-size:12.5px}
+.console.warn{border-left-color:var(--am)}
+.console.warn .ic,.console.warn .t1{color:var(--am)}
+
+/* ---------- 头图（六池总览） ---------- */
+.hero{position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;
+  margin-bottom:18px;background:#04121a}
+.hero img{display:block;width:100%;height:min(30vw,236px);object-fit:cover;
+  object-position:center 44%;filter:saturate(.86) brightness(.9)}
+.hero::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(4,13,18,.93) 3%,rgba(4,13,18,.52) 44%,rgba(4,13,18,.14) 80%),
+             linear-gradient(0deg,rgba(4,13,18,.88),rgba(4,13,18,.05) 52%)}
+.hero .hb{position:absolute;left:20px;bottom:16px;z-index:2;max-width:min(650px,72%);
+  padding:10px 16px 11px 14px;border-left:2px solid var(--cy);
+  background:linear-gradient(90deg,rgba(4,13,18,.76),rgba(4,13,18,.18));
+  backdrop-filter:blur(3px)}
+.hero .hb h2{margin:0;font-size:19px;letter-spacing:3.4px;font-weight:700}
+.hero .hb p{margin:7px 0 0;font-size:11.5px;color:#a5c7cd;letter-spacing:1px;line-height:1.75}
+.hero .hbadge{position:absolute;right:18px;top:16px;z-index:2;font-size:10.5px;letter-spacing:1.6px;
+  color:#9fd8e8;border:1px solid rgba(159,216,232,.32);border-radius:7px;padding:4px 10px;
+  background:rgba(4,13,18,.55)}
+
+/* ---------- 航线图 ---------- */
+.mapbox{border:1px solid var(--line);border-radius:12px;background:rgba(6,18,24,.55);
+  padding:6px 10px 2px;margin-bottom:20px}
+#map{display:block;width:100%;height:auto}
+.nd-t{font-size:13px;fill:var(--ink);font-family:system-ui,"Microsoft YaHei",sans-serif}
+.nd-s{font-size:10.5px;fill:var(--faint);font-family:ui-monospace,Menlo,Consolas,monospace}
+
+/* ---------- 卡片 ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(288px,1fr));gap:14px}
+.card{border:1px solid var(--line);border-radius:13px;background:var(--panel);
+  padding:16px 17px;display:flex;flex-direction:column;gap:9px;position:relative;overflow:hidden}
+.card.locked{opacity:.52;border-style:dashed}
+.card.open{border-color:rgba(255,200,87,.50);box-shadow:0 0 0 1px rgba(255,200,87,.14),0 8px 26px rgba(0,0,0,.35)}
+.card.cleared{border-color:rgba(79,224,200,.42)}
+.card.pending{opacity:.72}
+.c-img{margin:-16px -17px 2px;position:relative;background:#04121a;line-height:0;overflow:hidden}
+.c-img img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;
+  filter:saturate(.86) brightness(.78);transition:transform .5s cubic-bezier(.2,.7,.3,1),filter .35s ease}
+.c-img::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(0deg,rgba(8,22,28,.98) 0%,rgba(8,22,28,.58) 36%,rgba(8,22,28,.10) 73%,transparent 100%)}
+.card:hover .c-img img{transform:scale(1.035);filter:saturate(.98) brightness(.9)}
+.card.locked .c-img img{filter:grayscale(.85) brightness(.5)}
+.card.pending .c-img img{filter:saturate(.7) brightness(.72)}
+
+.c-h{display:flex;align-items:baseline;gap:9px;position:relative;z-index:2;margin-top:-43px;padding:0 2px 3px}
+.c-n{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--faint)}
+.c-name{font-size:16.5px;font-weight:700;letter-spacing:1px}
+.c-sub{font-size:11.5px;color:#9ee8da;opacity:.9;letter-spacing:.5px;padding-left:2px}
+.c-topic{font-size:11.5px;color:var(--dim);line-height:1.7;min-height:38px;
+  padding:8px 10px;border-left:2px solid rgba(79,224,200,.34);border-radius:0 7px 7px 0;
+  background:linear-gradient(90deg,rgba(79,224,200,.055),transparent 80%)}
+.c-f{display:flex;align-items:center;gap:9px;margin-top:2px}
+.badge{font-size:10.5px;padding:3px 8px;border-radius:6px;letter-spacing:.5px;
+  border:1px solid var(--line);color:var(--dim)}
+.badge.ok{color:#071a16;background:var(--cy);border-color:var(--cy);font-weight:700}
+.badge.now{color:#241a00;background:var(--am);border-color:var(--am);font-weight:700}
+.badge.skip{color:var(--sx);border-color:rgba(159,216,232,.35)}
+.badge.lock{color:var(--faint)}
+.badge.build{color:var(--am);border-color:rgba(255,200,87,.35)}
+.btn{margin-left:auto;font-size:12px;padding:6px 13px;border-radius:8px;cursor:pointer;
+  border:1px solid var(--line);background:rgba(79,224,200,.08);color:var(--cy);
+  text-decoration:none;letter-spacing:.5px;transition:background .16s,border-color .16s}
+.btn:hover{background:rgba(79,224,200,.18);border-color:var(--cy)}
+.btn.ghost{color:var(--dim);background:transparent}
+.btn.off{color:var(--faint);background:transparent;border-style:dashed;cursor:default}
+.btn.off:hover{background:transparent;border-color:var(--line)}
+
+/* ---------- 底部动作 ---------- */
+.actions{display:flex;gap:11px;flex-wrap:wrap;margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
+.abtn{font-size:13px;padding:10px 18px;border-radius:10px;cursor:pointer;text-decoration:none;
+  border:1px solid var(--line);background:rgba(79,224,200,.10);color:var(--cy);letter-spacing:.6px;font-weight:600}
+.abtn:hover{background:rgba(79,224,200,.2)}
+.abtn.ghost{background:transparent;color:var(--dim);font-weight:400}
+.abtn.ghost:hover{color:var(--ink);border-color:var(--cy)}
+.note{margin-top:14px;font-size:11.5px;color:var(--faint);line-height:1.9}
+.note b{color:var(--dim)}
+.log{margin-top:10px;font-size:11px;color:var(--faint);line-height:1.85;
+  max-height:96px;overflow:auto}
+
+/* ==============================================================================
+   封面 · 首航（COVER）—— 纯 DOM+SVG，零依赖，改文案只动 COVER 数据区
+   ============================================================================== */
+a.chip{text-decoration:none;cursor:pointer}
+a.chip:hover{border-color:var(--cy);color:var(--ink);background:rgba(79,224,200,.12)}
+
+#cover{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:26px 22px;text-align:center;
+  background:
+    radial-gradient(1100px 620px at 50% 8%,rgba(79,224,200,.11),transparent 60%),
+    radial-gradient(760px 480px at 84% 104%,rgba(255,95,95,.075),transparent 62%),
+    linear-gradient(180deg,#040d12 0%,#061620 52%,#020d14 100%);
+  overflow:hidden;transition:opacity .5s ease,transform .55s ease}
+#cover[hidden]{display:none}
+#cover.out{opacity:0;transform:scale(1.05);pointer-events:none}
+
+/* 底图 + 蒙版 */
+.cv-bg{position:absolute;inset:0;background-size:cover;background-position:center 40%;
+  background-repeat:no-repeat;filter:saturate(.94) brightness(.86)}
+.cv-veil{position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(2,10,15,.94) 0%,rgba(2,10,15,.78) 36%,rgba(2,10,15,.34) 72%,rgba(2,10,15,.62) 100%),
+             linear-gradient(180deg,rgba(2,10,15,.52) 0%,rgba(2,10,15,.16) 40%,rgba(2,10,15,.9) 100%)}
+
+/* 星点 */
+.cv-stars{position:absolute;inset:0;pointer-events:none;opacity:.55}
+.cv-stars i{position:absolute;width:2px;height:2px;border-radius:50%;
+  background:#9fd8e8;animation:twk 3.4s ease-in-out infinite}
+@keyframes twk{0%,100%{opacity:.18}50%{opacity:.9}}
+
+/* 扫描线 */
+.cv-scan{position:absolute;left:0;right:0;height:140px;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(79,224,200,.055),transparent);
+  animation:scank 7.5s linear infinite}
+@keyframes scank{0%{top:-16%}100%{top:112%}}
+
+.cv-in{position:relative;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(250px,.72fr);
+  align-items:end;gap:clamp(30px,7vw,96px);width:min(1100px,94vw);
+  text-align:left;animation:rise .85s cubic-bezier(.2,.7,.3,1) both}
+.cv-copy{padding:clamp(22px,3.5vw,42px);border:1px solid rgba(159,216,232,.18);
+  border-left:2px solid rgba(79,224,200,.78);border-radius:2px 18px 18px 2px;
+  background:linear-gradient(115deg,rgba(4,16,23,.92),rgba(4,16,23,.62));
+  box-shadow:0 22px 70px rgba(0,0,0,.28);backdrop-filter:blur(8px)}
+.cv-copy::after{content:'MISSION BRIEF // 001';display:block;margin-top:22px;color:rgba(159,216,232,.45);
+  font:10px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:2.2px}
+.cv-aside{align-self:stretch;display:flex;flex-direction:column;justify-content:flex-end;padding:0 0 10px;
+  color:#9cc5ca;text-align:left}
+.cv-aside .aside-kicker{font:10px/1.4 ui-monospace,Menlo,Consolas,monospace;letter-spacing:3px;color:var(--cy);opacity:.82}
+.cv-aside .aside-title{margin:10px 0 20px;font-size:clamp(22px,3vw,34px);line-height:1.22;letter-spacing:2px;color:#e6f8f7}
+.cv-aside .aside-rule{width:100%;height:1px;background:linear-gradient(90deg,rgba(79,224,200,.64),transparent);margin-bottom:17px}
+.cv-telemetry{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cv-telemetry div{padding:10px 9px;border:1px solid rgba(159,216,232,.16);background:rgba(4,17,24,.52)}
+.cv-telemetry b{display:block;font:700 21px/1 ui-monospace,Menlo,Consolas,monospace;color:var(--am)}
+.cv-telemetry span{display:block;margin-top:6px;font-size:10px;color:var(--dim);letter-spacing:.8px}
+.cv-aside .aside-note{margin-top:14px;padding-left:12px;border-left:1px solid rgba(255,200,87,.55);
+  color:#89adb3;font-size:11px;line-height:1.8}
+@keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+
+.cv-kicker{font-size:10.5px;letter-spacing:5.5px;color:#83c8c3;
+  font-family:ui-monospace,Menlo,Consolas,monospace;margin-bottom:12px}
+.cv-title{margin:0;font-size:clamp(48px,7.4vw,88px);font-weight:800;letter-spacing:10px;
+  text-indent:10px;line-height:1.08;color:#eafffb;
+  background:linear-gradient(180deg,#f2fffc 8%,#4fe0c8 60%,#1c8f7e 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  text-shadow:0 6px 30px rgba(79,224,200,.22)}
+.cv-rule{width:190px;height:1px;margin:16px 0 15px;
+  background:linear-gradient(90deg,transparent,rgba(79,224,200,.65),transparent)}
+.cv-hook{margin:0 0 10px;padding-left:14px;border-left:2px solid var(--am);font-size:15px;line-height:1.9;color:#d7e8e8;max-width:600px}
+.cv-hook b{color:var(--am);font-weight:700}
+.cv-brief{font-size:12px;color:#9abac0;line-height:1.9;max-width:560px}
+
+/* 船 */
+.cv-ship{width:min(560px,86vw);height:auto;margin:14px 0 6px;display:block;
+  animation:bob 6.2s ease-in-out infinite;
+  filter:drop-shadow(0 14px 26px rgba(0,0,0,.5))}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-.5deg)}
+  50%{transform:translateY(-9px) rotate(.7deg)}}
+.cv-w1{animation:drift 9s linear infinite}
+.cv-w2{animation:drift 13s linear infinite reverse}
+@keyframes drift{from{transform:translateX(0)}to{transform:translateX(-140px)}}
+.cv-crack{animation:pulse 1.9s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+
+/* 按钮 */
+.cv-btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:20px}
+.cv-btn{font-size:15px;font-weight:700;letter-spacing:2px;padding:14px 34px;border-radius:12px;
+  cursor:pointer;border:1px solid var(--am);color:#241a00;text-decoration:none;
+  background:linear-gradient(180deg,#ffd77a,#ffb52e);
+  box-shadow:0 10px 28px rgba(255,181,46,.26),0 0 0 0 rgba(255,181,46,.35);
+  transition:transform .16s,box-shadow .22s}
+.cv-btn:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(255,181,46,.34),0 0 0 6px rgba(255,181,46,.12)}
+.cv-btn:active{transform:translateY(1px)}
+.cv-btn.alt{border-color:var(--cy);color:#04211c;
+  background:linear-gradient(180deg,#7ff0dc,#33c4ab);
+  box-shadow:0 10px 28px rgba(79,224,200,.24)}
+.cv-btn.alt:hover{box-shadow:0 14px 34px rgba(79,224,200,.32),0 0 0 6px rgba(79,224,200,.12)}
+.cv-ghost{font-size:12.5px;letter-spacing:1px;padding:13px 20px;border-radius:11px;cursor:pointer;
+  border:1px solid var(--line);background:transparent;color:var(--dim);text-decoration:none;
+  transition:color .16s,border-color .16s,background .16s}
+.cv-ghost:hover{color:var(--ink);border-color:var(--cy);background:rgba(79,224,200,.08)}
+.cv-foot{margin-top:26px;font-size:10.5px;letter-spacing:1.2px;color:#3d5a62;
+  font-family:ui-monospace,Menlo,Consolas,monospace}
+.cv-live{margin-top:8px;font-size:11px;color:var(--sx);letter-spacing:.6px}
+.cv-live b{color:var(--cy)}
+
+@media (max-width:760px){
+  .cv-in{grid-template-columns:1fr;gap:18px;width:min(620px,94vw);align-items:start;overflow:auto;max-height:100%;padding:8px 0}
+  .cv-copy{padding:24px 20px 20px}
+  .cv-aside{padding:0 20px 8px}
+  .cv-aside .aside-title{margin:7px 0 12px;font-size:22px}
+  .cv-aside .aside-note{display:none}
+  .cv-title{font-size:clamp(45px,14vw,72px)}
+  .cv-hook{font-size:14px;line-height:1.75}
+  .cv-foot{margin-top:18px}
+}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">星海号 · 舰桥<small>BREAKWAVE LAB · FLIGHT DECK</small></div>
+  <div class="spacer"></div>
+  <div class="chip">船用燃料储备 <b>47</b> 天</div>
+  <div class="chip cy">标定卡 <b id="cCleared">0</b>/<b id="cTotal">6</b></div>
+  <div class="chip">存档 <b id="cStore">—</b></div>
+  <a class="chip" href="index.html?cover=1" title="回到开场封面">⌂ 封面</a>
+</div>
+
+<div class="wrap">
+
+  <div class="hero" id="hero">
+    <img id="heroImg" src="" alt="星海号侧舷的六座实验水舱">
+    <div class="hbadge" id="heroBadge"></div>
+    <div class="hb"><h2 id="heroT1"></h2><p id="heroT2"></p></div>
+  </div>
+
+  <div class="console" id="console">
+    <div class="ic">◈</div>
+    <div class="bd">
+      <div class="t1" id="csT1">调度台 · 待机</div>
+      <div class="t2" id="csT2">读取航行档案…</div>
+    </div>
+  </div>
+
+  <div class="mapbox">
+    <svg id="map" viewBox="0 0 1000 132" preserveAspectRatio="xMidYMid meet" aria-label="六号水池航线图"></svg>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="actions">
+    <a class="abtn" id="btnNext" href="#">进入当前水池</a>
+    <a class="abtn ghost" id="btnQuiz" href="quiz.html">参加摸底测评</a>
+    <a class="abtn ghost" href="prologue.html">📜 序章 · 四十七天</a>
+    <button class="abtn ghost" id="btnReset" type="button">↺ 重置航行档案</button>
+  </div>
+
+  <div class="note" id="note"></div>
+  <div class="log" id="log"></div>
+</div>
+
+<!-- ===== 封面 · 首航（内容由 COVER 数据区渲染，见脚本 B 区）===== -->
+<div id="cover" hidden></div>
+
+<script src="fleet.js"></script>
+<script>
+/* ================================================================================
+   【A 区 · 界面文案】改这里不影响任何逻辑
+   ================================================================================ */
+var UI = {
+  /* 头部大图（六池总览） */
+  hero: {
+    img: 'assets/img/hero-fleet.jpg',
+    badge: 'FLIGHT DECK · 六池航图',
+    t1: '六座水池 · 一次归航',
+    t2: '船体由六座水舱拼成（图中侧舷六格）—— 一格一道物理关。标定卡集满，船才浮得起来。'
+  },
+  newcomer: {
+    t1: '新船员报到',
+    t2: '先看一遍序章 · 四十七天 —— 弄清楚我们为什么下水，回来再做摸底测评。'
+  },
+  untested: {
+    t1: '建议：先执行摸底测评',
+    t2: '调度台还没见过你的成绩单 —— 六座水池都已开放，随便进；做一份卷子，它会给你推荐一个起点。'
+  },
+  tested: {
+    t1: '起点已判定',
+    t2: ''
+  },
+  done: {
+    t1: '六池标定卡已全部签发',
+    t2: '六座水池都通关了。想复习哪一池，直接点卡片重进。'
+  },
+  note: '六座水池<b>全部开放</b>：一开始就能进任何一池，通关只点亮标定卡，不锁后面的池子。' +
+        '摸底测评只决定<b>推荐从哪一池下水</b>，判定为「已达标」的只是提示你可以跳过，随时照样能进。',
+  resetAsk: '清空全部标定卡与测评成绩，回到出港第一天？'
+};
+
+/* 状态 → 徽章/按钮文案 */
+var STM = {
+  cleared: { b:'已通关', cls:'ok',   btn:'重进',   ghost:false },
+  open:    { b:'当前',   cls:'now',  btn:'进入',   ghost:false },
+  skip:    { b:'已达标', cls:'skip', btn:'进入',   ghost:true  },
+  locked:  { b:'未解锁', cls:'lock', btn:'未解锁', ghost:true, off:true },
+  pending: { b:'建造中', cls:'build',btn:'看预告', ghost:true }
+};
+
+/* ================================================================================
+   【B 区 · 封面】开场文案与开关 —— 改这里不影响舰桥与解锁逻辑
+   --------------------------------------------------------------------------------
+   auto: 'always'    每次打开都先见封面（当前设置：进去就该是开场，不是选关列表）
+         'newcomer'  只有新档自动弹，老档直接进舰桥
+         'never'     永远不自动弹（仍可用 index.html?cover=1 打开）
+   go:   主按钮「修复星海号」去哪儿（默认序章；想直接测评就改 'quiz.html'）
+   有存档时封面会多出一个青色「继续航行 →」直达当前池子，老玩家只多一次点击。
+   注：序章播完回舰桥时会自动带上 ?cover=0，所以不会刚看完序章又被封面拦一次。
+   ================================================================================ */
+var COVER = {
+  auto: 'always',
+  bg: 'assets/img/cover.jpg',   /* 封面底图，留空 '' 就是纯色底 */
+  bgOpacity: 0.46,              /* 底图亮度，0~1 */
+  ship: false,                  /* true = 在底图上再叠一只 SVG 船剪影 */
+  kicker: 'BREAKWAVE LAB · 破浪实验室',
+  title: '星海号',
+  hook: '燃料只剩 <b>47 天</b>。船陷在黏稠的海里，活塞在共振边缘嘶吼 —— 而驾驶台前只剩你一个人。',
+  brief: '六座水池，六道物理关。先摸清你的底子，再决定从哪一池下水。',
+  main: '⚒ 修复星海号',
+  skip: '跳过序章 · 直接登舰',
+  resume: '继续航行',
+  foot: 'v1.0 · 已建成 {BUILT}/{COUNT} 座实验舱 · 存档 {STORE}',
+  go: 'prologue.html'
+};
+
+/* ---- 封面：船的剪影（纯 SVG，改外形只动这里） ---- */
+function shipSVG(){
+  return '' +
+  '<svg class="cv-ship" viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" aria-label="受损的星海号">' +
+    '<defs>' +
+      '<linearGradient id="cvg1" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="#12333f"/><stop offset="1" stop-color="#04141b"/></linearGradient>' +
+      '<linearGradient id="cvg2" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="#0d2c37"/><stop offset="1" stop-color="#061a22"/></linearGradient>' +
+    '</defs>' +
+    '<path class="cv-w2" fill="rgba(79,224,200,.045)" d="M-140 196 C -60 182, 0 210, 80 196 C 160 182, 220 210, 300 196 C 380 182, 440 210, 520 196 C 600 182, 660 210, 760 196 L 760 250 L -140 250 Z"/>' +
+    '<path class="cv-w1" fill="rgba(79,224,200,.095)" d="M-140 208 C -70 194, -10 222, 70 208 C 150 194, 210 222, 290 208 C 370 194, 430 222, 510 208 C 590 194, 650 222, 760 208 L 760 250 L -140 250 Z"/>' +
+    '<g>' +
+      '<path d="M62 112h454l44-28-8 68c-100 24-344 24-446 0Z" fill="url(#cvg1)" stroke="rgba(79,224,200,.50)" stroke-width="2"/>' +
+      '<path d="M62 112h454l44-28" fill="none" stroke="rgba(79,224,200,.72)" stroke-width="2.4"/>' +
+      '<path d="M106 152c102 24 348 24 446 0" fill="none" stroke="rgba(79,224,200,.22)" stroke-width="1.6"/>' +
+      '<path d="M120 90h44v22h-44zM170 94h32v18h-32z" fill="#0b2530" stroke="rgba(79,224,200,.32)" stroke-width="1.4"/>' +
+      '<path d="M210 62h130v50H210z" fill="url(#cvg2)" stroke="rgba(79,224,200,.45)" stroke-width="1.8"/>' +
+      '<g fill="#4fe0c8" opacity=".78"><rect x="220" y="72" width="18" height="10" rx="2"/>' +
+        '<rect x="246" y="72" width="18" height="10" rx="2"/>' +
+        '<rect x="272" y="72" width="18" height="10" rx="2"/>' +
+        '<rect x="298" y="72" width="18" height="10" rx="2"/></g>' +
+      '<path d="M360 58h36l-6 54h-24z" fill="#0b2530" stroke="rgba(79,224,200,.40)" stroke-width="1.6"/>' +
+      '<path d="M275 62V18" stroke="rgba(79,224,200,.55)" stroke-width="2.4"/>' +
+      '<path d="M255 34h40" stroke="rgba(79,224,200,.55)" stroke-width="2.4"/>' +
+      '<circle class="cv-crack" cx="548" cy="96" r="3.4" fill="#ff5f5f"/>' +
+      '<path class="cv-crack" d="M430 116l11 16-10 14 13 14" fill="none" stroke="#ff5f5f" stroke-width="2" stroke-linecap="round"/>' +
+      '<path class="cv-crack" d="M470 118l8 12-8 12" fill="none" stroke="rgba(255,95,95,.7)" stroke-width="1.6" stroke-linecap="round"/>' +
+    '</g>' +
+  '</svg>';
+}
+
+/* ---- 封面：渲染 ---- */
+function renderCover(){
+  var st = F.state, cc = F.clearedCount(), nx = F.nextPlay();
+  var stars = '', i;
+  for(i = 0; i < 46; i++){
+    var sx = (i * 37.7) % 100, sy = (i * i * 5.1) % 74, sd = ((i % 7) * 0.45).toFixed(2);
+    stars += '<i style="left:' + sx.toFixed(1) + '%;top:' + sy.toFixed(1) + '%;animation-delay:' + sd + 's"></i>';
+  }
+  var foot = COVER.foot
+    .replace('{BUILT}', F.BUILT).replace('{COUNT}', F.COUNT).replace('{STORE}', F.storage);
+  var live = (cc > 0 || st.quiz.taken)
+    ? '航行档案已存 · 标定卡 <b>' + cc + '/' + F.COUNT + '</b>' +
+      (nx ? ' · 推荐下一池：第 ' + nx + ' 号池 · ' + F.lab(nx).name : '')
+    : '';
+
+  var bg = COVER.bg
+    ? '<div class="cv-bg" style="background-image:url(\'' + COVER.bg + '\');opacity:' + COVER.bgOpacity + '"></div>' +
+      '<div class="cv-veil"></div>'
+    : '';
+
+  el('cover').innerHTML = bg +
+    '<div class="cv-stars">' + stars + '</div><div class="cv-scan"></div>' +
+    '<div class="cv-in">' +
+      '<div class="cv-copy">' +
+        '<div class="cv-kicker">' + COVER.kicker + '</div>' +
+        '<h1 class="cv-title">' + COVER.title + '</h1>' +
+        '<div class="cv-rule"></div>' +
+        (COVER.ship ? shipSVG() : '') +
+        '<p class="cv-hook">' + COVER.hook + '</p>' +
+        '<div class="cv-brief">' + COVER.brief + '</div>' +
+        '<div class="cv-btns">' +
+          '<button class="cv-btn" id="cvMain" type="button">' + COVER.main + '</button>' +
+          (live ? '<button class="cv-btn alt" id="cvResume" type="button">' + COVER.resume + ' →</button>' : '') +
+          '<button class="cv-ghost" id="cvSkip" type="button">' + COVER.skip + '</button>' +
+        '</div>' +
+        (live ? '<div class="cv-live">' + live + '</div>' : '') +
+        '<div class="cv-foot">' + foot + '</div>' +
+      '</div>' +
+      '<aside class="cv-aside" aria-label="航行任务摘要">' +
+        '<div class="aside-kicker">VESSEL STATUS / 47 DAYS</div>' +
+        '<div class="aside-title">把一艘船，<br>重新交还给海。</div>' +
+        '<div class="aside-rule"></div>' +
+        '<div class="cv-telemetry"><div><b>06</b><span>实验水池</span></div><div><b>02</b><span>已建成</span></div><div><b>01</b><span>当前船员</span></div></div>' +
+        '<div class="aside-note">每解开一座水池，你就拿回一张标定卡。<br>先判断自己的起点，再把航线推向深处。</div>' +
+      '</aside>' +
+    '</div>';
+}
+
+/* ---- 封面：动作 ---- */
+function launch(url){
+  try { F.mark('cover'); } catch(e){}
+  var c = el('cover');
+  c.classList.add('out');
+  setTimeout(function(){ location.href = url; }, 480);
+}
+function closeCover(skipped){
+  try { F.mark('cover'); } catch(e){}
+  if(skipped){ try { F.mark('prologue'); } catch(e){} }
+  var c = el('cover');
+  c.classList.add('out');
+  setTimeout(function(){
+    c.hidden = true; c.classList.remove('out');
+    document.body.style.overflow = '';
+    drawAll();
+  }, 500);
+}
+function bindCover(){
+  var c = el('cover');
+  var bm = c.querySelector('#cvMain'), bs = c.querySelector('#cvSkip'), br = c.querySelector('#cvResume');
+  if(bm) bm.onclick = function(){ launch(COVER.go); };
+  if(bs) bs.onclick = function(){ closeCover(true); };
+  if(br) br.onclick = function(){ var n = F.nextPlay(); launch(n ? F.hrefFor(n) : 'index.html?cover=0'); };
+}
+function initCover(){
+  renderCover(); bindCover();
+  var q = null;
+  try { q = new URLSearchParams(location.search).get('cover'); } catch(e){}
+  var show;
+  if(q === '1') show = true;
+  else if(q === '0') show = false;
+  else if(COVER.auto === 'always') show = true;
+  else if(COVER.auto === 'never') show = false;
+  else show = !F.seen('prologue') && !F.seen('cover') && F.clearedCount() === 0 && !F.state.quiz.taken;
+
+  var c = el('cover');
+  c.hidden = !show;
+  c.classList.remove('out');
+  /* 封面盖住时，舰桥不抢滚动 */
+  document.body.style.overflow = show ? 'hidden' : '';
+  return show;
+}
+
+/* ================================================================================
+   【C 区 · 渲染】
+   ================================================================================ */
+var F = window.Fleet;
+
+function el(id){ return document.getElementById(id); }
+
+function isSkip(n){
+  var st = F.state;
+  return st.quiz.taken && !st.cleared[n-1] && n < st.quiz.start;
+}
+
+/* ---- 航线图 ---- */
+function drawMap(){
+  var svg = el('map');
+  var NS = 'http://www.w3.org/2000/svg';
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+
+  var X = [], i;
+  for(i = 0; i < F.COUNT; i++) X.push(84 + i * 166);
+  var Y = 58;
+
+  function mk(t, a){ var e = document.createElementNS(NS, t); for(var k in a) e.setAttribute(k, a[k]); return e; }
+
+  /* 连线 */
+  for(i = 0; i < F.COUNT - 1; i++){
+    var doneSeg = F.state.cleared[i];
+    svg.appendChild(mk('line', {
+      x1:X[i]+16, y1:Y, x2:X[i+1]-16, y2:Y,
+      stroke: doneSeg ? 'rgba(79,224,200,.72)' : 'rgba(79,224,200,.16)',
+      'stroke-width': doneSeg ? 2.4 : 1.6,
+      'stroke-dasharray': doneSeg ? '' : '5 6'
+    }));
+  }
+
+  /* 节点 */
+  for(i = 0; i < F.COUNT; i++){
+    var n = i + 1, st = F.statusOf(n), skip = isSkip(n);
+    var L = F.lab(n);
+    var col = st === 'cleared' ? '#4fe0c8'
+            : st === 'open'    ? '#ffc857'
+            : st === 'pending' ? '#7a6a3a'
+            : (skip ? '#9fd8e8' : '#31505a');
+    var r = st === 'open' ? 15 : 12;
+
+    if(st === 'open') svg.appendChild(mk('circle',{cx:X[i],cy:Y,r:r+9,fill:'rgba(255,200,87,.16)'}));
+    svg.appendChild(mk('circle',{cx:X[i],cy:Y,r:r,fill:'#07171d',stroke:col,'stroke-width':2.2}));
+    var t = mk('text',{x:X[i],y:Y+4.5,'text-anchor':'middle',class:'nd-t',
+      fill: st==='locked' ? '#4d6b73' : '#dff0f2','font-size':'12','font-weight':'600'});
+    t.textContent = (st === 'cleared') ? '✓' : String(n);
+    svg.appendChild(t);
+
+    var n1 = mk('text',{x:X[i],y:Y+34,'text-anchor':'middle',class:'nd-t'});
+    n1.textContent = L.name; svg.appendChild(n1);
+    var n2 = mk('text',{x:X[i],y:Y+50,'text-anchor':'middle',class:'nd-s'});
+    n2.textContent = L.code + ' · ' + (st === 'pending' ? '建造中' : L.sub);
+    svg.appendChild(n2);
+  }
+}
+
+/* ---- 卡片 ---- */
+function drawCards(){
+  var g = el('grid'); g.innerHTML = '';
+  for(var n = 1; n <= F.COUNT; n++){
+    var L = F.lab(n), st = F.statusOf(n), skip = isSkip(n);
+    var key = (st === 'open' && skip) ? 'skip' : st;
+    var m = STM[key] || STM.locked;
+
+    var c = document.createElement('div');
+    c.className = 'card ' + (st === 'open' && skip ? 'cleared' : st);
+    var img = F.imgFor(n);
+    c.innerHTML =
+      (img ? '<div class="c-img"><img src="' + img + '" alt="" loading="lazy"></div>' : '') +
+      '<div class="c-h"><span class="c-n">' + L.code + '</span>' +
+      '<span class="c-name">' + L.name + '</span></div>' +
+      '<div class="c-sub">' + L.sub + '</div>' +
+      '<div class="c-topic">' + L.topic + '</div>' +
+      '<div class="c-f"><span class="badge ' + m.cls + '">' + m.b + '</span>' +
+      '<span class="c-n">标定卡 ' + (st === 'cleared' ? '已签发' : '未签发') + '</span>' +
+      (m.off ? '<span class="btn off">' + m.btn + '</span>'
+             : '<a class="btn' + (m.ghost ? ' ghost' : '') + '" href="' + F.hrefFor(n) + '">' + m.btn + ' →</a>') +
+      '</div>';
+    g.appendChild(c);
+  }
+}
+
+/* ---- 调度台 / 顶栏 / 动作 ---- */
+function drawConsole(){
+  var st = F.state, box = el('console');
+  var cc = F.clearedCount();
+  var t1, t2, warn = false;
+
+  if(cc >= F.BUILT && cc > 0 && F.nextPlay() === null){
+    t1 = UI.done.t1; t2 = UI.done.t2;
+  } else if(!st.quiz.taken){
+    if(!F.seen('prologue') && cc === 0){ t1 = UI.newcomer.t1; t2 = UI.newcomer.t2; }
+    else { t1 = UI.untested.t1; t2 = UI.untested.t2; }
+    warn = true;
+  } else {
+    var v = F.verdict();
+    var nx = F.nextPlay();
+    t1 = v.title;
+    t2 = '成绩 ' + st.quiz.score + '/' + st.quiz.total + '　' + v.desc +
+      (nx ? '　→ 推荐下一池：第 ' + nx + ' 号池 · ' + F.lab(nx).name : '');
+  }
+  el('csT1').textContent = t1;
+  el('csT2').textContent = t2;
+  box.className = 'console' + (warn ? ' warn' : '');
+
+  var nx2 = F.nextPlay();
+  var bn = el('btnNext');
+  if(nx2){ bn.textContent = '进入 · 第 ' + nx2 + ' 号池 · ' + F.lab(nx2).name + ' →'; bn.href = F.hrefFor(nx2); bn.style.display=''; }
+  else { bn.style.display='none'; }
+
+  el('btnQuiz').textContent = st.quiz.taken ? '重新摸底测评' : '参加摸底测评';
+  el('cCleared').textContent = cc;
+  el('cTotal').textContent = F.COUNT;
+  el('cStore').textContent = F.storage;
+
+  /* 日志 */
+  var lg = el('log');
+  if(st.log && st.log.length){
+    lg.innerHTML = st.log.slice(0, 6).map(function(x){
+      var d = new Date(x.at);
+      var hh = ('0' + d.getHours()).slice(-2), mm = ('0' + d.getMinutes()).slice(-2);
+      return '· ' + hh + ':' + mm + '　' + x.t;
+    }).join('<br>');
+  } else lg.innerHTML = '';
+}
+
+/* ---- 头图 ---- */
+function drawHero(){
+  var H = UI.hero || {}, box = el('hero');
+  if(!H.img){ box.style.display = 'none'; return; }
+  box.style.display = '';
+  el('heroImg').src = H.img;
+  el('heroBadge').textContent = H.badge || '';
+  el('heroT1').textContent = H.t1 || '';
+  el('heroT2').textContent = H.t2 || '';
+}
+
+function drawAll(){ drawHero(); drawMap(); drawCards(); drawConsole(); }
+
+el('note').innerHTML = UI.note;
+el('btnReset').onclick = function(){
+  if(!confirm(UI.resetAsk)) return;
+  F.reset(); drawAll();
+};
+
+F.on(drawAll);
+drawAll();
+initCover();
+
+/* 测试钩子：离线自检与状态注入 */
+window.__bridge = {
+  get state(){ return F.state; },
+  status: function(n){ return F.statusOf(n); },
+  next: function(){ return F.nextPlay(); },
+  setQuiz: function(g){ return F.setQuiz({ score:0, total:12, groups:g }); },
+  clear: function(n){ return F.clear(n); },
+  reset: function(){ F.reset(); drawAll(); },
+  draw: drawAll,
+  cover: function(){ var s = initCover(); return { show:s, main:!!document.getElementById('cvMain'),
+    title:(document.querySelector('.cv-title')||{}).textContent }; },
+  closeCover: closeCover
+};
+</script>
+</body>
+</html>

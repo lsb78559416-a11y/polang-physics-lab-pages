@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第五关：终极抵消 —— 打造球鼻艏 ｜ 破浪实验室</title>
+<style>
+  :root{
+    --paper:#0c1724; --paper2:#132236; --paper3:#1d3350;
+    --ink:#e9eff6; --ink2:#b9c9db; --ink3:#8299b2;
+    --navy:#6fc5ea; --rope:#3f5a75; --brass:#e6b95c;
+    --red:#ff7a5c; --sea:#3aa0c8; --ok:#57c06b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    font-family:"Segoe UI","Microsoft YaHei",system-ui,Georgia,serif;
+    color:var(--ink); padding:14px;
+    background:
+      radial-gradient(rgba(140,180,220,.05) 1px,transparent 1px),
+      radial-gradient(1000px 620px at 12% -10%,rgba(40,70,110,.55),transparent 62%),
+      radial-gradient(900px 520px at 92% 110%,rgba(20,60,90,.5),transparent 55%),
+      var(--paper);
+    background-size:3px 3px,100% 100%,100% 100%,100% 100%;
+    background-attachment:fixed;
+  }
+  .wrap{max-width:1380px;margin:0 auto}
+
+  /* ---------- 顶栏 ---------- */
+  .topbar{
+    display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+    padding:10px 14px;border:2px solid var(--rope);border-radius:14px;
+    background:linear-gradient(180deg,#16283f,#101e30);
+    box-shadow:0 8px 20px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .brand{font-weight:800;font-size:1.06rem;letter-spacing:.5px;white-space:nowrap}
+  .brand small{display:block;font-size:.6rem;font-weight:600;letter-spacing:1.4px;color:var(--ink3)}
+  .spacer{flex:1}
+  .chip{
+    font-size:.74rem;font-weight:700;color:var(--navy);
+    background:rgba(111,197,234,.12);border:1px solid rgba(111,197,234,.4);
+    border-radius:20px;padding:5px 11px;white-space:nowrap;
+  }
+  .btn{
+    font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer;
+    padding:8px 14px;border-radius:9px;white-space:nowrap;
+    border:2px solid var(--rope);background:linear-gradient(180deg,#1c3049,#15263c);
+    color:var(--ink);box-shadow:0 2px 0 rgba(0,0,0,.4);
+    transition:transform .08s, box-shadow .08s, background .15s;
+  }
+  .btn:hover{background:linear-gradient(180deg,#223958,#1a2e48)}
+  .btn:active{transform:translateY(2px);box-shadow:none}
+  .btn.bulb{border-color:#8e3623;background:linear-gradient(180deg,#4a201a,#3a1712);color:#ffb8a6}
+  .btn.bulb.on{border-color:#2e7d32;background:linear-gradient(180deg,#173322,#12291c);color:#9fd8a8}
+
+  /* ---------- 布局 ---------- */
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 356px;gap:14px;margin-top:14px;align-items:start}
+  @media (max-width:1080px){ .layout{grid-template-columns:1fr} }
+  .stage,.panel{display:flex;flex-direction:column;gap:14px;min-width:0}
+
+  .card{
+    background:rgba(17,30,47,.96);border:2px solid var(--rope);border-radius:14px;
+    padding:10px 12px 12px;box-shadow:0 10px 22px rgba(0,0,0,.45);
+  }
+  .cap{font-size:.8rem;color:var(--ink2);line-height:1.6;margin-bottom:8px}
+  .cap b{color:var(--ink)}
+  .canvas-box{width:100%;border-radius:10px;overflow:hidden;line-height:0}
+  canvas{display:block;width:100%;cursor:pointer;border-radius:10px;
+         box-shadow:inset 0 0 0 2px rgba(111,197,234,.25)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.76rem;color:var(--ink2);margin-top:8px}
+  .legend i{display:inline-block;width:22px;height:0;border-top:3px solid;vertical-align:middle;margin-right:5px}
+
+  /* ---------- 数据面板 ---------- */
+  .m-row{display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;color:var(--ink2);margin-top:9px}
+  .m-row b{font-size:1rem;color:var(--ink);font-variant-numeric:tabular-nums}
+  .bar{position:relative;height:10px;border-radius:6px;background:rgba(111,197,234,.14);overflow:hidden;margin-top:5px}
+  .bar>i{position:absolute;top:0;bottom:0;left:0;width:0;border-radius:6px;
+         background:linear-gradient(90deg,#e0b45c,#ff7a5c);transition:width .1s linear}
+  .bar.g>i{background:linear-gradient(90deg,#7fd68f,#3aa85a)}
+  .bar>u{position:absolute;top:-2px;bottom:-2px;left:50%;width:2px;background:rgba(233,239,246,.55)}
+  .m-score{margin-top:12px;padding-top:10px;border-top:1px dashed rgba(111,197,234,.3);
+           display:flex;justify-content:space-between;align-items:baseline}
+  .m-score span{font-size:.82rem;color:var(--ink2)}
+  .m-score span small{font-size:.68rem;color:var(--ink3);font-weight:400}
+  .ms-val{display:flex;align-items:baseline;gap:3px}
+  .ms-val b{font-size:1.7rem;color:var(--brass);font-variant-numeric:tabular-nums;line-height:1}
+  .ms-val i{font-style:normal;font-size:.76rem;color:var(--ink3)}
+  .status{margin-top:11px;font-size:.83rem;font-weight:700;line-height:1.5;
+          padding:8px 10px;border-radius:9px;background:rgba(111,197,234,.08);
+          border-left:4px solid var(--navy);color:var(--ink2)}
+  .status.bad{background:rgba(255,122,92,.1);border-left-color:var(--red);color:#ffb0a0}
+  .status.good{background:rgba(87,192,107,.1);border-left-color:var(--ok);color:#9fe0ac}
+
+  /* ---------- 控件 ---------- */
+  .ctl{margin-bottom:13px}
+  .ctl:last-child{margin-bottom:0}
+  .ctl label{display:flex;justify-content:space-between;align-items:baseline;font-size:.83rem;font-weight:700;color:var(--ink2);gap:8px}
+  .ctl label b{color:var(--brass);font-variant-numeric:tabular-nums}
+  .ctl label .fr{font-size:.72rem;color:var(--navy);font-weight:700;white-space:nowrap}
+  .ctl .sub{font-size:.71rem;color:var(--ink3);margin-top:3px;line-height:1.5}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:6px;margin-top:9px;
+    border-radius:4px;background:linear-gradient(90deg,var(--paper3),var(--rope));outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:20px;height:20px;border-radius:50%;cursor:pointer;
+    background:radial-gradient(circle at 35% 30%,#fff6e0,#b8892e);
+    border:2px solid #6d4a1c;box-shadow:0 2px 5px rgba(58,44,27,.45);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:18px;height:18px;border-radius:50%;cursor:pointer;
+    background:radial-gradient(circle at 35% 30%,#fff6e0,#b8892e);border:2px solid #6d4a1c;
+  }
+  /* 航速滑块：5 个航速档分区，一眼看出"换档"在哪里 */
+  #sV{
+    background:linear-gradient(90deg,
+      #24384f 0 13.3%,   #ff7a5c 13.3% 13.9%,
+      #2b4258 13.9% 37.8%, #ff7a5c 37.8% 38.4%,
+      #24384f 38.4% 62.2%, #ff7a5c 62.2% 62.8%,
+      #2b4258 62.8% 85.6%, #ff7a5c 85.6% 86.2%,
+      #24384f 86.2% 100%);
+  }
+  .bin-hint{display:flex;justify-content:space-between;font-size:.62rem;color:var(--ink3);margin-top:4px}
+  .bin-hint b{color:var(--brass);font-weight:700}
+
+  /* ---------- 任务卡 ---------- */
+  .goal .g-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .g-title{font-weight:800;font-size:.9rem}
+  .g-stars{font-size:.92rem;letter-spacing:1px;color:var(--brass)}
+  .g-stars .off{opacity:.25}
+  .g-line{font-size:.78rem;color:var(--ink2);margin-top:6px;line-height:1.6}
+  .hold{margin-top:8px;display:flex;align-items:center;gap:9px}
+  .hold .bar{flex:1;margin-top:0}
+  .hold .bar.done>i{background:linear-gradient(90deg,#d8b45c,#b8892e)}
+  .hold span{font-size:.72rem;color:var(--ink3);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .g-foot{margin-top:7px;font-size:.71rem;color:var(--ink3)}
+
+  /* ---------- 提示卡 ---------- */
+  .hint{display:none}
+  .hint.show{display:block}
+  .hint ul{margin:8px 0 0 16px}
+  .hint li{font-size:.8rem;color:var(--ink2);line-height:1.75;margin-bottom:5px}
+  .hint li b{color:var(--navy)}
+  .btn.demo{width:100%;margin-top:11px;border-color:var(--navy);
+            background:linear-gradient(180deg,#173048,#122840);color:#a8d8f0}
+
+  /* ---------- AI 助教（智能体接入区，已预留） ---------- */
+  .ai-chip{font-size:.68rem;font-weight:700;color:var(--ink3);border:1px solid rgba(111,197,234,.4);
+           border-radius:20px;padding:2px 9px;margin-left:7px;vertical-align:2px}
+  .ai-chip.on{color:#9fd8a8;border-color:#3aa85a;background:rgba(87,192,107,.15)}
+  .ai-slot{margin-top:8px;border:2px dashed rgba(111,197,234,.35);border-radius:10px;
+           padding:9px 10px;background:rgba(111,197,234,.05)}
+  .ai-slot-ph{font-size:.71rem;color:var(--ink3);line-height:1.7;text-align:center}
+  .ai-slot-ph code,.ai-log code{font-size:.69rem;color:var(--navy);word-break:break-all}
+  .ai-log{margin-top:9px;max-height:168px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+  .ai-msg{font-size:.76rem;line-height:1.65;padding:6px 9px;border-radius:9px}
+  .ai-msg.sys{background:rgba(111,197,234,.08);color:var(--ink3)}
+  .ai-msg.user{background:rgba(111,197,234,.12);color:#cfe9f8;align-self:flex-end;max-width:94%}
+  .ai-msg.ai{background:rgba(230,185,92,.12);color:#ecd9a8;border-left:3px solid var(--brass)}
+  .ai-input{display:flex;gap:7px;margin-top:9px}
+  .ai-input input{flex:1;min-width:0;font-family:inherit;font-size:.78rem;padding:8px 10px;
+                  border:2px solid rgba(111,197,234,.4);border-radius:9px;background:#0f1d2e;color:var(--ink)}
+  .ai-input input:focus{outline:none;border-color:var(--navy)}
+  .ai-input .btn{padding:8px 12px;font-size:.78rem}
+  .ai details{margin-top:9px;font-size:.72rem;color:var(--ink3)}
+  .ai details summary{cursor:pointer;font-weight:700;color:var(--navy)}
+  .ai details pre{margin-top:6px;padding:8px;border-radius:8px;background:rgba(111,197,234,.06);
+                  font-size:.68rem;line-height:1.65;white-space:pre-wrap;word-break:break-all;color:var(--ink2)}
+
+  /* ---------- 浮层 ---------- */
+  #toast{
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);
+    background:rgba(46,32,16,.94);color:#fdf3dc;font-size:.88rem;font-weight:700;
+    padding:11px 20px;border-radius:11px;border:2px solid var(--brass);
+    opacity:0;pointer-events:none;transition:.22s;z-index:50;max-width:88vw;text-align:center;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  #flash{
+    position:fixed;inset:0;pointer-events:none;z-index:40;opacity:0;
+    background:radial-gradient(circle at 50% 50%,rgba(181,70,46,0),rgba(181,70,46,.55) 130%);
+    transition:opacity .12s linear;
+  }
+  .foot{margin:14px 0 6px;font-size:.74rem;color:var(--ink3);line-height:1.8;text-align:center}
+
+  /* ---------- ① 波的公式卡 ---------- */
+  .fml{display:flex;flex-direction:column;gap:7px}
+  .f-row{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);
+         gap:3px 14px;align-items:center;padding:9px 13px;border-radius:10px;
+         background:rgba(111,197,234,.06);border:1.5px solid rgba(111,197,234,.28);
+         transition:background .25s,border-color .25s,box-shadow .25s}
+  .f-row .f-note{grid-column:1/-1;font-size:.71rem;color:var(--ink3);line-height:1.6}
+  .f-eq{font-family:Georgia,"Times New Roman",serif;font-style:italic;font-weight:700;
+        font-size:1.04rem;color:var(--ink);letter-spacing:.4px}
+  .f-eq sup,.f-eq sub{font-size:.6em}
+  .f-val{font-size:.8rem;color:var(--ink2);text-align:right;font-variant-numeric:tabular-nums;line-height:1.5}
+  .f-val b{color:var(--navy);font-size:.98rem;font-variant-numeric:tabular-nums}
+  .f-row.res{background:rgba(230,185,92,.08);border-color:var(--brass)}
+  .f-row.res .f-val b{font-size:1.34rem;color:var(--brass)}
+  .f-arrow{font-size:.66rem;color:var(--ink3);text-align:center;letter-spacing:1.5px}
+  .fs{font-style:italic;color:#8fd0f0;padding:0 4px;border-radius:5px;transition:background .2s,color .2s}
+  .f-row.hot{background:rgba(255,122,92,.1);border-color:var(--red);box-shadow:0 0 0 3px rgba(255,122,92,.12)}
+  .fs.hot{background:var(--red);color:#1a0f0c;animation:fPulse .9s ease-in-out infinite}
+  @keyframes fPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,122,92,.45)}50%{box-shadow:0 0 0 6px rgba(255,122,92,0)}}
+  /* 方向指示：▲=变多（绿） ▼=变少（红） ＝=没变——数值本身也按方向变色 */
+  .dir{font-size:.88em;font-weight:900;margin-left:5px;display:inline-block;min-width:1.1em}
+  .dir.up{color:#57e389}
+  .dir.dn{color:#ff7a5c}
+  .dir.eq{color:var(--ink3)}
+  .fml .f-val b.v-up{color:#57e389}
+  .fml .f-val b.v-dn{color:#ff7a5c}
+  .fml .f-val b.v-up,.fml .f-val b.v-dn{display:inline-block;animation:vPop .32s ease}
+  @keyframes vPop{0%{transform:scale(1.45)}100%{transform:scale(1)}}
+
+  /* ---------- 剧情卡（第五关） ---------- */
+  .st-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .st-tag{font-size:.66rem;font-weight:800;letter-spacing:1.5px;color:#fff8e6;
+          background:linear-gradient(180deg,#c1503a,#8e3623);border-radius:6px;padding:3px 9px}
+  .st-title{font-weight:800;font-size:.94rem}
+  .st-toggle{margin-left:auto;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;
+             color:var(--navy);background:rgba(111,197,234,.08);border:1px solid rgba(111,197,234,.4);
+             border-radius:7px;padding:3px 10px}
+  .st-toggle:hover{background:rgba(111,197,234,.18)}
+  .st-body{margin-top:9px}
+  .st-body p{font-size:.8rem;color:var(--ink2);line-height:1.9}
+  .st-body p b{color:#ff9b85}
+  .st-know{margin-top:9px;padding-top:8px;font-size:.72rem;color:var(--ink3);
+           border-top:1px dashed rgba(111,197,234,.25);line-height:1.7}
+  .story.folded .st-body{display:none}
+  .story .st-chip{font-size:.68rem;color:var(--navy);background:rgba(111,197,234,.1);
+                  border:1px solid rgba(111,197,234,.3);border-radius:20px;padding:2px 9px;font-weight:700}
+
+  /* ---------- ★ 探路实验模式（?only=vol / ?only=len） ---------- */
+  .chip.probe{color:#ffd479;background:rgba(230,185,92,.14);border-color:rgba(230,185,92,.5)}
+  .lock-tag{font-size:.64rem;font-weight:800;color:#ffd479;background:rgba(230,185,92,.13);
+            border:1px solid rgba(230,185,92,.45);border-radius:20px;padding:1px 8px;
+            margin-left:7px;white-space:nowrap}
+  .probe-badge{font-size:.64rem;font-weight:800;color:#ffd479;background:rgba(230,185,92,.13);
+               border:1px solid rgba(230,185,92,.45);border-radius:20px;padding:2px 9px;white-space:nowrap}
+  .ctl.locked label{color:var(--ink3)}
+  .ctl.locked label b{color:var(--ink3)}
+  .ctl.locked .sub{opacity:.65}
+  input[type=range]:disabled{cursor:not-allowed}
+  input[type=range]:disabled::-webkit-slider-thumb{
+    background:radial-gradient(circle at 35% 30%,#8d97a4,#4a5563);
+    border-color:#2b3644;box-shadow:none;cursor:not-allowed}
+  input[type=range]:disabled::-moz-range-thumb{
+    background:radial-gradient(circle at 35% 30%,#8d97a4,#4a5563);
+    border-color:#2b3644;cursor:not-allowed}
+  .probe-note{margin-bottom:9px;padding:8px 11px;border-radius:9px;font-size:.76rem;line-height:1.7;
+              color:#e7d6a8;background:rgba(230,185,92,.09);border-left:4px solid var(--brass)}
+  .probe-note b{color:#ffd479}
+  .probe-meter{margin-top:9px;font-size:.76rem;color:var(--ink3)}
+  .probe-meter b{color:var(--brass);font-variant-numeric:tabular-nums}
+
+  /* ---------- 探路结论卡 ---------- */
+  .conc{opacity:0;transform:translateY(16px);
+        transition:opacity .5s ease,transform .5s cubic-bezier(.2,.8,.3,1);
+        border-color:var(--brass);
+        background:linear-gradient(180deg,rgba(43,36,20,.97),rgba(17,30,47,.97))}
+  .conc.show{opacity:1;transform:none}
+  .cc-head{display:flex;align-items:center;gap:9px}
+  .cc-ico{font-size:1.15rem}
+  .cc-title{font-weight:800;font-size:1rem;color:#ffd479}
+  .cc-lead{margin-top:10px;font-size:.95rem;font-weight:800;line-height:1.75;color:#ffb98a}
+  .cc-body{margin-top:10px;font-size:.83rem;line-height:1.95;color:var(--ink2)}
+  .cc-body b{color:var(--ink)}
+  .cc-body .ok{color:#57e389;font-weight:800}
+  .cc-body .bad{color:#ff7a5c;font-weight:800}
+  .cc-list{margin:8px 0 0 17px}
+  .cc-list li{font-size:.82rem;line-height:1.85;color:var(--ink2);margin-bottom:4px}
+  .cc-kv{margin-top:11px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 12px;
+         font-size:.81rem;padding:10px 12px;border-radius:9px;
+         background:rgba(111,197,234,.07);border:1px solid rgba(111,197,234,.25)}
+  .cc-kv i{font-style:normal;color:var(--ink3);white-space:nowrap}
+  .cc-kv b{color:var(--brass);font-variant-numeric:tabular-nums}
+  .cc-verdict{margin-top:11px;padding:10px 12px;border-radius:9px;font-size:.85rem;font-weight:700;
+              line-height:1.8;color:#9fd8a8;background:rgba(87,192,107,.11);
+              border-left:4px solid var(--ok)}
+  .cc-verdict b{color:#c8f0d2}
+  .cc-act{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .cc-act .btn{text-decoration:none;display:inline-flex;align-items:center;gap:7px}
+  .cc-act .btn.main{border-color:#2e7d32;background:linear-gradient(180deg,#173322,#12291c);color:#9fd8a8}
+
+  /* ============================================================
+     V2 视觉精修层（D2）
+     —— 只做质感与层次：玻璃面板 / 蓝图角标 / 仪表化读数
+     ============================================================ */
+  :root{
+    --line:rgba(140,190,230,.14); --line2:rgba(140,190,230,.26);
+    --ease:cubic-bezier(.2,.8,.3,1);
+    --lift:0 16px 38px rgba(0,0,0,.45);
+  }
+  html{ -webkit-text-size-adjust:100% }
+  body{
+    text-rendering:optimizeLegibility; font-feature-settings:"tnum" 1,"kern" 1;
+    padding:16px;
+  }
+  .wrap{max-width:1400px}
+
+  /* —— 顶栏：悬浮玻璃条 —— */
+  .topbar{
+    position:sticky;top:0;z-index:20;border-width:1px;border-color:var(--line2);border-radius:16px;
+    background:linear-gradient(180deg,rgba(24,43,68,.88),rgba(13,24,38,.8));
+    backdrop-filter:blur(14px) saturate(1.25);-webkit-backdrop-filter:blur(14px) saturate(1.25);
+    box-shadow:0 14px 36px rgba(0,0,0,.52), inset 0 1px 0 rgba(255,255,255,.09);
+    padding:11px 15px;
+  }
+  .brand{letter-spacing:.06em}
+  .brand small{letter-spacing:.16em;font-weight:700}
+
+  /* —— 卡片：玻璃面板 —— */
+  .card:not(.conc){
+    border-width:1px;border-color:var(--line2);border-radius:16px;
+    background:linear-gradient(180deg,rgba(20,36,56,.86),rgba(12,23,37,.86));
+    backdrop-filter:blur(10px) saturate(1.15);-webkit-backdrop-filter:blur(10px) saturate(1.15);
+    box-shadow:var(--lift), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .cap{font-size:.79rem;line-height:1.72;color:var(--ink2)}
+  .cap b{color:var(--ink);letter-spacing:.01em}
+
+  /* —— 画布：蓝图角标 —— */
+  .canvas-box{
+    position:relative;border-radius:12px;
+    box-shadow:0 0 0 1px var(--line2), 0 18px 40px rgba(0,0,0,.45);
+  }
+  .canvas-box::before,.canvas-box::after{
+    content:"";position:absolute;width:18px;height:18px;z-index:2;pointer-events:none;
+    border:1px solid rgba(111,197,234,.62);
+  }
+  .canvas-box::before{left:8px;top:8px;border-right:0;border-bottom:0;border-radius:3px 0 0 0}
+  .canvas-box::after{right:8px;bottom:8px;border-left:0;border-top:0;border-radius:0 0 3px 0}
+  canvas{box-shadow:none;border-radius:12px}
+  /* 图例：芯片化 */
+  .legend{gap:9px;margin-top:10px}
+  .legend span{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:.73rem;color:var(--ink2);letter-spacing:.02em;
+    padding:4px 11px 4px 9px;border-radius:999px;
+    background:rgba(140,190,230,.07);border:1px solid var(--line);
+  }
+  .legend i{width:18px;margin-right:0;border-top-width:2.5px;border-radius:2px}
+
+  /* —— 读数区：仪表化 —— */
+  .m-row{font-size:.79rem;letter-spacing:.02em;color:var(--ink3)}
+  .m-row b{font-size:1.04rem;letter-spacing:0;color:var(--ink)}
+  .bar{height:8px;border-radius:999px;background:rgba(140,190,230,.12);
+       box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
+  .bar>i{border-radius:999px;box-shadow:0 0 12px rgba(255,122,92,.32)}
+  .bar.g>i{box-shadow:0 0 12px rgba(87,192,107,.32)}
+  .m-score{border-top-style:solid;border-top-color:var(--line)}
+  .ms-val b{font-size:1.9rem;text-shadow:0 0 24px rgba(230,185,92,.35)}
+  .status{border-radius:10px;border-left-width:3px}
+
+  /* —— 滑块：填充式轨道 + 铜质旋钮 —— */
+  input[type=range]{
+    height:8px;border-radius:999px;
+    background:linear-gradient(90deg,
+      rgba(111,197,234,.85) 0 var(--fill,0%),
+      rgba(140,190,230,.14) var(--fill,0%) 100%);
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.5);
+    transition:box-shadow .2s;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    width:18px;height:18px;border:1px solid rgba(255,240,200,.85);
+    background:radial-gradient(circle at 34% 30%,#fff4da,#c9962f 62%,#7a5613);
+    box-shadow:0 0 0 3px rgba(230,185,92,.16), 0 3px 9px rgba(0,0,0,.55);
+    transition:box-shadow .16s var(--ease), transform .12s var(--ease);
+  }
+  input[type=range]:hover::-webkit-slider-thumb{box-shadow:0 0 0 6px rgba(230,185,92,.2), 0 3px 11px rgba(0,0,0,.6)}
+  input[type=range]:active::-webkit-slider-thumb{transform:scale(1.1)}
+  input[type=range]::-moz-range-thumb{
+    width:17px;height:17px;border:1px solid rgba(255,240,200,.85);
+    background:radial-gradient(circle at 34% 30%,#fff4da,#c9962f 62%,#7a5613);
+  }
+  input[type=range]:focus-visible,.btn:focus-visible,input:focus-visible{
+    outline:2px solid var(--navy);outline-offset:6px;
+  }
+  input[type=range]:disabled{
+    background:linear-gradient(90deg,
+      rgba(130,153,178,.34) 0 var(--fill,0%),
+      rgba(130,153,178,.1) var(--fill,0%) 100%);
+  }
+  .ctl{padding:2px 0 1px}
+  .ctl label{letter-spacing:.02em}
+  .ctl .sub{line-height:1.62}
+
+  /* —— 公式卡：左侧驱动色条 —— */
+  .f-row{
+    position:relative;padding:10px 14px 10px 19px;border-radius:11px;
+    border-width:1px;border-color:var(--line2);
+    background:linear-gradient(180deg,rgba(140,190,230,.07),rgba(140,190,230,.04));
+  }
+  .f-row::before{
+    content:"";position:absolute;left:8px;top:10px;bottom:10px;width:2px;border-radius:2px;
+    background:var(--line2);transition:background .25s;
+  }
+  .f-row[data-sym="lam"]::before{background:linear-gradient(180deg,#6fc5ea,#3aa0c8)}
+  .f-row[data-sym="phi"]::before{background:linear-gradient(180deg,#e6b95c,#b8892e)}
+  .f-row[data-sym="amp"]::before{background:linear-gradient(180deg,#8fd0f0,#46a5d8)}
+  .f-row.res::before{background:linear-gradient(180deg,#e0b45c,#ff7a5c)}
+  .f-eq{font-size:1.06rem;letter-spacing:.02em}
+  .f-val{line-height:1.62}
+  .f-row.res{background:linear-gradient(180deg,rgba(230,185,92,.1),rgba(230,185,92,.05));
+             border-color:rgba(230,185,92,.6)}
+  .fs{background:rgba(111,197,234,.1);border:1px solid transparent}
+  .fs:hover{border-color:rgba(111,197,234,.35)}
+  .f-row:hover{border-color:rgba(140,190,230,.4);
+    background:linear-gradient(180deg,rgba(140,190,230,.1),rgba(140,190,230,.05))}
+  .f-arrow{letter-spacing:.22em;opacity:.85}
+
+  /* —— 按钮：统一铜/钢质感 —— */
+  .btn{
+    border-width:1px;border-color:var(--line2);border-radius:11px;letter-spacing:.02em;
+    background:linear-gradient(180deg,rgba(34,56,84,.92),rgba(17,30,48,.94));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 6px 16px rgba(0,0,0,.35);
+    transition:transform .12s var(--ease), box-shadow .18s, background .18s, border-color .18s;
+  }
+  .btn:hover{transform:translateY(-1px);border-color:rgba(140,190,230,.42);
+             box-shadow:inset 0 1px 0 rgba(255,255,255,.1), 0 10px 22px rgba(0,0,0,.42)}
+  .btn:active{transform:translateY(1px)}
+  .btn.bulb{border-color:rgba(178,74,48,.75)}
+  .btn.bulb.on{border-color:rgba(70,168,90,.75)}
+
+  /* —— 任务卡 / 星章 —— */
+  .g-stars{letter-spacing:.16em}
+  .g-stars span{text-shadow:0 0 12px rgba(230,185,92,.5)}
+  .goal{position:relative;overflow:hidden}
+  .goal::after{
+    content:"";position:absolute;left:0;right:0;top:0;height:2px;
+    background:linear-gradient(90deg,transparent,rgba(230,185,92,.55),transparent);
+  }
+
+  /* —— 结论卡 / 探路元素 —— */
+  .conc{border-radius:16px;box-shadow:0 20px 48px rgba(0,0,0,.5)}
+  .cc-kv{border-radius:11px}
+  .probe-note,.probe-badge,.lock-tag{border-radius:10px}
+
+  /* —— 入场层叠 —— */
+  .vv{opacity:0;transform:translateY(14px)}
+  .vv.vin{opacity:1;transform:none;
+    transition:opacity .6s ease, transform .6s var(--ease)}
+
+  /* —— 滚动条 —— */
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:rgba(255,255,255,.03)}
+  ::-webkit-scrollbar-thumb{background:rgba(140,190,230,.22);border-radius:10px}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(140,190,230,.36)}
+
+  /* —— 无障碍：减少动态效果 —— */
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
+                         animation-delay:0ms!important;transition-duration:.001ms!important;
+                         transition-delay:0ms!important}
+    .vv{opacity:1;transform:none}
+    .grain{animation:none}
+  }
+
+  /* ============================================================
+     D3 交互升级层（追加式，不改动上方既有规则）
+     双向悬停联动 · 90% 目标线 · 状态反馈动效 · 进度条阻尼
+     ============================================================ */
+
+  /* —— 公式行 ↔ 滑块 双向悬停联动 —— */
+  .f-row{cursor:default}
+  .f-row.hov{                       /* 悬停滑块时：被驱动的公式行亮起（蓝，区别于拖动的红闪 .hot） */
+    border-color:rgba(111,197,234,.75);
+    background:linear-gradient(180deg,rgba(111,197,234,.14),rgba(111,197,234,.07));
+    box-shadow:0 0 0 3px rgba(111,197,234,.1);
+  }
+  .f-row.hov-self{                  /* 悬停公式行自身：轻微浮起 */
+    transform:translateY(-1px);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);
+  }
+  .f-row{transition:background .25s,border-color .25s,box-shadow .25s,transform .18s}
+  .ctl.glow label{color:var(--navy)}
+  .ctl.glow label b{text-shadow:0 0 10px rgba(230,185,92,.5)}
+  .ctl.glow input[type=range]::-webkit-slider-thumb{
+    box-shadow:0 0 0 5px rgba(111,197,234,.28), 0 0 16px rgba(111,197,234,.8);
+  }
+  .ctl.hov-src label{color:var(--navy)}
+
+  /* —— 消波率 90% 目标线 —— */
+  .bar>em.tgt{
+    position:absolute;top:-1px;bottom:-1px;left:95%;width:0;
+    border-left:2px dashed rgba(230,185,92,.95);
+    filter:drop-shadow(0 0 3px rgba(230,185,92,.7));
+  }
+
+  /* —— 状态行 / 结论行 变化时的翻转反馈 —— */
+  .status.flip,.f-note.flip{animation:statusFlip .38s ease}
+  @keyframes statusFlip{0%{transform:translateY(6px);opacity:.2}100%{transform:none;opacity:1}}
+
+  /* —— 进度条阻尼：每帧刷新也有平滑跟随感 —— */
+  .bar>i{transition:width .14s ease-out,left .14s ease-out,background .25s}
+
+  /* ============================================================
+     追加：根号排版 —— 给被开方内容补上横线（vinculum）
+     原写法 "√( … )" 只有根号字符、没有横线，视觉上像被截断，
+     且括号内是加法项时容易被误读成 √(A₀²) + …
+     ============================================================ */
+  /* 参数由无头浏览器实测收敛：横向 -1.8px（横线左端压进 √ 墨迹右缘）、
+     纵向 0px（横线与 √ 尖端等高），故接合处无缝。
+     √ 用 top 定位而非 bottom：窄屏折行时 √ 仍贴第一行。 */
+  .f-eq .rad{position:relative;display:inline-block;padding-left:.90em;vertical-align:-.15em}
+  .f-eq .rad-s{position:absolute;left:0;top:-.35em;font-style:normal;
+               font-size:1.3em;line-height:1}
+  /* .rad-b 用 inline（不设 display:block）：万一窄屏折行，inline 的 border-top 会在
+     每个折行片段上方各画一条，正好表示"每一行都在根号内"——用 block 只会画一条，
+     会把第二行起读成根号外，数学上是错的。
+     white-space 沿用默认（可折行），否则会撑破网格列与右侧数值重叠。 */
+  .f-eq .rad-b{border-top:2px solid currentColor;padding:.28em .30em 0 .12em;
+               border-top-right-radius:1.5px}
+  /* 窄屏：这一行公式最长，微缩字号避免过度挤压（两列网格下仍可能折行，
+     折行时由上面的 inline border-top 保证每一行都在根号内） */
+  @media (max-width:620px){
+    .f-row[data-sym="amp"] .f-eq{font-size:.9rem}
+  }
+</style>
+</head>
+<body>
+<div id="flash"></div>
+<div id="toast"></div>
+
+<div class="wrap">
+  <header class="topbar">
+    <div class="brand">⚓ 破浪实验室<small id="brandSub">第五关 · 终极抵消 —— 打造球鼻艏</small></div>
+    <div class="spacer"></div>
+    <span class="chip probe" id="probeChip" style="display:none"></span>
+    <a class="btn" id="btnOtherProbe" href="lab5.html" style="display:none;text-decoration:none"></a>
+    <a class="btn" href="lab5-story.html" title="回看第五关关卡前剧情：风暴海峡的密令" style="text-decoration:none">🎬 关卡剧情</a>
+    <span class="chip" id="binChip">巡航档</span>
+    <button class="btn bulb" id="btnBulb">球鼻艏：未安装</button>
+    <button class="btn" id="btnHint">📜 老所长的图纸</button>
+    <button class="btn" id="btnReset" title="重置参数（Shift+点击：清空全部进度）">↺ 重置</button>
+  </header>
+
+  <div class="layout">
+    <!-- ================= 画面 ================= -->
+    <div class="stage">
+
+      <!-- 第五关剧情 -->
+      <div class="card story" id="storyCard">
+        <div class="st-head">
+          <span class="st-tag">第五关</span>
+          <span class="st-title">终极抵消 —— 打造球鼻艏</span>
+          <span class="st-chip">风暴海峡 · 设计巡航速度</span>
+          <button class="st-toggle" id="btnStory">收起</button>
+        </div>
+        <div class="st-body" id="storyBody">
+          <p>穿出峡湾后，传统船艏的减阻极限已无法应对<b>风暴海峡</b>。老所长发来<b>绝密图纸</b>，
+             引导实施「<b>球鼻艏计划</b>」：在船艏加装球状突起，用特定的<b>设计巡航速度</b>制造
+             <b>空间波程差</b>，使球鼻艏兴波与船体艏波发生<b>相消干涉</b>，大幅削弱激波振幅，实现破浪提速。</p>
+          <div class="st-know">核心知识点：波的叠加原理 · 相位与相位差 · 相消干涉条件（相干条件、空间波程差）</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cap">
+          <b>① 波的公式 · 谁在跟着变？</b>　拖动右侧滑块调节球鼻艏：被你改动的量会<span style="color:var(--red);font-weight:800">高亮跳动</span>，并沿公式链一路点亮到结果，看清每个量的因果。
+          <span style="color:#57e389;font-weight:800">▲ 变多</span>　<span style="color:#ff7a5c;font-weight:800">▼ 变少</span>　<span style="color:var(--ink3);font-weight:700">＝ 不变</span>（对比上一次取值）
+        </div>
+        <div class="probe-note" id="probeNote" style="display:none"></div>
+        <div class="fml">
+          <div class="f-row" data-sym="lam">
+            <div class="f-eq">λ = 2π<b class="fs" data-k="V">V</b><sup>2</sup> / g</div>
+            <div class="f-val">λ = <b id="fLam">92.0</b> m<span class="dir" id="dLam"></span></div>
+            <div class="f-note">波长由<b>航速</b>决定：V 变 → λ 按平方跟着变（深水重力波）</div>
+          </div>
+          <div class="f-arrow">▼ 波长定了，波程差换算成相位的"比例"就定了</div>
+          <div class="f-row" data-sym="phi">
+            <div class="f-eq">Δφ = 2π · <b class="fs" data-k="Lb">L<sub>b</sub></b> / <b class="fs" data-k="V">λ</b></div>
+            <div class="f-val">Δφ = <b id="fPhi">0°</b>　（L<sub>b</sub> = <b id="fLb">0.0</b> m）<span class="dir" id="dPhi"></span></div>
+            <div class="f-note"><b>空间波程差</b>：L<sub>b</sub> 变 → 相位差 Δφ 跟着变，凑到 180° 两列波正好反相</div>
+          </div>
+          <div class="f-arrow">▼ 相位差与两列波各自的振幅，共同决定合成结果</div>
+          <div class="f-row" data-sym="amp">
+            <div class="f-eq">A<sub>合</sub> = <span class="rad"><span class="rad-s">√</span><span class="rad-b"><b class="fs" data-k="V">A₀</b>² + <b class="fs" data-k="Vb">A<sub>球</sub></b>² + 2A₀A<sub>球</sub>·cos<b class="fs" data-k="Lb">Δφ</b></span></span></div>
+            <div class="f-val">A₀ = <b id="fA0">1.20</b><span class="dir" id="dA0"></span> ｜ A<sub>球</sub> = <b id="fAb">0.90</b><span class="dir" id="dAb"></span> ｜ A<sub>合</sub> = <b id="fAres">1.20</b> m<span class="dir" id="dAres"></span></div>
+            <div class="f-note">A₀ 是艏波振幅（随 V 变）；A<sub>球</sub> 由<b>体积</b>滑块调——与 A₀ 等高才能抵净</div>
+          </div>
+          <div class="f-arrow">▼ 合成振幅与基准波之比，就是最终结果</div>
+          <div class="f-row res" data-sym="res">
+            <div class="f-eq">消波率 = ( 1 − A<sub>合</sub> / A₀ ) × 100%</div>
+            <div class="f-val"><b id="fCan">0%</b><span class="dir" id="dCan"></span></div>
+            <div class="f-note" id="fVerdict">拖动滑块，看这条结果怎么变。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cap">
+          <b>② 船艏纵向剖面 · 波程差与相消干涉</b>　沿船艏测量线切开水面：船体艏波、球鼻艏兴波（虚线），
+          以及叠加后的真实水面（实线）。垂向已放大，便于看清相位关系。
+          <span style="color:var(--red)">点击剖面画面任意处</span>也可装／拆球鼻艏。
+        </div>
+        <div class="canvas-box"><canvas id="cvSide"></canvas></div>
+        <div class="legend">
+          <span><i style="border-color:#ffa636"></i>船体艏波（虚线）</span>
+          <span><i style="border-color:#46cdf5"></i>球鼻艏兴波（虚线）</span>
+          <span><i style="border-color:#f0e6c8"></i>叠加合成波（真实水面）</span>
+        </div>
+      </div>
+
+      <!-- ★ 探路实验结论卡（仅 ?only=vol / ?only=len 时显示） -->
+      <div class="card conc" id="concCard" style="display:none"></div>
+    </div>
+
+    <!-- ================= 控制面板 ================= -->
+    <aside class="panel">
+
+      <div class="card">
+        <div class="m-row"><span>合成激波振幅 A<sub>合</sub></span><b id="mRes">1.20 m</b></div>
+        <div class="bar"><i id="barRes"></i><u></u></div>
+        <div class="m-row"><span>艏波削弱率（消波率）</span><b id="mCancel">0%</b></div>
+        <div class="bar g"><i id="barCancel"></i><u></u><em class="tgt" title="通关目标：消波率 ≥ 90%"></em></div>
+        <div class="m-row"><span>兴波阻力 R</span><b id="mR">100% R₀</b></div>
+        <div class="bar"><i id="barR"></i></div>
+        <div class="m-row"><span>相位差 Δφ（波程差 Lb 决定）</span><b id="mPhi">0° · 0 m</b></div>
+        <div class="m-row"><span>波长 λ（2πV²/g）</span><b id="mLam">92 m</b></div>
+        <div class="m-score">
+          <span>总得分 <small>满分 100</small></span>
+          <div class="ms-val"><b id="mScore">0</b><i>/ 100</i></div>
+        </div>
+        <div class="status" id="mStatus">调节滑块，让球鼻艏兴波与船体艏波相消干涉。</div>
+      </div>
+
+      <div class="card">
+        <div class="ctl">
+          <label><span>① 球鼻艏伸出长度 <span style="color:var(--ink3);font-weight:400">Lb</span></span><b id="vLb">0 m</b></label>
+          <input type="range" id="sLb" min="0" max="110" step="0.5" value="0">
+          <div class="sub">制造<b>空间波程差</b>——两列波前后错开多少距离，决定相位差能不能凑到 180°。</div>
+        </div>
+        <div class="ctl">
+          <label><span>② 球鼻艏体积</span><b id="vVb">60%</b></label>
+          <input type="range" id="sVb" min="0" max="100" step="1" value="60">
+          <div class="sub">改变球鼻艏兴波的<b>振幅</b>——要与船体艏波等高，相消才是彻底的。</div>
+        </div>
+        <div class="ctl">
+          <label><span>③ 设计航速 V</span><b id="vV">12.0 m/s</b></label>
+          <input type="range" id="sV" min="8" max="17" step="0.1" value="12">
+          <div class="bin-hint"><span>低速</span><span>中低速</span><span>巡航</span><span>高速</span><span>冲刺</span></div>
+          <div class="sub">航速决定波长 λ：<b>设计巡航速度只有一个，换个档位最优球鼻艏就变</b>。</div>
+        </div>
+      </div>
+
+      <div class="card" id="miniCard" style="display:none"></div>
+
+      <div class="card goal" id="goalCard">
+        <div class="g-top">
+          <span class="g-title">🎯 本次任务</span>
+          <span class="g-stars" id="stars"></span>
+        </div>
+        <div class="g-line" id="gLine">消波率 ≥ 90% 并保持 5 秒 → 攻克当前航速档</div>
+        <div class="hold">
+          <div class="bar g"><i id="holdBar"></i></div>
+          <span id="holdTxt">0.0 / 5 s</span>
+        </div>
+        <div class="g-foot" id="gFoot"></div>
+      </div>
+
+      <div class="card hint" id="hintCard">
+        <div class="g-title">📜 老所长的绝密图纸</div>
+        <ul>
+          <li>船体艏波波长 <b>λ = 2πV²/g = <span id="hLam">92</span> m</b>，随航速平方增长。</li>
+          <li>要相消干涉，两列波相位差需为 <b>180°</b>：即空间波程差 <b>≈ λ/2 = <span id="hLbOpt">46</span> m</b>。</li>
+          <li>还要满足相干条件中的振幅配平：体积约 <b><span id="hVbOpt">80</span>%</b> 时球鼻艏兴波与艏波等高。</li>
+          <li>⚠️ 球鼻艏不是万能的：航速一变 λ 就变，原来的“最优参数”立刻失效——真实船舶也这样。</li>
+        </ul>
+        <button class="btn demo" id="btnDemo">🧠 课堂示范：一键调到理论最优</button>
+      </div>
+
+      <!-- ================= 智能体接入区（预留） ================= -->
+      <div class="card ai" id="aiCard">
+        <div class="g-title">🤖 AI 助教<span class="ai-chip" id="aiChip">未接入</span></div>
+
+        <!-- ★ 未来智能体的 UI 挂载点：BowLabAgent.mount(你的DOM节点) ★ -->
+        <div class="ai-slot" id="aiSlot">
+          <div class="ai-slot-ph" id="aiSlotPh">
+            智能体界面挂载点（已预留）<br>
+            <code>BowLabAgent.mount(el)</code>　<code>BowLabAgent.register(adapter)</code>
+          </div>
+        </div>
+
+        <div class="ai-log" id="aiLog">
+          <div class="ai-msg sys">接口已预留：外部智能体可读取本实验台的全部状态与物理量、直接调参，并把界面挂到上方挂载点。</div>
+        </div>
+
+        <div class="ai-input">
+          <input id="aiInput" placeholder="问 AI：这个航速下球鼻艏该伸多长？">
+          <button class="btn" id="aiSend">发送</button>
+        </div>
+        <button class="btn demo" id="aiDemo">▶ 演示：本地示例智能体逐步寻优</button>
+
+        <details>
+          <summary>接入说明 / API 契约</summary>
+          <pre>window.BowLabAgent
+  // 读
+  getState()      -> {V, Lb, Vb, on}
+  getMetrics()    -> {Fr, lam, LbOpt, VbOpt, A0, Ab, Ares, cancel, R, dphiDeg}
+  observe()       -> {state, metrics, score, bin, cleared, prompt}
+  toPrompt()      -> 中文自然语言状态快照（可直接喂给大模型）
+  optimum()       -> {Lb, Vb} 当前航速下的理论最优
+  // 写
+  setParams({V, Lb, Vb, on})   // Lb: m, Vb: 0~1 或 0~100
+  toggleBulb(bool) / reset() / autoTune()
+  // 交互
+  say(text) / log(text) / mount(el) / clearMount()
+  register({name, ask(q, ctx), onTelemetry(snap)})
+  onUpdate(cb, ms) -> 取消订阅函数
+
+// 事件（可被外部监听）
+window.addEventListener('bowlab:ready' | 'bowlab:telemetry' | 'bowlab:clear', e => e.detail)</pre>
+        </details>
+      </div>
+
+    </aside>
+  </div>
+
+  <div class="foot">
+    破浪实验室 · 第五关「终极抵消 —— 打造球鼻艏」 ｜ 空格键：开关球鼻艏　R：重置　
+    🤖 智能体接入：<b>window.BowLabAgent</b>（读状态 / 调参数 / 挂界面，详见 AI 助教栏）<br>
+    物理模型：艏波与球鼻艏兴波的相位差 Δφ=2π·Lb/λ（空间波程差 Lb），振幅矢量叠加 A<sub>合</sub>=|A₀+A<sub>球</sub>e<sup>−iΔφ</sup>|，兴波阻力 ∝ A<sub>合</sub>²
+  </div>
+</div>
+
+<!-- 舰桥进度内核：全站解锁状态的唯一真源（见 fleet.js） -->
+<script src="fleet.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   0. 常量与工具
+   ============================================================ */
+const G        = 9.81;
+const SHIP_L   = 300;              // 船长 (m) —— 大型集装箱船
+const VIEW_M   = 1000;             // 画面横向上代表的水域长度 (m)
+
+const clamp = (v,a,b)=> v<a?a:(v>b?b:v);
+const lerp  = (a,b,t)=> a+(b-a)*t;
+
+/* ============================================================
+   0.5 ★ 探路实验模式 ★
+   ------------------------------------------------------------
+   从剧情结尾的三选一进来时，URL 上会带 ?only=vol 或 ?only=len：
+     ?only=vol —— 只允许调「球鼻艏体积」（长度 Lb、航速 V 锁死）
+     ?only=len —— 只允许调「球鼻艏伸出长度」（体积 Vb、航速 V 锁死）
+   目的：让体验者亲手验证"只调一个参数行不行"——
+     体积只改振幅 A球，长度只改相位差 Δφ，两个都调才能相消。
+   ============================================================ */
+const ONLY = (function(){
+  const m = /[?&]only=(vol|len)\b/.exec(location.search || '');
+  return m ? m[1] : null;
+})();
+const LOCK_V  = 12;      // 探路实验固定在「设计巡航速度」
+const LOCK_VB = 0.6;     // ?only=len 时体积被锁在 60%（A球=0.90 m ≠ A₀）
+const LOCK_LB = 0;       // ?only=vol 时长度被锁在 0 m（Δφ 恒为 0°）
+
+/* 任何写入路径都被这层兜住：探路模式下被锁的参数永远回到锁定值 */
+function lockParams(){
+  if(!ONLY) return;
+  S.V  = LOCK_V;
+  S.on = true;                       // 探路实验里球鼻艏默认已装，实验只关于那一个滑块
+  if(ONLY==='vol') S.Lb = LOCK_LB;
+  if(ONLY==='len') S.Vb = LOCK_VB;
+}
+
+/* ============================================================
+   1. 状态
+   ============================================================ */
+const S = {
+  V: ONLY ? LOCK_V : 12,
+  Lb: ONLY==='vol' ? LOCK_LB : 0,
+  Vb: ONLY==='len' ? LOCK_VB : 0.6,
+  on: !!ONLY,
+  t:0, binNow:-1,
+  score:0, hold:0, holdQ:0, flash:0, lastWarn:-99,
+  warn:0, clears:[false,false,false,false,false], best:0
+};
+
+const BINS = [
+  {hi:9.2,  short:'低速档',   name:'低速档 Fr≈0.15'},
+  {hi:11.4, short:'中低速档', name:'中低速档 Fr≈0.19'},
+  {hi:13.6, short:'巡航档',   name:'巡航档 Fr≈0.23'},
+  {hi:15.7, short:'高速档',   name:'高速档 Fr≈0.27'},
+  {hi:99,   short:'冲刺档',   name:'冲刺档 Fr≈0.30'}
+];
+function binIndex(V){ for(let i=0;i<BINS.length;i++) if(V<BINS[i].hi) return i; return BINS.length-1; }
+
+/* ============================================================
+   2. 物理模型：船首波 + 球鼻艏波的矢量叠加
+   ============================================================ */
+function phys(){
+  lockParams();                                                 // 探路模式：强制锁定被锁参数
+  const V  = S.V;
+  const lam = 2*Math.PI*V*V/G;                                  // 深水横波波长 (m)
+  const A0  = 1.2*Math.pow(V/12,2);                             // 原生首波振幅 (m)
+  const Ab  = S.on ? 1.5*S.Vb*Math.pow(V/12,1.5) : 0;           // 附加波振幅 (m)
+  const Lb  = S.on ? S.Lb : 0;
+  const dphi= 2*Math.PI*(Lb/lam);                               // 相位差 (rad)
+  const re  = A0 + Ab*Math.cos(dphi);
+  const im  =      -Ab*Math.sin(dphi);
+  const Ares= Math.hypot(re,im);                                // 合成首波振幅 (m)
+  const cancel = 1 - Ares/A0;                                   // 消波率
+  const R   = (Ares/A0)*(Ares/A0);                              // 兴波阻力相对值
+  const Fr  = V/Math.sqrt(G*SHIP_L);
+  const LbOpt = lam/2;                                          // 理论最优伸出长度
+  const VbOpt = clamp(A0/(1.5*Math.pow(V/12,1.5)),0,1);         // 理论最优体积
+  return {V,lam,A0,Ab,Lb,dphi,Ares,cancel,R,Fr,LbOpt,VbOpt};
+}
+
+/* ============================================================
+   3. 画布
+   ============================================================ */
+const views = {
+  side: {id:'cvSide'}
+};
+Object.keys(views).forEach(k=>{
+  const v = views[k];
+  v.cv  = document.getElementById(v.id);
+  v.box = v.cv.parentElement;
+});
+
+function fitView(v, ratio, minH, maxH){
+  const w = Math.max(220, v.box.clientWidth);
+  const h = clamp(Math.round(w*ratio), minH, maxH);
+  const dpr = Math.min(2, window.devicePixelRatio||1);
+  v.cv.style.height = h+'px';
+  v.cv.width  = Math.round(w*dpr);
+  v.cv.height = Math.round(h*dpr);
+  const ctx = v.cv.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  v.ctx=ctx; v.W=w; v.H=h;
+}
+
+function resizeAll(){
+  fitView(views.side, 0.30, 190, 300);
+}
+
+/* ============================================================
+   4. ① 波的公式卡 · 拖动滑块时高亮"谁在跟着变"
+   ============================================================ */
+let hotKey=null, hotTimer=null;
+const HOT_MAP={            /* 拖动某个滑块 → 公式链上点亮哪些行（符号由 data-k 高亮） */
+  V : {rows:['lam','phi','amp','res']},   // V → λ → Δφ → A₀ → 结果，全链联动
+  Lb: {rows:['phi','amp','res']},         // Lb → Δφ → cosΔφ → A合 → 结果
+  Vb: {rows:['amp','res']}                // 体积 → A球 → A合 → 结果
+};
+function markTouch(k){
+  document.querySelectorAll('.fs.hot').forEach(n=>n.classList.remove('hot'));
+  document.querySelectorAll('.f-row.hot').forEach(n=>n.classList.remove('hot'));
+  if(k && HOT_MAP[k]){
+    document.querySelectorAll('.fs[data-k="'+k+'"]').forEach(n=>n.classList.add('hot'));
+    HOT_MAP[k].rows.forEach(s=>{
+      const r=document.querySelector('.f-row[data-sym="'+s+'"]');
+      if(r) r.classList.add('hot');
+    });
+  }
+  clearTimeout(hotTimer);
+  hotTimer=setTimeout(()=>markTouch(null), 1600);   // 停手 1.6 s 后熄灭
+}
+function updateFormula(P){
+  document.getElementById('fLam').textContent = sNum('fLam', P.lam, v=>v.toFixed(1));
+  /* Δφ 用未取模的连续值平滑，显示时才取模，避免绕圈回放 */
+  document.getElementById('fPhi').textContent = sNum('fPhi', P.dphi*180/Math.PI, v=>(((v%360)+360)%360).toFixed(0))+'°';
+  document.getElementById('fLb').textContent  = sNum('fLb', P.Lb, v=>v.toFixed(1));
+  document.getElementById('fA0').textContent  = sNum('fA0', P.A0, v=>v.toFixed(2));
+  document.getElementById('fAb').textContent  = sNum('fAb', P.Ab, v=>v.toFixed(2));
+  document.getElementById('fAres').textContent= sNum('fAres', P.Ares, v=>v.toFixed(2));
+  document.getElementById('fCan').textContent = sNum('fCan', P.cancel*100, v=>v.toFixed(0))+'%';
+  /* 方向指示：只在拖动滑块时与上一次拖动后的取值对比，方向保持显示——▲绿=变多，▼红=变少 */
+  const cur={lam:P.lam, dphi:P.dphi, a0:P.A0, ab:P.Ab, ares:P.Ares, can:P.cancel*100};
+  if(prevF===null){ prevF=cur; }
+  else if(dirDirty){
+    dirSpan('dLam','fLam', cur.lam , prevF.lam , .05 );
+    dirSpan('dPhi','fPhi', cur.dphi, prevF.dphi, .015);
+    dirSpan('dA0' ,'fA0' , cur.a0  , prevF.a0  , .004);
+    dirSpan('dAb' ,'fAb' , cur.ab  , prevF.ab  , .004);
+    dirSpan('dAres','fAres',cur.ares, prevF.ares, .004);
+    dirSpan('dCan','fCan', cur.can , prevF.can , .4  );
+    prevF=cur; dirDirty=false;
+  }
+  prevF=cur;
+  const v=document.getElementById('fVerdict');
+  const vt = !S.on ? '球鼻艏未装：A<sub>球</sub> = 0，公式退化成 A<sub>合</sub> = A₀，消波率恒为 0 —— 先装上球鼻艏再调'
+    : P.cancel>=0.9 ? '🎉 cos Δφ ≈ −1 且 A<sub>球</sub> ≈ A₀：A<sub>合</sub> ≈ 0，两列波完全相消，阻力最低'
+    : P.cancel>=0.6 ? '接近反相了：对照第 2 行把 Δφ 凑向 180°，再对照第 3 行配平 A<sub>球</sub>'
+    : P.cancel>=-0.2? '相位或振幅没配好：看第 2 行 Δφ 偏离 180° 多少、A<sub>球</sub> 和 A₀ 差多少'
+    : '⚠️ cos Δφ ≈ +1：同相叠加，A<sub>合</sub> 比 A₀ 还大，浪更高、阻力暴涨——把 L<sub>b</sub> 调回 λ/2 的奇数倍';
+  if(vt!==_verdPrev){
+    _verdPrev=vt; v.innerHTML=vt;
+    v.classList.remove('flip'); void v.offsetWidth; v.classList.add('flip');
+  }
+}
+let _verdPrev='';
+let prevF=null, dirDirty=false;
+function dirSpan(arrowId, valId, cur, prev, eps){
+  const a=document.getElementById(arrowId), v=document.getElementById(valId);
+  if(!a||!v) return;
+  let cls='';
+  if(cur>prev+eps) cls='up';            // 变多 → 绿
+  else if(cur<prev-eps) cls='dn';       // 变少 → 红
+  a.textContent = cls==='up' ? '▲' : cls==='dn' ? '▼' : '＝';
+  a.className = 'dir' + (cls ? ' '+cls : ' eq');
+  v.classList.remove('v-up','v-dn');
+  if(cls){
+    v.classList.add(cls==='up' ? 'v-up' : 'v-dn');
+    v.style.animation='none'; void v.offsetWidth; v.style.animation='';  // 重触发弹跳
+  }
+}
+
+/* ============================================================
+   6. ② 纵向波形剖面
+   ============================================================ */
+function renderSide(dt){
+  const v = views.side, ctx = v.ctx, W = v.W, H = v.H;
+  const P = phys();
+  const ppm   = W/VIEW_M;
+  const waterY= Math.round(H*0.42);
+  const bowX  = W - Math.min(W*0.26, 235);        // 船首靠右，尾流向左铺开
+  const LbPx  = (S.on ? S.Lb : 0)*ppm;
+  const ampPx = clamp(0.40*H/(2*Math.max(P.A0,0.001)), 8, 30);
+  const lamPx = Math.max(6, P.lam*ppm);
+  const k     = 2*Math.PI/lamPx;
+  const kMax  = 0.42*H;
+
+  /* --- 采样三条曲线 --- */
+  const N = Math.ceil(W/2);
+  const XS=[], H1=[], H2=[], HS=[];
+  for(let i=0;i<N;i++){
+    const x = i*2;
+    const s = (x-bowX)/ppm;                        // >0 在船首前方
+    const env = s>0 ? Math.exp(-Math.pow(s/60,2))
+                    : 1/Math.sqrt(1+Math.abs(s)/180);
+    const ph  = k*(x-bowX);
+    const y1  = P.A0*env*Math.cos(ph);
+    const y2  = P.Ab*env*Math.cos(ph - P.dphi);
+    XS.push(x); H1.push(y1); H2.push(y2); HS.push(y1+y2);
+  }
+  const yOf = h => waterY - clamp(h*ampPx, -kMax, kMax);
+
+  /* --- 风暴海峡的夜空（深色主题） --- */
+  const sky = ctx.createLinearGradient(0,0,0,waterY);
+  sky.addColorStop(0,'#141d2b'); sky.addColorStop(0.5,'#223247'); sky.addColorStop(1,'#33465f');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,waterY);
+  /* 低垂云带 */
+  ctx.save();
+  ctx.fillStyle='#8fa6bd';
+  ctx.globalAlpha=.14;
+  ctx.beginPath(); ctx.ellipse(W*0.22, waterY*0.26, W*0.20, waterY*0.24, 0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(W*0.66, waterY*0.16, W*0.26, waterY*0.20, 0,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=.14;
+  ctx.beginPath(); ctx.ellipse(W*0.88, waterY*0.44, W*0.16, waterY*0.16, 0,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=.10;
+  ctx.fillRect(0, waterY*0.62, W, waterY*0.38);
+  ctx.restore();
+  /* 云隙透下的一道光 */
+  ctx.save();
+  const gl = ctx.createRadialGradient(W*0.16,waterY*0.30,4, W*0.16,waterY*0.30,120);
+  gl.addColorStop(0,'rgba(255,250,224,.55)'); gl.addColorStop(1,'rgba(255,250,224,0)');
+  ctx.fillStyle=gl; ctx.fillRect(0,0,W,waterY);
+  ctx.restore();
+
+  /* --- 水体（沿合成波面填充） --- */
+  ctx.beginPath();
+  ctx.moveTo(0, yOf(HS[0]));
+  for(let i=1;i<N;i++) ctx.lineTo(XS[i], yOf(HS[i]));
+  ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath();
+  const wg = ctx.createLinearGradient(0,waterY,0,H);
+  wg.addColorStop(0,'#2d7089'); wg.addColorStop(.45,'#154a60'); wg.addColorStop(1,'#08202d');
+  ctx.fillStyle=wg; ctx.fill();
+
+  /* --- 距离刻度（水下） --- */
+  ctx.save();
+  ctx.font='600 10px "Segoe UI","Microsoft YaHei",sans-serif';
+  ctx.textAlign='center';
+  for(let m=100; m<=900; m+=100){
+    const x = bowX - m*ppm;
+    if(x<6) break;
+    ctx.strokeStyle='rgba(255,255,255,.16)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(x,waterY+6); ctx.lineTo(x,H-4); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.34)';
+    ctx.fillText(m+' m', x, H-9);
+  }
+  ctx.fillStyle='rgba(255,255,255,.34)';
+  ctx.textAlign='right';
+  ctx.fillText('距船首距离 →', W-8, H-9);
+  ctx.restore();
+
+  /* --- 原生波（醒目虚线） --- */
+  ctx.save();
+  ctx.lineCap='round';
+  ctx.setLineDash([11,7]); ctx.lineWidth=4.6;
+  ctx.strokeStyle='rgba(46,32,16,.55)';           /* 深色衬底，压住背景波纹 */
+  ctx.beginPath();
+  for(let i=0;i<N;i++){ const y=yOf(H1[i]); i?ctx.lineTo(XS[i],y):ctx.moveTo(XS[i],y); }
+  ctx.stroke();
+  ctx.setLineDash([11,7]); ctx.lineWidth=3;
+  ctx.strokeStyle='#ffa636';
+  ctx.shadowColor='rgba(120,60,0,.65)'; ctx.shadowBlur=6;
+  ctx.beginPath();
+  for(let i=0;i<N;i++){ const y=yOf(H1[i]); i?ctx.lineTo(XS[i],y):ctx.moveTo(XS[i],y); }
+  ctx.stroke();
+  ctx.shadowBlur=0;
+
+  /* --- 附加波（醒目虚线） --- */
+  if(P.Ab>0.0001){
+    ctx.setLineDash([5,7]); ctx.lineWidth=4.6;
+    ctx.strokeStyle='rgba(46,32,16,.5)';
+    ctx.beginPath();
+    for(let i=0;i<N;i++){ const y=yOf(H2[i]); i?ctx.lineTo(XS[i],y):ctx.moveTo(XS[i],y); }
+    ctx.stroke();
+    ctx.setLineDash([5,7]); ctx.lineWidth=3;
+    ctx.strokeStyle='#46cdf5';
+    ctx.shadowColor='rgba(0,60,90,.65)'; ctx.shadowBlur=6;
+    ctx.beginPath();
+    for(let i=0;i<N;i++){ const y=yOf(H2[i]); i?ctx.lineTo(XS[i],y):ctx.moveTo(XS[i],y); }
+    ctx.stroke();
+    ctx.shadowBlur=0;
+  }
+  /* --- 合成波（实线，真实水面） --- */
+  ctx.setLineDash([]); ctx.lineWidth=2.6;
+  ctx.strokeStyle='#fdf6e2';
+  ctx.shadowColor='rgba(0,0,0,.45)'; ctx.shadowBlur=5;
+  ctx.beginPath();
+  for(let i=0;i<N;i++){ const y=yOf(HS[i]); i?ctx.lineTo(XS[i],y):ctx.moveTo(XS[i],y); }
+  ctx.stroke();
+  ctx.restore();
+
+  /* --- 船首剖面 + 球鼻艏（船体在首柱后方，球鼻艏向船首前方伸出） --- */
+  drawBowSection(ctx, W, H, bowX, waterY, LbPx, P);
+
+  /* --- 合成首波振幅标注（画在船体之上） --- */
+  const crest=waterY-Math.abs(P.Ares)*ampPx, trough=waterY+Math.abs(P.Ares)*ampPx;
+  ctx.save();
+  ctx.setLineDash([3,3]); ctx.strokeStyle='rgba(181,70,46,.95)'; ctx.lineWidth=1.6;
+  ctx.beginPath(); ctx.moveTo(bowX,waterY-66); ctx.lineTo(bowX,waterY+66); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle='rgba(240,230,200,.9)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(bowX-10,crest); ctx.lineTo(bowX+10,crest);
+  ctx.moveTo(bowX-10,trough); ctx.lineTo(bowX+10,trough); ctx.stroke();
+  ctx.font='700 11px "Segoe UI","Microsoft YaHei",sans-serif';
+  ctx.textAlign='left';
+  ctx.fillStyle='#e9eff6';
+  ctx.fillText('A合 = '+P.Ares.toFixed(2)+' m', bowX+16, waterY-48);
+  ctx.font='600 10px "Segoe UI","Microsoft YaHei",sans-serif';
+  ctx.fillStyle='rgba(210,225,240,.7)';
+  ctx.fillText('λ = '+P.lam.toFixed(0)+' m', bowX+16, waterY-34);
+  ctx.restore();
+
+  /* --- 标注：球鼻艏伸出长度（画在球鼻艏下方） --- */
+  if(S.on && LbPx>4){
+    const y = Math.min(waterY + 78, H - 16);
+    ctx.save();
+    ctx.strokeStyle='rgba(255,246,214,.9)'; ctx.lineWidth=1.6;
+    ctx.beginPath();
+    ctx.moveTo(bowX,y); ctx.lineTo(bowX,y-11);
+    ctx.moveTo(bowX+LbPx,y); ctx.lineTo(bowX+LbPx,y-11);
+    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bowX,y-5); ctx.lineTo(bowX+LbPx,y-5); ctx.stroke();
+    ctx.font='700 11px "Segoe UI","Microsoft YaHei",sans-serif';
+    ctx.fillStyle='rgba(255,246,214,.95)'; ctx.textAlign='center';
+    ctx.fillText('空间波程差 Δ = '+S.Lb.toFixed(1)+' m', bowX+LbPx/2, y+15);
+    ctx.restore();
+  }
+
+  /* --- 状态徽标 --- */
+  ctx.save();
+  ctx.font='700 12px "Segoe UI","Microsoft YaHei",sans-serif';
+  ctx.textAlign='left';
+  const txt = !S.on ? '球鼻艏：关闭'
+            : (P.cancel>=0.9 ? '✅ 完美抵消：两列波几乎完全相消'
+            : P.cancel>=0.6 ? '✅ 大幅消波'
+            : P.cancel>=0.2 ? '🙂 有消波效果，还不够'
+            : P.cancel>=-0.2? '😐 效果微弱：相位或振幅没配好'
+                            : '⚠️ 同相叠加：波更高，阻力暴涨！');
+  ctx.fillStyle = P.cancel<-0.2 ? 'rgba(255,122,92,.95)' : 'rgba(225,238,250,.9)';
+  ctx.fillText(txt, 10, 18);
+  ctx.fillStyle='rgba(210,225,240,.6)';
+  ctx.fillText('垂向放大 ≈ '+Math.round(ampPx/ppm)+' ×　横向 1 格 = 100 m', 10, 34);
+  ctx.restore();
+}
+
+function drawBowSection(ctx, W, H, bowX, waterY, LbPx, P){
+  const deckY  = waterY - 46;
+  const keelY  = waterY + Math.min(70, H*0.29);
+  const hullLen= Math.min(W*0.13, 124);        // 只画船首段，末端用断口线表示船体向后继续
+  const backX  = bowX - hullLen;               // 船体向"船尾"方向（左）延伸
+  const Vb     = clamp(S.Vb, 0, 1);
+  const LbVis  = Math.max(LbPx, 0);
+
+  /* 船体外板线型：首柱在最右端（微前倾），甲板向船尾延伸 */
+  const hullPath = ()=>{
+    ctx.beginPath();
+    ctx.moveTo(bowX+8, deckY);                                  // 首柱顶（甲板端）
+    ctx.lineTo(backX, deckY);                                   // 甲板向后
+    ctx.lineTo(backX, keelY);                                   // 断口处下到船底
+    ctx.lineTo(bowX-64, keelY);                                 // 平底
+    ctx.quadraticCurveTo(bowX-20, keelY, bowX-6, waterY+44);    // 前踵（向下前收）
+    ctx.quadraticCurveTo(bowX+1, waterY+6, bowX+8, deckY);      // 首柱外板线回到甲板
+    ctx.closePath();
+  };
+
+  ctx.save();
+
+  /* 水线以上：船体外板（深灰蓝，带竖向明暗） */
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0,0,W,waterY); ctx.clip();
+  hullPath();
+  const gTop = ctx.createLinearGradient(0,deckY,0,waterY);
+  gTop.addColorStop(0,'#3d4c5e'); gTop.addColorStop(0.55,'#2b3846'); gTop.addColorStop(1,'#1e2733');
+  ctx.fillStyle = gTop; ctx.fill();
+  ctx.restore();
+
+  /* 水线以下：防污漆（暗红），略带透明以便看清波形 */
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0,waterY,W,H-waterY); ctx.clip();
+  hullPath();
+  const gBot = ctx.createLinearGradient(0,waterY,0,keelY);
+  gBot.addColorStop(0,'#93412f'); gBot.addColorStop(1,'#5e2a20');
+  ctx.globalAlpha = 0.9; ctx.fillStyle = gBot; ctx.fill();
+  /* 水线漆条（boot-top） */
+  ctx.globalAlpha = 1;
+  ctx.beginPath(); ctx.rect(backX-4, waterY, hullLen+20, 5); ctx.clip();
+  hullPath();
+  ctx.fillStyle = '#1a1f26'; ctx.fill();
+  ctx.restore();
+
+  /* 船体轮廓线 */
+  hullPath();
+  ctx.strokeStyle='rgba(14,20,26,.95)'; ctx.lineWidth=1.5; ctx.stroke();
+
+  /* 断口线（船体向后继续） */
+  const hh = keelY - deckY;
+  ctx.beginPath();
+  ctx.moveTo(backX, deckY);
+  ctx.quadraticCurveTo(backX-9, deckY+hh*0.18, backX, deckY+hh*0.35);
+  ctx.quadraticCurveTo(backX+9, deckY+hh*0.50, backX, deckY+hh*0.66);
+  ctx.quadraticCurveTo(backX-9, deckY+hh*0.84, backX, keelY);
+  ctx.strokeStyle='rgba(240,230,200,.85)'; ctx.lineWidth=1.6; ctx.stroke();
+
+  /* 舷墙/甲板线与船名 */
+  ctx.strokeStyle='rgba(240,230,200,.7)'; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.moveTo(backX,deckY+1); ctx.lineTo(bowX+6,deckY+1); ctx.stroke();
+  ctx.font='700 11px "Segoe UI","Microsoft YaHei",sans-serif';
+  ctx.fillStyle='rgba(240,230,200,.65)'; ctx.textAlign='left';
+  ctx.fillText('星海号', backX+14, deckY+27);
+
+  /* 航向箭头（船向右航行） */
+  ctx.strokeStyle='rgba(210,225,240,.6)'; ctx.lineWidth=1.8;
+  ctx.beginPath();
+  ctx.moveTo(backX+12, deckY-15); ctx.lineTo(bowX-18, deckY-15);
+  ctx.moveTo(bowX-18, deckY-15); ctx.lineTo(bowX-27, deckY-20);
+  ctx.moveTo(bowX-18, deckY-15); ctx.lineTo(bowX-27, deckY-10);
+  ctx.stroke();
+  ctx.fillStyle='rgba(210,225,240,.65)'; ctx.textAlign='left';
+  ctx.fillText('V', bowX-15, deckY-19);
+
+  /* ★ 球鼻艏：装了就一定画出来（Lb=0 时是首柱下方的一个鼓包，不向前伸）★ */
+  if(S.on){
+    const tipX = bowX + LbVis;                 // 前端：首柱之前 Lb
+    const cy   = waterY + 16 + 9*Vb;           // 球鼻艏轴线（水下）
+    const rh   = 9 + 13*Vb;                    // 半高：由体积决定
+    const aftX = bowX - (30 + 46*Vb);          // 与船体融合的位置（往后）
+    ctx.beginPath();
+    ctx.moveTo(aftX, cy - rh*0.45);
+    ctx.bezierCurveTo(bowX-12, cy-rh*1.25, bowX+LbVis*0.6, cy-rh*1.12, tipX, cy-rh*0.42);
+    ctx.quadraticCurveTo(tipX + rh*1.05, cy, tipX, cy+rh*0.42);
+    ctx.bezierCurveTo(bowX+LbVis*0.6, cy+rh*1.12, bowX-12, cy+rh*1.32, aftX, cy+rh*0.5);
+    ctx.closePath();
+    const gB = ctx.createLinearGradient(0, cy-rh, 0, cy+rh);
+    /* 与船体水线下同一套防污漆深红（略亮一点，保证轮廓能分辨） */
+    gB.addColorStop(0,'#ab4a31'); gB.addColorStop(0.42,'#93412f'); gB.addColorStop(1,'#63271b');
+    ctx.fillStyle = gB; ctx.fill();
+    ctx.strokeStyle='#3d1a12'; ctx.lineWidth=1.4; ctx.stroke();
+    /* 高光，让它看着是圆的 */
+    ctx.beginPath();
+    ctx.moveTo(aftX+12, cy-rh*0.5);
+    ctx.bezierCurveTo(bowX-10, cy-rh*0.95, bowX+LbVis*0.6, cy-rh*0.85, tipX-rh*0.3, cy-rh*0.35);
+    ctx.strokeStyle='rgba(255,206,180,.35)'; ctx.lineWidth=1.6; ctx.stroke();
+    if(LbVis > 56){
+      ctx.font='700 10px "Segoe UI","Microsoft YaHei",sans-serif';
+      ctx.fillStyle='rgba(255,226,206,.85)'; ctx.textAlign='center';
+      ctx.fillText('球鼻艏', bowX - 12 + LbVis*0.5, cy+3);
+    }
+  }
+
+  /* 首柱处的水花：波越大水花越猛，抵消得好就几乎不起浪 */
+  const inten = clamp(P.Ares/Math.max(P.A0,0.01), 0, 2);
+  if(inten > 0.05){
+    ctx.save();
+    ctx.globalAlpha = Math.min(0.95, 0.12 + 0.55*inten);
+    ctx.strokeStyle = '#f2fbff'; ctx.lineCap='round';
+    const r = 9 + 7*inten;
+    ctx.lineWidth = 2.6;
+    ctx.beginPath(); ctx.arc(bowX+4, waterY+3, r, -2.0, -0.5); ctx.stroke();
+    ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.arc(bowX+4, waterY+3, r*1.7, -1.85, -0.75); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bowX+6, waterY+2); ctx.lineTo(bowX+16+r, waterY-6-4*inten); ctx.stroke();
+    ctx.restore();
+  }
+
+  /* 水线 */
+  ctx.strokeStyle='rgba(253,246,226,.5)'; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.moveTo(0,waterY); ctx.lineTo(W,waterY); ctx.stroke();
+  ctx.restore();
+}
+
+/* ============================================================
+   7. UI
+   ============================================================ */
+const el = {};
+['binChip','btnBulb','btnHint','btnReset','mRes','barRes','mCancel','barCancel',
+ 'mR','barR','mPhi','mLam','mScore','mStatus','vLb','vVb','vV','sLb','sVb','sV',
+ 'holdBar','holdTxt','stars','gFoot','gLine','hintCard','hLam','hLbOpt','hVbOpt','btnDemo','toast','flash',
+ 'aiChip','aiSlot','aiSlotPh','aiLog','aiInput','aiSend','aiDemo','btnStory','storyCard']
+ .forEach(id=> el[id]=document.getElementById(id));
+
+let statusTxt='', statusCls='', taskLine='';
+/* D3：数值滚动——显示值向真实值指数趋近（每帧调用），像仪表指针一样带阻尼 */
+const _smv={};
+function sNum(key, target, fmt){
+  let o=_smv[key];
+  if(!o){ _smv[key]={v:target, t:performance.now()}; return fmt(target); }
+  const now=performance.now();
+  const dt=Math.min(.12,(now-o.t)/1000); o.t=now;
+  o.v += (target-o.v)*(1-Math.exp(-dt*11));
+  if(Math.abs(o.v-target) < 0.003*Math.max(1,Math.abs(target))) o.v=target;   /* 收敛即锁死，不抖 */
+  return fmt(o.v);
+}
+
+function updateUI(P){
+  el.mRes.textContent = sNum('mRes', P.Ares, v=>v.toFixed(2)+' m');
+  el.barRes.style.width = clamp(P.Ares/(2*P.A0)*100,0,100)+'%';
+
+  const c = P.cancel;
+  el.mCancel.textContent = sNum('mCancel', c*100, v=>v.toFixed(0)+'%');
+  el.barCancel.style.left  = (c>=0? 50 : 50+c*50)+'%';
+  el.barCancel.style.width = (Math.min(Math.abs(c),1)*50)+'%';
+  el.barCancel.style.background = c>=0
+      ? 'linear-gradient(90deg,#7fbf5f,#2e7d32)'
+      : 'linear-gradient(90deg,#b5462e,#8e3623)';
+
+  el.mR.textContent = sNum('mR', P.R*100, v=>v.toFixed(0)+'% R₀');
+  el.barR.style.width = clamp(P.R/2*100,0,100)+'%';
+
+  /* 相位角用"未取模"的连续值做平滑，避免 359°→0° 绕圈回放 */
+  const phiDeg = P.Lb/Math.max(P.lam,1)*360;
+  el.mPhi.textContent = sNum('mPhiD', phiDeg, v=>(((v%360)+360)%360).toFixed(0))+'° · '
+                    + sNum('mPhiL', P.Lb, v=>v.toFixed(1))+' m';
+  el.mLam.textContent = sNum('mLam', P.lam, v=>v.toFixed(0))+' m';
+  el.mScore.textContent = sNum('mScore', S.score, v=>Math.round(v));
+  updateFormula(P);   /* 同步刷新 ① 波的公式卡 */
+
+  const t = !S.on ? '球鼻艏未装：水面只有船体艏波，兴波阻力基准 R₀。点击画面实施球鼻艏计划。'
+          : c>=0.9 ? '🌊 相消干涉成功！艏波几乎消失，兴波阻力降到最低。'
+          : c>=0.6 ? '✅ 大幅消波，继续微调相位与体积。'
+          : c>=0.2 ? '🙂 有消波效果，但两列波还没完全对上。'
+          : c>=-0.2? '😐 效果微弱：相位差或振幅没配好。'
+                   : '⚠️ 两列波同相叠加，波浪变大、兴波阻力暴涨！';
+  const cls = c<-0.2 ? 'status bad' : (c>=0.6 ? 'status good' : 'status');
+  if(t!==statusTxt || cls!==statusCls){
+    statusTxt=t; statusCls=cls;
+    el.mStatus.textContent=t; el.mStatus.className=cls;
+    el.mStatus.classList.remove('flip'); void el.mStatus.offsetWidth; el.mStatus.classList.add('flip');
+  }
+
+  el.holdBar.style.width = clamp(S.hold/5*100,0,100)+'%';
+  el.holdTxt.textContent = S.hold.toFixed(1)+' / 5 s';
+
+  /* 任务行：随时反映"现在离通关还差什么"，不会卡在那里一动不动 */
+  const bi = binIndex(S.V), short = BINS[bi].short;
+  const done = S.clears[bi];
+  let line;
+  if(done){
+    line = '✅ 本航速档（'+short+'）已攻克　→　把航速拖到别的档位再战';
+  }else if(!S.on){
+    line = '「'+short+'」先装上球鼻艏，再把消波率调到 ≥ 90%';
+  }else if(P.cancel >= 0.9){
+    line = '🌊 「'+short+'」消波率 '+(P.cancel*100).toFixed(0)+'% 已达标 · 还剩 '+(5-S.hold).toFixed(1)+' s';
+  }else{
+    line = '「'+short+'」当前消波率 '+(P.cancel*100).toFixed(0)+'%　→　目标 ≥ 90% 并保持 5 秒';
+  }
+  if(line !== taskLine){ taskLine = line; el.gLine.textContent = line; }
+  if((el.holdBar.parentElement.className.indexOf('done')>=0) !== done){
+    el.holdBar.parentElement.className = done ? 'bar g done' : 'bar g';
+  }
+
+  el.binChip.textContent = BINS[binIndex(S.V)].name;
+  el.hLam.textContent = P.lam.toFixed(0);
+  el.hLbOpt.textContent = P.LbOpt.toFixed(0);
+  el.hVbOpt.textContent = Math.round(P.VbOpt*100);
+}
+
+function refreshStatic(){
+  const P = phys();
+  el.vLb.textContent = S.Lb.toFixed(1)+' m（'+(S.Lb/SHIP_L*100).toFixed(1)+'% L）';
+  el.vVb.textContent = Math.round(S.Vb*100)+'%';
+  el.vV.textContent  = S.V.toFixed(1)+' m/s';
+  el.btnBulb.textContent = S.on ? '球鼻艏：已安装 ✓' : '球鼻艏：未安装';
+  el.btnBulb.className = 'btn bulb'+(S.on?' on':'');
+  /* 滑块可用性 / 明暗：探路模式下被锁的两个滑块禁用并调暗，只留一个能动 */
+  el.sLb.disabled = (ONLY==='vol');
+  el.sVb.disabled = (ONLY==='len');
+  el.sV.disabled  = !!ONLY;
+  el.sLb.style.opacity = ONLY ? (ONLY==='vol'?.4:1) : (S.on?1:.55);
+  el.sVb.style.opacity = ONLY ? (ONLY==='len'?.4:1) : (S.on?1:.55);
+  el.sV.style.opacity  = ONLY ? .4 : 1;
+  el.holdTxt.style.opacity = 1;
+  /* 星章：按已攻克档位数点亮前 n 颗，读起来更直观 */
+  const nClear = S.clears.filter(Boolean).length;
+  let s='';
+  for(let i=0;i<5;i++) s += '<span class="'+(i<nClear?'':'off')+'">★</span>';
+  el.stars.innerHTML = s;
+  el.gFoot.textContent = '已攻克 '+nClear+' / 5　·　当前档位「'+BINS[binIndex(S.V)].short+'」';
+  /* V2：参数被程序改动（重置 / 一键最优）时同步滑块填充色 */
+  if(window.__paintRanges) window.__paintRanges();
+}
+
+let toastTimer=null;
+function toast(msg, ms){
+  el.toast.textContent = msg;
+  el.toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> el.toast.classList.remove('show'), ms||2300);
+}
+
+/* ============================================================
+   7.5 ★ 探路实验：只解锁一个参数 ★
+   ------------------------------------------------------------
+   体验者从剧情结尾三选一进来 → 只能动一个滑块 → 亲手撞到
+   "只调一个参数不行"这堵墙 → 结论卡 → 正式实验室。
+   ============================================================ */
+const probe = { min:Infinity, max:-Infinity, n:0, shown:false };
+const probeRange = ()=> ONLY==='vol' ? 100 : 110;
+
+/* 记录滑块被扫过的范围：两端都真拖到（±2%）且来回调过多次 → 才算"从头拖到尾"，自动出结论 */
+function probeTrack(v){
+  if(!ONLY) return;
+  probe.n++;
+  if(v<probe.min) probe.min=v;
+  if(v>probe.max) probe.max=v;
+  const R = probeRange();
+  const swept = clamp((probe.max-probe.min)/R, 0, 1);
+  const pt = document.getElementById('probePct');
+  if(pt) pt.textContent = Math.round(swept*100);
+  const touchedEnds = probe.min <= R*.02 && probe.max >= R*.98;   // 两端都真碰到
+  if(!probe.shown && touchedEnds && probe.n>=30) revealConc();
+}
+
+function miniTaskHTML(){
+  const isVol = ONLY==='vol', nm = isVol?'体积':'长度';
+  return '<div class="g-top">'+
+      '<span class="g-title">🧭 探路实验 · 只调'+nm+'</span>'+
+      '<span class="probe-badge">'+(isVol?'长度 L<sub>b</sub> 已锁 🔒':'体积已锁 🔒')+'</span>'+
+    '</div>'+
+    '<div class="g-line">'+
+      (isVol
+        ? '老所长只给你留了一个旋钮：<b>② 球鼻艏体积</b>；伸出长度 L<sub>b</sub> 和航速 V 都锁死了。<br>'+
+          '目标还是那个目标 —— 把消波率拉到 <b>≥ 90%</b>。<br>拖动体积滑块，试试能不能办到。'
+        : '老所长只给你留了一个旋钮：<b>① 球鼻艏伸出长度 L<sub>b</sub></b>；体积和航速 V 都锁死了。<br>'+
+          '目标还是那个目标 —— 把消波率拉到 <b>≥ 90%</b>。<br>拖动长度滑块，试试能不能办到。')+
+    '</div>'+
+    '<div class="probe-meter">已扫过 <b id="probePct">0</b>% 的'+nm+'范围　·　<b>把滑块两端都拖到底</b>（0% 和最大值都碰到），结论才会自动出现</div>'+
+    '<button class="btn demo" id="btnConc">📋 我调完了，直接看结论</button>';
+}
+
+/* 两个探路实验共用的"最终结论" */
+function verdictHTML(lam, A0, VbO){
+  return '<div class="cc-verdict">✅ 真正的结论：<b>「长度」和「体积」两个都得调</b><br>'+
+    '· <b>伸出长度 L<sub>b</sub></b> 管 <b>相位差 Δφ</b> → 把它凑到 <b>180°</b>'+
+      '（L<sub>b</sub> ≈ λ/2 ≈ '+(lam/2).toFixed(1)+' m）<br>'+
+    '· <b>体积</b> 管 <b>振幅 A<sub>球</sub></b> → 把它配平到与 A₀ = '+A0.toFixed(2)+
+      ' m 相等（约 '+Math.round(VbO*100)+'%）<br>'+
+    '少一个都不行：相位对了振幅不平（只调长度），振幅变了相位不对（只调体积）。'+
+  '</div>';
+}
+
+function concActions(){
+  const other = ONLY==='vol' ? 'len' : 'vol';
+  const txt   = ONLY==='vol' ? '📏 换个角度：只调长度试试' : '🧊 换个角度：只调体积试试';
+  return '<div class="cc-act">'+
+    '<a class="btn main" href="lab5.html">⚓ 进入正式实验室：长度 + 体积一起调</a>'+
+    '<a class="btn" href="lab5.html?only='+other+'">'+txt+'</a>'+
+    '<a class="btn" href="lab5-story.html">🎬 回看剧情</a>'+
+  '</div>';
+}
+
+function concHTML(){
+  const V   = LOCK_V;
+  const lam = 2*Math.PI*V*V/G;
+  const A0  = 1.2*Math.pow(V/12,2);
+  const VbO = clamp(A0/(1.5*Math.pow(V/12,1.5)), 0, 1);
+
+  if(ONLY==='vol'){
+    const AbMax = 1.5*Math.pow(V/12,1.5);              // 体积拉满时的 A球
+    const cMax  = 1-(A0+AbMax)/A0;                     // 体积拉满时的消波率（负）
+    return ''+
+    '<div class="cc-head"><span class="cc-ico">🔎</span><span class="cc-title">探路结论 · 只调体积</span></div>'+
+    '<div class="cc-lead">❌ 行不通：体积怎么调，消波率都到不了 90%。</div>'+
+    '<div class="cc-body">'+
+      '你把体积从 0 拖到 100%，<b>A<sub>球</sub></b> 从 0 涨到 <b>'+AbMax.toFixed(2)+' m</b>——'+
+      '振幅的确在变 ✓。可是 ① 公式卡第 2 行的 <b>Δφ</b> 从头到尾纹丝不动，一直是 '+
+      '<b class="bad">0°</b>。<br>'+
+      'Δφ = 0° 意味着两列波<b>同相</b>：<span class="bad">A<sub>合</sub> = A₀ + A<sub>球</sub></span>——'+
+      '不是互相抵消，而是<b>越叠越高</b>。体积拉满时 A<sub>合</sub> = '+(A0+AbMax).toFixed(2)+
+      ' m，消波率掉到 <b class="bad">'+(cMax*100).toFixed(0)+'%</b>，'+
+      '兴波阻力反涨到 <b>'+Math.pow((A0+AbMax)/A0,2).toFixed(2)+' R₀</b>。'+
+    '</div>'+
+    '<div class="cc-kv">'+
+      '<i>你调的量</i><b>体积 → A<sub>球</sub>（振幅）　✅ 确实在变</b>'+
+      '<i>你没权限的量</i><b>长度 → Δφ（相位差）　❌ 锁死在 0°</b>'+
+      '<i>最好的结果</i><b>体积拖回 0（等于不装）：消波率才 0%</b>'+
+    '</div>'+
+    '<div class="cc-body"><b>为什么？</b>看 ① 公式卡第 2 行：'+
+      '<b>Δφ = 2π·L<sub>b</sub>/λ</b> —— 这个式子里<b>根本没有体积</b>。'+
+      '相位差只认伸出长度 L<sub>b</sub>。长度锁死在 0，Δφ 就只能是 0°。'+
+    '</div>'+
+    verdictHTML(lam, A0, VbO) + concActions();
+  }
+
+  /* ONLY==='len' */
+  const Ab    = 1.5*LOCK_VB*Math.pow(V/12,1.5);        // 被锁死的 A球
+  const resid = Math.abs(A0-Ab);
+  const cBest = 1-resid/A0;
+  return ''+
+  '<div class="cc-head"><span class="cc-ico">🔎</span><span class="cc-title">探路结论 · 只调长度</span></div>'+
+  '<div class="cc-lead">⚠️ 差最后一口气：最好也只有 '+(cBest*100).toFixed(0)+'%，卡在 90% 门外。</div>'+
+  '<div class="cc-body">'+
+    '长度从 0 拖到 110 m，Δφ 从 0° 一路转到 360°。A<sub>合</sub> 先是往下掉、过了最低点又回升；'+
+    '最低点出现在 <b>L<sub>b</sub> ≈ '+(lam/2).toFixed(1)+' m</b>（Δφ = <b class="ok">180°</b>）——'+
+    '这时候两列波<b>确实反相了</b> ✓，消波率到 <b class="ok">'+(cBest*100).toFixed(0)+'%</b>。'+
+    '可是不管再往左还是往右拖，都下不去了。'+
+  '</div>'+
+  '<div class="cc-kv">'+
+    '<i>你调的量</i><b>长度 → Δφ（相位差）　✅ 能凑到 180°</b>'+
+    '<i>你没权限的量</i><b>体积 → A<sub>球</sub>（振幅）　❌ 锁死在 '+Ab.toFixed(2)+' m</b>'+
+    '<i>为什么消不干净</i><b>两列波不等高：|A₀ − A<sub>球</sub>| = |'+A0.toFixed(2)+' − '+
+      Ab.toFixed(2)+'| = '+resid.toFixed(2)+' m ≠ 0</b>'+
+  '</div>'+
+  '<div class="cc-body">'+
+    '反相只是「方向相反」，要<b>抵干净</b>还得「个头一样大」。'+
+    'A₀ = '+A0.toFixed(2)+' m，而 A<sub>球</sub> 被锁死在 '+Ab.toFixed(2)+' m，'+
+    '反相叠加后仍剩下 '+resid.toFixed(2)+' m 的浪 —— 这就是剩下的那 '+
+    ((1-cBest)*100).toFixed(0)+'%（阻力仍有 '+Math.pow(resid/A0,2).toFixed(2)+' R₀）。'+
+    '要把它削到 0，必须让 A<sub>球</sub> = A₀，而那是<b>体积</b>的活。'+
+  '</div>'+
+  verdictHTML(lam, A0, VbO) + concActions();
+}
+
+function revealConc(){
+  if(!ONLY || probe.shown) return;
+  probe.shown = true;
+  const card = document.getElementById('concCard');
+  if(!card) return;
+  card.innerHTML = concHTML();
+  card.style.display = '';
+  requestAnimationFrame(()=> card.classList.add('show'));
+  try{ card.scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){ card.scrollIntoView(); }
+  const pt = document.getElementById('probePct');
+  if(pt) pt.textContent = '100';
+  toast('🔎 探路结论已生成 —— 往下看', 3000);
+}
+
+/* 探路模式的整站改造：标题 / 徽标 / 提示 / 锁滑块 / 换任务卡 */
+function applyProbe(){
+  if(!ONLY) return;
+  const isVol = ONLY==='vol', nm = isVol?'体积':'长度';
+  const $ = id => document.getElementById(id);
+
+  document.title = '探路实验 · 只调'+nm+' ｜ 破浪实验室';
+  const bs = $('brandSub');
+  if(bs) bs.textContent = '第五关 · 探路实验 —— 只调' + nm;
+
+  const pc = $('probeChip');
+  if(pc){ pc.style.display=''; pc.textContent = '🧪 探路实验 · 只调'+nm; }
+
+  const bo = $('btnOtherProbe');
+  if(bo){
+    bo.style.display = '';
+    bo.href = 'lab5.html?only=' + (isVol?'len':'vol');
+    bo.textContent = isVol ? '📏 换成只调长度' : '🧊 换成只调体积';
+  }
+
+  /* 公式卡提示条：引导盯住"不会变的那一行" */
+  const pn = $('probeNote');
+  if(pn){
+    pn.style.display = '';
+    pn.innerHTML = isVol
+      ? '🔎 <b>盯住第 2 行</b>：你拖动体积时，只有第 3 行的 A<sub>球</sub> 和第 4 行的结果在动 —— '+
+        '第 2 行的 <b>Δφ 一动不动</b>。这就是"只调体积"的死结。'
+      : '🔎 <b>盯住第 3 行</b>：你拖动长度时，Δφ 一路在变（能凑到 180° ✓），'+
+        '可 A<sub>球</sub> 一动不动 —— 振幅没人管，两列波永远凑不齐个头。';
+  }
+
+  /* 任务卡：换成探路任务（5 星计分在探路模式没有意义，隐掉） */
+  const gc = $('goalCard'); if(gc) gc.style.display = 'none';
+  const mc = $('miniCard');
+  if(mc){
+    mc.style.display = '';
+    mc.innerHTML = miniTaskHTML();
+    const b = $('btnConc'); if(b) b.onclick = revealConc;
+  }
+
+  /* 探路模式下用不到的控件隐掉 */
+  if(el.btnBulb) el.btnBulb.style.display = 'none';   // 球鼻艏常开，不给关
+  if(el.btnDemo) el.btnDemo.style.display = 'none';   // "一键最优"会动到被锁参数
+  const aiCard = $('aiCard'); if(aiCard) aiCard.style.display = 'none';
+
+  /* 被锁的滑块：加 🔒、整行调暗 */
+  (isVol ? ['sLb','sV'] : ['sVb','sV']).forEach(id=>{
+    const s = el[id]; if(!s) return;
+    const ctl = s.closest ? s.closest('.ctl') : null;
+    if(!ctl || ctl.querySelector('.lock-tag')) return;
+    ctl.classList.add('locked');
+    const lab = ctl.querySelector('label');
+    if(lab){
+      const t = document.createElement('span');
+      t.className = 'lock-tag'; t.textContent = '🔒 已锁定';
+      lab.appendChild(t);
+    }
+    const sub = ctl.querySelector('.sub');
+    if(sub) sub.insertAdjacentHTML('afterbegin', '<b>（探路实验已锁）</b> ');
+  });
+}
+
+/* ============================================================
+   ★ 智能体接入区（AGENT HOOK · 预留）★
+   ------------------------------------------------------------
+   未来把智能体（规则体 / 大模型 / 仿真器）接进来的唯一入口：
+     window.BowLabAgent
+   它既能"读"（状态、物理量、文本快照），也能"写"（改参数、装球鼻艏、
+   在助教栏说话、把自己的 UI 挂到 #aiSlot），还能注册适配器与订阅遥测。
+   接入示例（在自己页面里）：
+     BowLabAgent.register({
+       name:'我的智能体',
+       async ask(question, ctx){           // ctx 内含 state/metrics/prompt
+         const r = await 调用我的模型(ctx.prompt, question);
+         return { message:r.text, params:{ Lb:r.Lb, Vb:r.Vb, on:true } };
+       },
+       onTelemetry(snap){ ... }             // 每 0.5 s 收到一次全场状态
+     });
+     BowLabAgent.mount(document.getElementById('myPanel'));
+   ============================================================ */
+const ai = { adapter:null, subs:[], telT:0 };
+
+function aiSay(role, text){
+  const d = document.createElement('div');
+  d.className = 'ai-msg '+role;
+  d.textContent = text;
+  el.aiLog.appendChild(d);
+  while(el.aiLog.children.length > 60) el.aiLog.removeChild(el.aiLog.firstChild);
+  el.aiLog.scrollTop = el.aiLog.scrollHeight;
+}
+
+/* 全场快照：给智能体用的"可观测量" */
+function snapshot(){
+  const P = phys();
+  return {
+    state:  {V:S.V, Lb:S.Lb, Vb:S.Vb, on:S.on},
+    metrics:{Fr:P.Fr, lam:P.lam, LbOpt:P.LbOpt, VbOpt:P.VbOpt,
+             A0:P.A0, Ab:P.Ab, Ares:P.Ares, cancel:P.cancel, R:P.R,
+             dphiDeg:((P.dphi*180/Math.PI)%360+360)%360},
+    score:Math.round(S.score), hold:S.hold, bin:BINS[binIndex(S.V)].name,
+    cleared:S.clears.slice(), t:S.t, warn:S.warn
+  };
+}
+
+/* 中文自然语言快照——可直接作为大模型提示词 */
+function toPrompt(s){
+  s = s || snapshot();
+  const m = s.metrics, st = s.state;
+  return [
+    '【球鼻艏消波实验台 · 当前状态】',
+    '航速 V='+st.V.toFixed(1)+' m/s（Fr='+m.Fr.toFixed(3)+'，'+s.bin+'）',
+    '原生首波波长 λ=2πV²/g='+m.lam.toFixed(0)+' m；原生首波振幅 A₀='+m.A0.toFixed(2)+' m',
+    '球鼻艏：'+(st.on?'已安装':'未安装')+'　伸出长度 Lb='+st.Lb.toFixed(1)+' m（'+
+      (st.Lb/SHIP_L*100).toFixed(1)+'% L）　体积='+Math.round(st.Vb*100)+'%',
+    st.on ? ('附加波振幅 A球='+m.Ab.toFixed(2)+' m；相位差 Δφ='+m.dphiDeg.toFixed(0)+'°')
+          : '附加波：无（水面只有原生首波）',
+    '合成首波振幅 A合='+m.Ares.toFixed(2)+' m；消波率='+(m.cancel*100).toFixed(0)+
+      '%；兴波阻力='+(m.R*100).toFixed(0)+'% R₀',
+    '理论最优参考：Lb≈λ/2='+m.LbOpt.toFixed(1)+' m，体积≈'+Math.round(m.VbOpt*100)+'%',
+    '得分 '+s.score+'；已攻克航速档 '+s.cleared.filter(Boolean).length+'/5'
+  ].join('\n');
+}
+
+/* 用给定参数预测消波率（供智能体评估"如果我这样调会怎样"） */
+function predict(V,Lb,Vb,on){
+  const lam = 2*Math.PI*V*V/G;
+  const A0  = 1.2*Math.pow(V/12,2);
+  const Ab  = on ? 1.5*Vb*Math.pow(V/12,1.5) : 0;
+  const d   = on ? 2*Math.PI*(Lb/lam) : 0;
+  const Ares= Math.hypot(A0+Ab*Math.cos(d), -Ab*Math.sin(d));
+  return {Ares, cancel:1-Ares/A0, R:(Ares/A0)*(Ares/A0), lam};
+}
+
+/* 内置示例智能体：规则版，分两步逼近理论最优（课堂上可现场演示"调参思路"） */
+function localAgent(q, ctx){
+  const m = ctx.metrics, st = ctx.state;
+  if(!st.on){
+    return {message:'船艏还没加装球状突起：A合=A₀='+m.A0.toFixed(2)+' m，兴波阻力 100% R₀。'+
+                   '第一步——先启动球鼻艏计划，让它独立兴波。', params:{on:true}};
+  }
+  const lam = m.lam;
+  const target = (Math.floor(st.Lb/lam + 0.5) + 0.5) * lam;   // 最近的 λ/2 奇数倍
+  const newLb  = clamp(st.Lb + (target - st.Lb)*0.75, 0, 110);
+  const newVb  = clamp(st.Vb + (m.VbOpt - st.Vb)*0.75, 0, 1);
+  const p      = predict(st.V, newLb, newVb, true);
+
+  let txt = '读数：原生波 A₀='+m.A0.toFixed(2)+' m，附加波 A球='+m.Ab.toFixed(2)+' m，相位差 '+
+            m.dphiDeg.toFixed(0)+'°。\n';
+  txt += Math.abs(m.dphiDeg-180)<18
+        ? '相位基本反相了 ✓　'
+        : '相位不对（要 180° 才反相），所以要把伸出长度调到 λ/2≈'+m.LbOpt.toFixed(0)+' m 的奇数倍。\n';
+  txt += Math.abs(m.Ab-m.A0) < 0.08*m.A0+0.02
+        ? '振幅已配平 ✓'
+        : '振幅不匹配：A球 要比 A₀ '+(m.Ab<m.A0?'大':'小')+'一点，体积该'+(m.Ab<m.A0?'加大':'减小')+'。';
+  txt += '\n建议：Lb '+st.Lb.toFixed(0)+' → '+newLb.toFixed(0)+' m，体积 '+
+         Math.round(st.Vb*100)+'% → '+Math.round(newVb*100)+'%，预计消波率 '+
+         (p.cancel*100).toFixed(0)+'%。';
+
+  return {message:txt, params:{Lb:newLb, Vb:newVb, on:true}};
+}
+
+/* ---------------- 对外 API ---------------- */
+const BowLabAgent = {
+  version:'1.0',
+  /* ---- 读 ---- */
+  getState(){
+    return {V:S.V, Lb:S.Lb, Vb:S.Vb, on:S.on};
+  },
+  getMetrics(){
+    const P = phys();
+    return {Fr:P.Fr, lam:P.lam, LbOpt:P.LbOpt, VbOpt:P.VbOpt, A0:P.A0, Ab:P.Ab,
+            Ares:P.Ares, cancel:P.cancel, R:P.R,
+            dphiDeg:((P.dphi*180/Math.PI)%360+360)%360};
+  },
+  observe(){ const s = snapshot(); s.prompt = toPrompt(s); return s; },
+  toPrompt(){ return toPrompt(); },
+  optimum(){ const P = phys(); return {Lb:P.LbOpt, Vb:P.VbOpt}; },
+  predict(V,Lb,Vb,on){ return predict(V===undefined?S.V:V, Lb||0,
+                        Vb===undefined?S.Vb:Vb, on===undefined?true:on); },
+  snapshot(){ return snapshot(); },
+
+  /* ---- 写 ---- */
+  setParams(p){
+    p = p||{};
+    if(typeof p.V  === 'number') { S.V  = clamp(p.V ,8,17);   el.sV.value  = S.V; onSpeedChanged(); }
+    if(typeof p.Lb === 'number') { S.Lb = clamp(p.Lb,0,110);  el.sLb.value = S.Lb; }
+    if(typeof p.Vb === 'number') { S.Vb = clamp(p.Vb>1? p.Vb/100 : p.Vb, 0, 1);
+                                   el.sVb.value = Math.round(S.Vb*100); }
+    if(typeof p.on === 'boolean') S.on = p.on;
+    refreshStatic();
+    return this.getState();
+  },
+  toggleBulb(on){ setBulb(typeof on==='boolean' ? on : !S.on, true); return S.on; },
+  autoTune(){ el.btnDemo.onclick(); return this.optimum(); },
+  reset(){ el.btnReset.onclick(); return this.getState(); },
+
+  /* ---- 交互 ---- */
+  say(text){ aiSay('ai',  String(text)); return true; },
+  log(text){ aiSay('sys', String(text)); return true; },
+  mount(node){
+    if(!node) return false;
+    el.aiSlotPh.style.display = 'none';
+    el.aiSlot.appendChild(node);
+    return true;
+  },
+  clearMount(){
+    el.aiSlot.querySelectorAll(':scope > :not(.ai-slot-ph)').forEach(n=>n.remove());
+    el.aiSlotPh.style.display = '';
+  },
+  async ask(q){
+    q = String(q||'').trim();
+    if(!q) return null;
+    const ctx = snapshot();
+    ctx.prompt = toPrompt(ctx);
+    aiSay('user', q);
+    if(ai.adapter && typeof ai.adapter.ask === 'function'){
+      let rep;
+      try{ rep = await ai.adapter.ask(q, ctx); }
+      catch(err){ aiSay('sys', '适配器出错：'+(err && err.message ? err.message : err)); return null; }
+      if(rep && rep.message) aiSay('ai', rep.message);
+      if(rep && rep.params)  this.setParams(rep.params);
+      return rep;
+    }
+    aiSay('sys', '未接入真实智能体，当前由「本地规则示例」作答。'+
+                 '接入方式：BowLabAgent.register({ name, ask(question, ctx){ return {message, params} } })');
+    const rep = localAgent(q, ctx);
+    aiSay('ai', rep.message);
+    if(rep.params) this.setParams(rep.params);
+    return rep;
+  },
+
+  /* ---- 注册适配器 / 订阅 ---- */
+  register(adapter){
+    const same = ai.adapter === adapter;
+    ai.adapter = adapter || null;
+    const has = !!(adapter && typeof adapter.ask === 'function');
+    el.aiChip.textContent = has ? ('已接入：'+(adapter.name||'智能体')) : '未接入';
+    el.aiChip.className = 'ai-chip'+(ai.adapter?' on':'');
+    if(adapter && typeof adapter.mount === 'function'){
+      try{ adapter.mount(el.aiSlot); }catch(err){}
+    }
+    if(!same && adapter && adapter.name) aiSay('sys', '已注册智能体适配器：'+adapter.name);
+    return true;
+  },
+  unregister(){
+    ai.adapter = null;
+    el.aiChip.textContent = '未接入'; el.aiChip.className = 'ai-chip';
+    aiSay('sys', '已卸载智能体适配器');
+    return true;
+  },
+  get adapter(){ return ai.adapter; },
+  onUpdate(cb, ms){
+    if(typeof cb !== 'function') return ()=>{};
+    const item = {cb, ms:ms||500, last:0};
+    ai.subs.push(item);
+    return ()=>{ const i = ai.subs.indexOf(item); if(i>=0) ai.subs.splice(i,1); };
+  }
+};
+window.BowLabAgent = BowLabAgent;
+window.dispatchEvent(new CustomEvent('bowlab:ready', {detail:{api:'window.BowLabAgent', version:BowLabAgent.version}}));
+
+/* ============================================================
+   8. 逻辑推进
+   ============================================================ */
+function setBulb(on, silent){
+  S.on = on;
+  refreshStatic();
+  if(!silent) toast(on ? '🛠 「球鼻艏计划」启动：船艏加装球状突起，开始独立兴波' : '🛠 已拆下球状突起：只剩传统船艏艏波');
+}
+
+function clearBin(){
+  if(ONLY) return;                  // 探路实验不参与 5 星计分
+  const i = binIndex(S.V);
+  if(S.clears[i]) return;
+  /* 结算：基础 10 分 + 保持期间消波质量最多 10 分（单档 ≤ 20 分，5 档满分 100） */
+  const q    = clamp((S.holdQ/5 - 0.9)/0.1, 0, 1);
+  const gain = 10 + Math.round(10*q);
+  S.clears[i] = true;
+  S.score = Math.min(100, S.score + gain);
+  S.hold = 0; S.holdQ = 0;
+  saveProgress();
+  refreshStatic();
+  toast('🏆 相消干涉成功！攻克「'+BINS[i].short+'」 +'+gain+' 分（'+Math.round(S.score)+' / 100）', 3600);
+  S.flash = 0.0;
+  /* 智能体事件：外部可监听"攻克某航速档" */
+  window.dispatchEvent(new CustomEvent('bowlab:clear', {
+    detail:{ bin:i, binName:BINS[i].name, gain:gain, snapshot:snapshot() }
+  }));
+
+  /* 五档全清 → 通知舰桥：第五关通关，并在顶栏放出下一关入口（fleet.js） */
+  if(S.clears.every(Boolean)){
+    try{ if(window.Fleet) window.Fleet.clear(5); }catch(e){}
+    if(!document.getElementById('nextLabLink')){
+      const a = document.createElement('a');
+      a.id = 'nextLabLink'; a.className = 'btn'; a.href = 'lab6.html';
+      a.textContent = '下一关 ▸ 稳若泰山'; a.style.textDecoration = 'none';
+      const tb = document.querySelector('.topbar');
+      if(tb) tb.appendChild(a);
+    }
+    toast('🏅 五个航速档全部达标 —— 相消干涉全线成立，第五关通关！顶栏已放出第六池入口', 6000);
+  }
+}
+
+/* 进度存档（星章 + 得分），刷新后不丢 */
+const PROG_KEY = 'bbl-progress-v1';
+function saveProgress(){
+  try{
+    localStorage.setItem(PROG_KEY, JSON.stringify({clears:S.clears, score:Math.round(S.score)}));
+  }catch(e){}
+}
+function loadProgress(){
+  try{
+    const o = JSON.parse(localStorage.getItem(PROG_KEY)||'null');
+    if(o && Array.isArray(o.clears) && o.clears.length===5){
+      S.clears = o.clears.map(Boolean);
+      S.score  = clamp(Number(o.score)||0, 0, 100);
+    }
+  }catch(e){}
+}
+
+function onSpeedChanged(){
+  const b = binIndex(S.V);
+  if(b === S.binNow) return;
+  const first = S.binNow < 0;
+  S.binNow = b;
+  S.hold = 0; S.holdQ = 0;                       // 换档：保持进度清零，不留残影
+  refreshStatic();
+  if(first) return;
+  if(S.clears[b]) toast('「'+BINS[b].short+'」已经攻克过 —— 换个还没拿下的档位试试', 2600);
+  else            toast('🆕 进入「'+BINS[b].short+'」：航速变了，最优球鼻艏参数也跟着变，重新调一次', 3200);
+}
+
+function update(dt){
+  S.t += dt;
+  const P = phys();
+
+  S.flash = Math.max(0, S.flash - dt*1.8);
+  el.flash.style.opacity = (S.flash*0.55).toFixed(3);
+
+  /* 计分：只有"攻克新航速档"才加分（满分 100，不随时间上涨，也不因调错而扣分）
+     同相叠加只给视觉/文字警告，不影响得分 */
+  if(S.on && P.cancel < -0.25 && S.t - S.lastWarn > 1.4){
+    S.lastWarn = S.t; S.warn++; S.flash = 1;
+    toast('⚠️ 两列波同相叠加！首波更高、兴波阻力暴涨——把参数调回反相', 2600);
+  }
+
+  /* 保持计时 → 通关 */
+  if(S.on && P.cancel >= 0.9 && !S.clears[binIndex(S.V)]){
+    S.hold  = Math.min(5, S.hold + dt);
+    S.holdQ += P.cancel*dt;                    // 累积保持期间的消波质量，用于结算小分
+    if(S.hold >= 5) clearBin();
+  }else{
+    S.hold = Math.max(0, S.hold - dt*1.6);
+    if(S.hold <= 0) S.holdQ = 0;
+  }
+
+  /* 智能体遥测：每 0.5 s 广播一次全场状态（节流，避免拖慢帧率） */
+  ai.telT += dt;
+  if(ai.telT >= 0.5){
+    ai.telT = 0;
+    const snap = snapshot();
+    if(ai.adapter && typeof ai.adapter.onTelemetry === 'function'){
+      try{ ai.adapter.onTelemetry(snap); }catch(err){}
+    }
+    for(let i=0;i<ai.subs.length;i++){
+      const s = ai.subs[i];
+      if(S.t*1000 - s.last >= s.ms){ s.last = S.t*1000; try{ s.cb(snap); }catch(err){} }
+    }
+    window.dispatchEvent(new CustomEvent('bowlab:telemetry', {detail:snap}));
+  }
+
+  updateUI(P);
+}
+
+/* ============================================================
+   9. 交互
+   ============================================================ */
+function bind(){
+  el.btnBulb.onclick = ()=> setBulb(!S.on);
+  el.btnHint.onclick = ()=>{
+    el.hintCard.classList.toggle('show');
+    el.btnHint.textContent = el.hintCard.classList.contains('show') ? '📖 收起提示' : '📖 教学提示';
+  };
+  el.btnReset.onclick = (e)=>{
+    if(e && e.shiftKey){                       // Shift+点击：连进度一起清掉
+      S.clears = [false,false,false,false,false];
+      S.score = 0;
+      saveProgress();
+      toast('🗑 进度已清空（星章与得分归零）');
+    }
+    S.V=12; S.Lb=0; S.Vb=0.6; S.on=false; S.hold=0; S.holdQ=0; S.warn=0;
+    el.sV.value=12; el.sLb.value=0; el.sVb.value=60;
+    onSpeedChanged();
+    refreshStatic();
+    if(!e || !e.shiftKey) toast('↺ 已重置参数（Shift+点击可清空全部进度）');
+  };
+  el.btnDemo.onclick = ()=>{
+    const P = phys();
+    S.on = true;
+    S.Lb = Math.round(P.LbOpt*2)/2;
+    S.Vb = P.VbOpt;
+    el.sLb.value = S.Lb; el.sVb.value = Math.round(S.Vb*100);
+    refreshStatic();
+    markTouch('Lb');
+    toast('🧠 已调到理论最优：Lb≈λ/2 = '+P.LbOpt.toFixed(1)+' m，相位差 180°，振幅配平', 3400);
+  };
+
+  /* 滑块：拖动即自动装球鼻艏，避免"调了没反应" */
+  const autoOn = ()=>{
+    if(!S.on){ S.on=true; refreshStatic(); toast('⚙️ 已自动为船首装上球鼻艏'); }
+  };
+  el.sLb.oninput = ()=>{ S.Lb = +el.sLb.value; dirDirty=true; autoOn(); refreshStatic(); markTouch('Lb'); probeTrack(+el.sLb.value); };
+  el.sVb.oninput = ()=>{ S.Vb = +el.sVb.value/100; dirDirty=true; autoOn(); refreshStatic(); markTouch('Vb'); probeTrack(+el.sVb.value); };
+  el.sV.oninput  = ()=>{ S.V = +el.sV.value; dirDirty=true; onSpeedChanged(); refreshStatic(); markTouch('V'); };
+
+  /* --- AI 助教（智能体接入区）交互 --- */
+  el.aiSend.onclick = ()=>{
+    const q = el.aiInput.value;
+    el.aiInput.value = '';
+    BowLabAgent.ask(q);
+  };
+  el.aiInput.addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.stopPropagation(); el.aiSend.onclick(); }
+  });
+  el.aiDemo.onclick = ()=>{
+    /* 用"注册适配器"的方式接入一个本地规则智能体，演示完整接入流程 */
+    if(!window.__demoAgent){
+      window.__demoAgent = {
+        name:'本地示例智能体（规则版）',
+        ask(q, ctx){ return localAgent(q, ctx); },
+        onTelemetry(snap){ /* 每 0.5 s 收到一次状态——接入大模型时可在此上报 */ }
+      };
+    }
+    BowLabAgent.register(window.__demoAgent);
+    BowLabAgent.ask('当前航速下，球鼻艏的伸出长度和体积该怎么调？');
+  };
+
+  /* 第五关剧情卡：收起 / 展开 */
+  el.btnStory.onclick = ()=>{
+    const folded = el.storyCard.classList.toggle('folded');
+    el.btnStory.textContent = folded ? '展开' : '收起';
+  };
+
+  /* 点击剖面画面 = 开/关球鼻艏（探路实验里球鼻艏常开且锁定，不给关） */
+  if(!ONLY){
+    views.side.cv.addEventListener('click', ()=> setBulb(!S.on));
+    views.side.cv.title = '点击开 / 关球鼻艏';
+  }else{
+    views.side.cv.title = '探路实验：球鼻艏已安装并锁定';
+  }
+
+  document.addEventListener('keydown', e=>{
+    const t = e.target;
+    if(t && (t.tagName==='INPUT' || t.tagName==='TEXTAREA')) return;   // 输入框内不劫持按键
+    if(e.code==='Space' && !ONLY){ e.preventDefault(); setBulb(!S.on); }
+    if(e.key==='r'||e.key==='R') el.btnReset.onclick();
+  });
+
+  let rt=null;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(rt);
+    rt = setTimeout(()=>{ resizeAll(); }, 120);
+  });
+}
+
+/* ============================================================
+   10. 主循环
+   ============================================================ */
+let last = performance.now();
+function loop(now){
+  let dt = (now-last)/1000; last = now;
+  dt = Math.min(dt, 0.05);
+  update(dt);
+  renderSide(dt);
+  requestAnimationFrame(loop);
+}
+
+/* ============================================================
+   11. 启动
+   ============================================================ */
+function init(){
+  if(!ONLY) loadProgress();          // 探路实验不读 5 星存档
+  bind();
+  applyProbe();                      // ★ 探路模式整站改造
+  resizeAll();
+  S.binNow = binIndex(S.V);
+  refreshStatic();
+  const P = phys();
+  updateUI(P);
+  requestAnimationFrame(loop);
+  if(ONLY){
+    setTimeout(()=> toast(ONLY==='vol'
+      ? '🧭 探路实验开始：只允许你动「球鼻艏体积」滑块 —— 试试能不能把艏波压下去'
+      : '🧭 探路实验开始：只允许你动「球鼻艏伸出长度」滑块 —— 试试能不能把艏波压下去', 4600), 700);
+  }else{
+    setTimeout(()=> toast('👋 先看看传统船艏怎么把水面掀起来，再点击画面实施球鼻艏计划', 4200), 700);
+  }
+}
+init();
+
+/* ============================================================
+   12. V2 视觉精修：入场层叠 + 滑块填充染色
+   ============================================================ */
+(function(){
+  /* 卡片自左上至右下依次淡入（结论卡自己有出现动画，排除在外） */
+  const nodes = [...document.querySelectorAll('.topbar, .wrap .card')]
+                  .filter(n => !n.classList.contains('conc'));
+  nodes.forEach((n,i)=>{ n.classList.add('vv'); setTimeout(()=>n.classList.add('vin'), 45*i+40); });
+
+  /* 把滑块"已填充"部分染成亮色（#sV 自带航速档渐变，跳过） */
+  function paint(r){
+    if(!r || r.id==='sV') return;
+    const min = +r.min || 0, max = +r.max || 100;
+    const p = ((+r.value - min) / ((max-min)||1)) * 100;
+    r.style.setProperty('--fill', p.toFixed(1)+'%');
+  }
+  const ranges = ['sLb','sVb'].map(id=>el[id]).filter(Boolean);
+  ranges.forEach(r=>{ paint(r); r.addEventListener('input', ()=>paint(r)); });
+  window.__paintRanges = ()=> ranges.forEach(paint);
+})();
+
+/* ============================================================
+   13. D3 交互升级：公式行 ↔ 滑块 双向悬停联动
+   悬停滑块 → 对应公式行亮起；悬停公式行 → 驱动它的滑块发光
+   （与拖动时的 .hot 红闪互不干扰，独立使用 .hov/.glow）
+   ============================================================ */
+(function(){
+  const rowOf = s => document.querySelector('.f-row[data-sym="'+s+'"]');
+  const ctlOf = id => el[id] ? el[id].closest('.ctl') : null;
+
+  /* 滑块 → 公式行 */
+  const SLIDER_ROWS={ sLb:HOT_MAP.Lb.rows, sVb:HOT_MAP.Vb.rows, sV:HOT_MAP.V.rows };
+  Object.keys(SLIDER_ROWS).forEach(id=>{
+    const ctl=ctlOf(id); if(!ctl) return;
+    ctl.addEventListener('mouseenter', ()=>{
+      SLIDER_ROWS[id].forEach(s=>{ const r=rowOf(s); if(r) r.classList.add('hov'); });
+      ctl.classList.add('hov-src');
+    });
+    ctl.addEventListener('mouseleave', ()=>{
+      document.querySelectorAll('.f-row.hov').forEach(r=>r.classList.remove('hov'));
+      ctl.classList.remove('hov-src');
+    });
+  });
+
+  /* 公式行 → 驱动它的滑块（res 行是结果，不指回任何滑块） */
+  const ROW_SLIDERS={ lam:['sV'], phi:['sLb'], amp:['sVb'], res:[] };
+  document.querySelectorAll('.f-row[data-sym]').forEach(r=>{
+    const sym=r.getAttribute('data-sym');
+    r.addEventListener('mouseenter', ()=>{
+      r.classList.add('hov-self');
+      (ROW_SLIDERS[sym]||[]).forEach(id=>{ const c=ctlOf(id); if(c) c.classList.add('glow'); });
+    });
+    r.addEventListener('mouseleave', ()=>{
+      r.classList.remove('hov-self');
+      document.querySelectorAll('.ctl.glow').forEach(c=>c.classList.remove('glow'));
+    });
+  });
+})();
+
+})();
+</script>
+
+<!-- 舰桥导航坞：回舰桥 / 看标定卡进度（放在内容列顶部，不遮挡任何控件） -->
+<script>try{ window.Fleet && window.Fleet.mountDock({label:'第五关 终极抵消', host:'.wrap', hostFirst:true, hostGap:'10px 0 0'}); }catch(e){}</script>
+</body>
+</html>

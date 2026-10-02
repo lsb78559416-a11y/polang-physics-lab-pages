@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>序章 · 四十七天 —— 破浪者：球鼻艏计划</title>
+<!-- 舰桥进度内核：全站解锁状态的唯一真源（见 fleet.js） -->
+<script src="fleet.js"></script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+</script>
+<style>
+:root{
+  --bg:#050f14; --ink:#dff0f2; --dim:#7fa3ab; --faint:#4d6b73;
+  --cy:#4fe0c8; --am:#ffc857; --rd:#ff5f5f; --sx:#9fd8e8;
+  --panel:rgba(8,22,28,.86); --line:rgba(79,224,200,.22);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+  font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;cursor:default;user-select:none}
+#stage{position:absolute;inset:0;z-index:0}
+#scene{position:absolute;inset:0;z-index:0}
+#scene canvas{display:block}
+/* 幕背景：每一幕一张实景底图（3D 画布已改成透明，底图从下面透上来） */
+#bg{position:absolute;inset:0;z-index:0;opacity:.46;
+  background-size:cover;background-position:center 44%;background-repeat:no-repeat;
+  filter:saturate(.72) brightness(.60) contrast(1.06);transform:scale(1);
+  transition:background-image .9s ease,opacity .9s ease}
+#bg.shift{animation:bgShift 1.25s cubic-bezier(.2,.75,.25,1) both}
+@keyframes bgShift{0%{opacity:.08;transform:scale(1.035);filter:saturate(.42) brightness(.38) contrast(1.12)}100%{opacity:var(--bg-opacity,.46);transform:scale(1);filter:saturate(.72) brightness(.60) contrast(1.06)}}
+#bg::after{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 46%,rgba(5,15,20,.28) 28%,rgba(5,15,20,.88) 90%)}
+/* 暗角 + 扫描线：给 3D 一层"指挥厅屏幕"的质感 */
+#vig{position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 42%,rgba(0,0,0,.62) 100%)}
+#scan{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:.16;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 1px,rgba(0,0,0,0) 1px 3px)}
+#stageFx{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden;opacity:0}
+#stageFx.show{animation:stageWipe 1.05s cubic-bezier(.2,.75,.25,1) both}
+#stageFx::before{content:'';position:absolute;left:-8%;right:-8%;top:42%;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(79,224,200,.95),rgba(255,200,87,.82),transparent);
+  box-shadow:0 0 18px rgba(79,224,200,.72),0 0 46px rgba(79,224,200,.28);
+  transform:translateX(-110%);opacity:.9}
+#stageFx.show::before{animation:stageSweep .9s .08s cubic-bezier(.2,.75,.25,1) both}
+#stageFx::after{content:'';position:absolute;inset:12% 4%;border:1px solid rgba(79,224,200,.20);
+  clip-path:polygon(0 0,100% 0,100% 18%,0 18%);transform:translateY(22vh);opacity:0}
+#stageFx.show::after{animation:stageFrame .9s .15s ease-out both}
+#stageFxTag{position:absolute;left:50%;top:34%;transform:translate(-50%,16px);white-space:nowrap;
+  font:11px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:4px;color:#bdeee5;
+  text-shadow:0 0 18px rgba(79,224,200,.8);opacity:0}
+#stageFx.show #stageFxTag{animation:stageTag .85s .1s ease-out both}
+@keyframes stageWipe{0%{opacity:0;background:rgba(3,13,17,0)}18%{opacity:1;background:rgba(3,13,17,.24)}72%{opacity:1;background:rgba(3,13,17,.08)}100%{opacity:0;background:rgba(3,13,17,0)}}
+@keyframes stageSweep{0%{transform:translateX(-110%)}100%{transform:translateX(110%)}}
+@keyframes stageFrame{0%{opacity:0;transform:translateY(22vh)}35%,72%{opacity:1}100%{opacity:0;transform:translateY(-18vh)}}
+@keyframes stageTag{0%{opacity:0;transform:translate(-50%,16px);letter-spacing:6px}35%,70%{opacity:1}100%{opacity:0;transform:translate(-50%,-12px);letter-spacing:4px}}
+#impactFx{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;
+  background:radial-gradient(circle at 50% 48%,rgba(79,224,200,.30),rgba(79,224,200,.07) 30%,transparent 68%)}
+#impactFx.burst{animation:impactBurst .55s ease-out both}
+#impactFx.warn{background:radial-gradient(circle at 50% 54%,rgba(255,95,95,.34),rgba(255,95,95,.06) 34%,transparent 70%)}
+@keyframes impactBurst{0%{opacity:0;transform:scale(.94)}18%{opacity:1}100%{opacity:0;transform:scale(1.05)}}
+/* 警报红光 */
+#redAlert{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0;
+  background:radial-gradient(ellipse at 50% 60%,rgba(255,40,40,.30) 0%,rgba(255,20,20,.06) 60%,rgba(0,0,0,0) 100%)}
+#redAlert.on{animation:redPulse 1.05s ease-in-out infinite}
+@keyframes redPulse{0%,100%{opacity:.22}50%{opacity:.72}}
+
+/* ---------- 幕牌 ---------- */
+#actPlaque{position:absolute;left:32px;top:26px;z-index:6;opacity:0;transform:translateY(-8px);
+  transition:opacity .55s ease,transform .55s ease;pointer-events:none}
+#actPlaque.show{opacity:1;transform:translateY(0)}
+#actPlaque b{display:block;font-size:19px;font-weight:800;letter-spacing:2px;color:var(--ink);
+  text-shadow:0 0 22px rgba(0,0,0,.9)}
+#actPlaque .sub{display:block;margin-top:5px;font-size:10px;letter-spacing:2.6px;color:var(--cy);
+  font-family:ui-monospace,Menlo,Consolas,monospace;opacity:.85}
+#actPlaque .bar{display:block;margin-top:9px;width:52px;height:2px;background:var(--cy);
+  box-shadow:0 0 12px var(--cy)}
+
+/* ---------- 中央大数字 ---------- */
+#bigNum{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) scale(.9);z-index:5;
+  opacity:0;pointer-events:none;transition:opacity .8s ease,transform .8s ease;text-align:center}
+#bigNum.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#bigNum .n{display:block;font-size:clamp(96px,17vw,208px);font-weight:900;line-height:.9;
+  color:var(--cy);letter-spacing:-4px;text-shadow:0 0 60px rgba(79,224,200,.55),0 0 120px rgba(79,224,200,.25);
+  font-family:ui-monospace,Menlo,Consolas,monospace}
+#bigNum .u{display:block;margin-top:10px;font-size:15px;letter-spacing:10px;color:var(--dim)}
+#bigNum .cap{display:block;margin-top:20px;font-size:12px;letter-spacing:1.6px;color:var(--faint)}
+
+/* ---------- 日志 ---------- */
+#logBox{position:absolute;right:26px;top:24px;z-index:6;width:270px;text-align:right;
+  font-size:10.5px;line-height:1.9;color:var(--faint);letter-spacing:.5px;pointer-events:none;
+  font-family:ui-monospace,Menlo,Consolas,monospace}
+#logBox div{animation:lgIn .4s ease}
+#logBox .hi{color:var(--cy)}
+#logBox .wn{color:var(--am)}
+#logBox .er{color:var(--rd)}
+@keyframes lgIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}
+
+/* ---------- 对话卡 ---------- */
+#dlg{position:absolute;left:50%;bottom:34px;transform:translate(-50%,14px);z-index:8;
+  width:min(960px,93vw);background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:20px 26px 16px;backdrop-filter:blur(9px);
+  box-shadow:0 22px 60px rgba(0,0,0,.62),0 0 0 1px rgba(0,0,0,.35) inset;
+  opacity:0;pointer-events:none;transition:opacity .4s ease,transform .4s ease;cursor:pointer}
+#dlg.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#dlg.show{animation:dlgEnter .48s cubic-bezier(.2,.75,.25,1) both}
+@keyframes dlgEnter{0%{opacity:0;transform:translate(-50%,18px) scale(.985)}100%{opacity:1;transform:translate(-50%,0) scale(1)}}
+#dlg.sys{border-color:rgba(255,95,95,.34)}
+.dhead{display:flex;align-items:center;gap:14px;margin-bottom:13px}
+.dav{width:42px;height:42px;flex:0 0 42px;border-radius:11px;display:grid;place-items:center;
+  font-size:21px;background:linear-gradient(150deg,rgba(79,224,200,.20),rgba(79,224,200,.05));
+  border:1px solid var(--line);box-shadow:0 0 0 rgba(79,224,200,0)}
+#dlg.show .dav{animation:avatarWake .65s .08s ease-out both}
+@keyframes avatarWake{0%{transform:scale(.82);filter:brightness(1.8);box-shadow:0 0 24px rgba(79,224,200,.5)}100%{transform:scale(1);filter:none;box-shadow:0 0 0 rgba(79,224,200,0)}}
+#dlg.sys .dav{background:linear-gradient(150deg,rgba(255,95,95,.22),rgba(255,95,95,.05));
+  border-color:rgba(255,95,95,.34)}
+.dname{font-size:15px;font-weight:800;letter-spacing:.6px}
+.drole{font-size:10.5px;color:var(--faint);margin-top:2px;letter-spacing:.4px}
+.dtext{min-height:76px;font-size:15px;line-height:1.95;color:var(--ink);letter-spacing:.3px}
+.dtext b{color:var(--cy);font-weight:800}
+#dlg.sys .dtext b{color:var(--rd)}
+.dtap{margin-top:12px;text-align:right;font-size:10.5px;color:var(--faint);letter-spacing:1.4px}
+.dtap i{font-style:normal;color:var(--cy);animation:blink 1.3s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:.35}50%{opacity:1}}
+.type-cursor{color:var(--cy);font-weight:400}
+
+/* ---------- 波形图例（第二幕） ---------- */
+#legend{position:absolute;left:34px;top:136px;z-index:6;opacity:0;pointer-events:none;
+  transition:opacity .5s ease;font-size:12px;letter-spacing:.6px}
+#legend.show{opacity:1}
+#legend div{display:flex;align-items:center;gap:10px;margin-bottom:9px;color:var(--dim)}
+#legend i{display:block;width:30px;height:3px;border-radius:2px}
+#legend i.c1{background:#4fe0c8;box-shadow:0 0 10px #4fe0c8}
+#legend i.c2{background:#ffc857;box-shadow:0 0 10px #ffc857}
+#legend i.c3{background:#8affd8;box-shadow:0 0 10px #8affd8}
+
+/* ---------- 六座水池状态（第三幕） ---------- */
+#labPanel{position:absolute;right:26px;top:50%;transform:translateY(-50%) translateX(12px);z-index:6;
+  width:236px;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:14px 16px;opacity:0;pointer-events:none;transition:opacity .5s ease,transform .5s ease;
+  backdrop-filter:blur(8px)}
+#labPanel.show{opacity:1;transform:translateY(-50%) translateX(0)}
+#labPanel .lp-h{font-size:11px;letter-spacing:1.6px;color:var(--cy);margin-bottom:11px;
+  font-family:ui-monospace,Menlo,Consolas,monospace}
+.lp-r{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:12px;color:var(--faint);
+  transition:color .3s ease}
+.lp-r .lp-d{width:7px;height:7px;border-radius:50%;background:#22424a;flex:0 0 7px;
+  transition:all .35s ease}
+.lp-r.on{color:var(--ink)}
+.lp-r.on .lp-d{background:var(--cy);box-shadow:0 0 10px var(--cy)}
+.lp-r .lp-n{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;opacity:.7;width:16px}
+.lp-r.wait{opacity:.55}
+.lp-r.wait .lp-d{background:#2b4a52;box-shadow:none}
+.lp-r.wait .lp-n{opacity:.5}
+.lp-note{margin-top:11px;padding-top:10px;border-top:1px solid var(--line);
+  font-size:10.5px;line-height:1.7;color:var(--faint)}
+.lp-note b{color:var(--cy);font-weight:600}
+
+/* ---------- 跳过 ---------- */
+#btnSkip{position:absolute;right:26px;bottom:30px;z-index:9;background:transparent;
+  border:1px solid var(--line);color:var(--dim);font-size:11px;letter-spacing:1.4px;
+  padding:8px 15px;border-radius:8px;cursor:pointer;transition:all .22s ease;font-family:inherit}
+#btnSkip:hover{color:var(--cy);border-color:var(--cy);background:rgba(79,224,200,.08)}
+
+/* ---------- 结尾面板 ---------- */
+#endPanel{position:absolute;inset:0;z-index:12;display:none;place-items:center;
+  background:linear-gradient(180deg,rgba(3,10,13,.72),rgba(3,10,13,.90));backdrop-filter:blur(3px)}
+#endPanel.show{display:grid;animation:fadeIn .6s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+#endInner{width:min(1020px,94vw);max-height:92vh;overflow-y:auto;padding:8px 4px}
+#endInner h2{font-size:23px;font-weight:800;letter-spacing:1.5px;text-align:center}
+#endInner .sub{text-align:center;margin-top:8px;font-size:11px;letter-spacing:3px;color:var(--cy);
+  font-family:ui-monospace,Menlo,Consolas,monospace}
+#endInner .lead{margin:20px auto 4px;max-width:760px;font-size:13px;line-height:2;color:var(--dim);
+  text-align:center;letter-spacing:.4px}
+#endInner .lead b{color:var(--am)}
+#routeCap{text-align:center;font-size:11px;letter-spacing:1.4px;color:var(--faint);margin:20px 0 -8px}
+#routeCap b{color:var(--cy)}
+#routeGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:22px 0 6px}
+/* 基态必须可见：animation 只是入场增强，一旦动画不执行（无头 / 省电模式）也不能丢卡片 */
+.rcard{background:rgba(11,28,34,.88);border:1px solid rgba(79,224,200,.20);border-radius:12px;
+  padding:14px 16px;display:flex;gap:13px;align-items:flex-start;
+  animation:cardIn .5s ease backwards}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.rcard.locked{border-color:rgba(120,150,158,.14);opacity:.62}
+.rcard.locked .rn{color:var(--faint)}
+.rnum{flex:0 0 40px;height:40px;border-radius:10px;display:grid;place-items:center;font-size:14px;
+  font-weight:900;background:linear-gradient(150deg,rgba(79,224,200,.20),rgba(79,224,200,.04));
+  border:1px solid var(--line);color:var(--cy);font-family:ui-monospace,Menlo,Consolas,monospace}
+.rcard.locked .rnum{background:rgba(120,150,158,.08);border-color:rgba(120,150,158,.18);color:var(--faint)}
+.rn{font-size:13.5px;font-weight:800;letter-spacing:.5px}
+.rt{font-size:10.5px;color:var(--faint);margin-top:3px;line-height:1.6}
+.rbadge{margin-left:auto;font-size:9.5px;letter-spacing:1.2px;padding:3px 8px;border-radius:20px;
+  background:rgba(79,224,200,.14);color:var(--cy);border:1px solid var(--line);white-space:nowrap}
+.rbadge.lock{background:rgba(120,150,158,.10);color:var(--faint);border-color:rgba(120,150,158,.18)}
+#entryRow{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:24px 0 6px}
+.ebtn{display:inline-block;padding:13px 26px;border-radius:10px;font-size:13.5px;font-weight:700;
+  letter-spacing:.8px;text-decoration:none;cursor:pointer;border:1px solid var(--line);
+  background:linear-gradient(150deg,rgba(79,224,200,.22),rgba(79,224,200,.06));color:var(--cy);
+  transition:all .22s ease;font-family:inherit}
+.ebtn:hover{background:linear-gradient(150deg,rgba(79,224,200,.34),rgba(79,224,200,.12));
+  box-shadow:0 0 26px rgba(79,224,200,.30);transform:translateY(-1px)}
+.ebtn.ghost{background:transparent;color:var(--dim);border-color:rgba(120,150,158,.22)}
+.ebtn.ghost:hover{color:var(--ink);border-color:rgba(120,150,158,.42);box-shadow:none}
+#endNote{text-align:center;font-size:10.5px;color:var(--faint);margin-top:16px;line-height:1.9}
+
+/* ---------- 落幕 → 回舰桥（ENDTXT.exit.on = true 时走这条路） ---------- */
+#curtain{position:absolute;inset:0;z-index:30;display:grid;place-items:center;
+  background:radial-gradient(ellipse at 50% 44%,rgba(4,14,18,.84),rgba(2,7,9,.975));
+  opacity:0;transition:opacity .85s ease;pointer-events:none}
+#curtain[hidden]{display:none}
+#curtain.show{opacity:1;pointer-events:auto}
+#curtain .ct-in{text-align:center;padding:0 24px;transform:translateY(10px);
+  transition:transform 1s cubic-bezier(.22,.9,.3,1)}
+#curtain.show .ct-in{transform:translateY(0)}
+.ct-kicker{font-size:10.5px;letter-spacing:4px;color:var(--cy);opacity:.85;
+  font-family:ui-monospace,Menlo,Consolas,monospace}
+.ct-line{margin-top:16px;font-size:clamp(24px,4.6vw,38px);font-weight:800;letter-spacing:6px;
+  text-indent:6px;color:var(--ink);text-shadow:0 6px 30px rgba(79,224,200,.22)}
+.ct-rule{width:132px;height:1px;margin:20px auto 18px;
+  background:linear-gradient(90deg,transparent,rgba(79,224,200,.62),transparent)}
+.ct-sub{font-size:11.5px;letter-spacing:2.4px;color:var(--dim);
+  animation:ctBlink 1.5s ease-in-out infinite}
+@keyframes ctBlink{0%,100%{opacity:.42}50%{opacity:.95}}
+@media (prefers-reduced-motion:reduce){
+  #curtain,#curtain .ct-in{transition-duration:.01ms!important}
+  .ct-sub{animation:none;opacity:.8}
+}
+
+/* ---------- 3D 失败提示 ---------- */
+#errMsg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;display:none;
+  width:min(460px,90vw);background:rgba(8,22,28,.94);border:1px solid rgba(255,95,95,.34);
+  border-radius:12px;padding:22px 26px;text-align:center}
+#errMsg.show{display:block}
+#errMsg .et{font-size:14px;font-weight:800;color:var(--rd);margin-bottom:9px}
+#errMsg .eb{font-size:12px;line-height:1.9;color:var(--dim)}
+@media (max-width:760px){
+  #logBox{display:none}
+  .dtext{font-size:14px;min-height:88px}
+  #actPlaque{left:18px;top:16px}
+}
+@media (prefers-reduced-motion:reduce){
+  #bg.shift,#stageFx.show,#stageFx.show::before,#stageFx.show::after,#stageFx.show #stageFxTag,
+  #impactFx.burst,#dlg.show,#dlg.show .dav{animation-duration:.01ms!important;animation-iteration-count:1!important}
+}
+</style>
+</head>
+<body>
+
+<div id="bg"></div>
+
+<div id="stage">
+  <div id="scene"></div>
+  <div id="vig"></div>
+  <div id="scan"></div>
+  <div id="stageFx"><span id="stageFxTag"></span></div>
+  <div id="impactFx"></div>
+  <div id="redAlert"></div>
+</div>
+
+<div id="bigNum">
+  <span class="n">47</span>
+  <span class="u">天</span>
+  <span class="cap">海蓝星 · 船用燃料储备</span>
+</div>
+
+<div id="actPlaque"><b></b><span class="sub"></span><span class="bar"></span></div>
+
+<div id="logBox"></div>
+
+<div id="legend">
+  <div><i class="c1"></i>船艏波</div>
+  <div><i class="c2"></i>球鼻艏波</div>
+  <div><i class="c3"></i>合成波</div>
+</div>
+
+<div id="labPanel">
+  <div class="lp-h">▍ 星海号 · 六座实验水池</div>
+  <div id="labBody"></div>
+  <div class="lp-note" id="labNote"></div>
+</div>
+
+<div id="dlg">
+  <div class="dhead">
+    <div class="dav" id="dlAv">⚓</div>
+    <div>
+      <div class="dname" id="dlName">—</div>
+      <div class="drole" id="dlRole">—</div>
+    </div>
+  </div>
+  <div class="dtext" id="dlText"></div>
+  <div class="dtap">点击继续 <i>▸</i></div>
+</div>
+
+<button id="btnSkip">跳过剧情 »</button>
+
+<div id="endPanel"><div id="endInner">
+  <h2 id="endTitle">启程</h2>
+  <div class="sub" id="endSub">THE COMMISSION · SEALED</div>
+  <div class="lead" id="endLead"></div>
+  <div id="routeCap"></div>
+  <div id="routeGrid"></div>
+  <div id="entryRow"></div>
+  <div id="endNote"></div>
+</div></div>
+
+<div id="curtain" hidden><div class="ct-in">
+  <div class="ct-kicker" id="ctKicker"></div>
+  <div class="ct-line" id="ctLine"></div>
+  <div class="ct-rule"></div>
+  <div class="ct-sub" id="ctSub"></div>
+</div></div>
+
+<div id="errMsg"><div class="ec">
+  <div class="et">⚠ 3D 场景加载失败</div>
+  <div class="eb">需要 WebGL 与联网（three.js 走 CDN）。<br>剧情与入口不受影响，可以继续往下看。</div>
+</div></div>
+
+<script type="module">
+
+/* ================================================================
+   序章 · 四十七天 —— 剧情引擎
+   依据：文字文稿1(5)(1).docx（六关齐全版）
+   人物沿用：老所长 ⚓ / 老陈教授 🎓 / 钱船长 📻 / 阿洛 🦊
+   ================================================================ */
+const $ = id => document.getElementById(id);
+
+/* ---------- 音效（WebAudio，失败静默） ---------- */
+let _ac = null;
+function AC(){ if(!_ac){ try{ _ac = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ _ac = null; } } return _ac; }
+function tone(f, d, ty, g){
+  const c = AC(); if(!c) return;
+  try{
+    const o = c.createOscillator(), gn = c.createGain();
+    o.type = ty || 'sine'; o.frequency.value = f;
+    gn.gain.setValueAtTime(0, c.currentTime);
+    gn.gain.linearRampToValueAtTime(g || 0.05, c.currentTime + 0.012);
+    gn.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + d);
+    o.connect(gn); gn.connect(c.destination);
+    o.start(); o.stop(c.currentTime + d + 0.02);
+  }catch(e){}
+}
+const beep  = () => tone(660, 0.07, 'sine', 0.030);
+const chime = () => { tone(523,0.16,'sine',0.05); setTimeout(()=>tone(784,0.22,'sine',0.045),110); };
+const alarm = () => { tone(180,0.30,'square',0.055); setTimeout(()=>tone(140,0.34,'square',0.05),150); };
+
+/* ---------- 日志 ---------- */
+function log(t, c){
+  const b = $('logBox'); if(!b) return;
+  const d = document.createElement('div');
+  if(c) d.className = c;
+  d.textContent = t;
+  b.insertBefore(d, b.firstChild);
+  while(b.children.length > 9) b.removeChild(b.lastChild);
+}
+
+/* ---------- 打字机（支持 <b> 标签，不破坏结构） ---------- */
+let tTimer = null, tParts = null, tPi = 0, tCi = 0, tEl = null, typing = false, tCB = null;
+function splitHTML(html){
+  const out = []; const re = /<b>([\s\S]*?)<\/b>/g;
+  let last = 0, m;
+  while((m = re.exec(html))){
+    if(m.index > last) out.push({ b:false, s:html.slice(last, m.index) });
+    out.push({ b:true, s:m[1] });
+    last = m.index + m[0].length;
+  }
+  if(last < html.length) out.push({ b:false, s:html.slice(last) });
+  return out;
+}
+function typeHTML(el, html, cb){
+  if(tTimer){ clearInterval(tTimer); tTimer = null; }
+  tParts = splitHTML(html); tPi = 0; tCi = 0; tEl = el; typing = true; tCB = cb || null;
+  const render = () => {
+    let s = '';
+    for(let i = 0; i < tPi && i < tParts.length; i++){
+      const p = tParts[i];
+      s += p.b ? ('<b>' + p.s + '</b>') : p.s;
+    }
+    if(tPi < tParts.length){
+      const p = tParts[tPi];
+      const seg = p.s.slice(0, tCi);
+      s += p.b ? ('<b>' + seg + '</b>') : seg;
+    }
+    el.innerHTML = s + '<span class="type-cursor">▌</span>';
+  };
+  render();
+  tTimer = setInterval(() => {
+    if(tPi >= tParts.length){
+      clearInterval(tTimer); tTimer = null; typing = false;
+      let s = '';
+      for(const p of tParts) s += p.b ? ('<b>' + p.s + '</b>') : p.s;
+      el.innerHTML = s;
+      if(tCB){ const f = tCB; tCB = null; f(); }
+      return;
+    }
+    const p = tParts[tPi];
+    tCi++;
+    if(tCi > p.s.length){ tPi++; tCi = 0; }
+    render();
+  }, 15);
+}
+function finishType(){
+  if(!typing || !tEl) return;
+  if(tTimer){ clearInterval(tTimer); tTimer = null; }
+  typing = false;
+  let s = '';
+  for(const p of tParts) s += p.b ? ('<b>' + p.s + '</b>') : p.s;
+  tEl.innerHTML = s;
+  if(tCB){ const f = tCB; tCB = null; f(); }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ★★★ 维护指南 —— 改这个文件之前，先看这 40 行 ★★★
+   ────────────────────────────────────────────────────────────────
+   整个文件分三块。改剧情只碰【A 区】，改接入地址只碰【B 区】，
+   【C 区】（3D / UI / 推进逻辑）一行都不用动，也不需要动。
+
+   【A 区 · 剧情数据】CAST 角色表 → ACTS 幕表 → BEATS 对白 →
+                     LABS 水池清单 → ROUTE 航线卡 → ENDTXT 结尾文案
+   【B 区 · 接入开关】QUIZ（摸底测评的地址 / 是否上线）
+   【C 区 · 引擎】以下所有 function、3D 场景、打字机、判定
+
+   四条铁律：
+   1. 加 / 删 / 改台词 = 只动 BEATS。一句就是一个对象，随便增删，
+      序号怎么变都不会错位（3D 状态由该句自带的 fx / st 声明，
+      代码里没有任何一处写死"第几句"）。
+   2. 新角色先在 CAST 登记，台词里用 CAST.XXX 引用。
+   3. 想让某句带新特效：给它一个新 fx 名即可。若 3D 里还没实现对应
+      表现，启动自检只报警告、剧情照常播，不会崩。
+   4. 想让某句改变 3D 的"持续状态"（波形阶段 / 六舱点亮数 / 待判定），
+      在该句上写 st:{...}（见 BEATS 上方注释）。st 只写"变成什么"，
+      不写"第几句"。
+
+   改完跑一次：python .../实验室设计/assets/verify.py .
+   它会校验 DOM id 完整性、外部图片、语法。再打开页面看 console，
+   自检会把数据里的问题（缺字段 / 未知 fx / 清单对不上）直接报出来。
+   ════════════════════════════════════════════════════════════════ */
+
+/* ================================================================
+   【A 区 · 1/6】角色表 CAST —— 加人先在这里登记
+   字段：n 姓名 / a 头像 / r 头衔 / sys 是否为系统播报（真则走告警音与样式）
+   ================================================================ */
+const CAST = {
+  MST: { n:'老所长',   a:'⚓', r:'海事总工 · 「球鼻艏计划」发起人' },
+  CHN: { n:'老陈教授', a:'🎓', r:'破浪实验室 · 首席工程师' },
+  CAP: { n:'钱船长',   a:'📻', r:'星海号 · 船长（无线电）' },
+  ALO: { n:'阿洛',     a:'🦊', r:'星海号 · 随船机械师' },
+  SYS: { n:'调度台',   a:'◈',  r:'破浪实验室 · 中枢', sys:true }
+};
+const MST = CAST.MST, CHN = CAST.CHN, CAP = CAST.CAP, ALO = CAST.ALO, SYS = CAST.SYS;
+
+/* ================================================================
+   【A 区 · 2/6】剧本 BEATS —— 改剧情就只改这里
+   ────────────────────────────────────────────────────────────────
+   一句 = { w:角色, t:文本, fx?:一次性特效, st?:持续状态 }
+
+   fx（一次性，触发一次就完）：
+     num 浮出 47 大字 · dim 航线熄灭 · bow 船艏水墙 · bulb 球鼻艏长出
+     cancel 两列波反相 · flash 全场闪光 · k7 点亮 K-7 · strait 点亮风暴海峡
+     scan 调度台扫描 · quiz 再次扫描 · radio 无线电脉冲 · alarm 警报 · end 收尾
+     名字随便加：3D 没实现的只会在 console 警告，不影响播放。
+
+   st（持续状态，一直保持到下一句改写它）：
+     A2：st:{wave:0..3}  0 静水面 / 1 单列船艏波 / 2 加球鼻艏双列 / 3 反相相消
+     A3：st:{tank:2}     点亮 N 个舱位（N=0..6，介绍阶段）
+         st:{tank:'scan'} 扫描一遍，六舱转"待判定"
+         st:{tank:'wait'} 保持待判定（不重扫）
+   ================================================================ */
+/* ================================================================================
+   【A 区 · 幕背景】每一幕一张实景底图。3D 画布已改成透明（alpha:true + 底色透明），
+   底图从画布下面透上来；3D 加载失败时也不会变成一片死黑。
+     on       : false 一键退回原来的纯色底（画布会自动变回不透明）
+     opacity  : 底图亮度，0~1，太大压过 3D
+     byStage  : 键是 ACTS[].s3 的值（'map'/'wave'/'ship'/'alarm'）+ 结尾 'end'
+   ================================================================================ */
+const PROBG = {
+  on: true,
+  opacity: 0.46,
+  byStage: {
+    map:   'assets/img/cover.jpg',       /* 第一幕 · 四十七天：舰桥 + 全息群岛沙盘 */
+    wave:  'assets/img/pool-2.jpg',      /* 第二幕 · 让浪去杀浪：黏稠海面 + 同心波 */
+    ship:  'assets/img/hero-fleet.jpg',  /* 第三幕 · 先摸你的底：侧舷六座水舱 */
+    alarm: 'assets/img/pool-1.jpg',      /* 尾声 · 点不着：引擎舱，点火否决 */
+    end:   'assets/img/extra-gate.jpg'   /* 结尾：船坞外海，准备出港 */
+  }
+};
+
+/* 切幕底图（不依赖 3D 是否加载成功） */
+function setBG(s){
+  var box = document.getElementById('bg');
+  if(!box) return;
+  if(!PROBG.on){ box.style.display = 'none'; return; }
+  box.style.setProperty('--bg-opacity', PROBG.opacity);
+  box.style.opacity = PROBG.opacity;
+  var f = PROBG.byStage[s];
+  if(f) box.style.backgroundImage = 'url("' + f + '")';
+  box.classList.remove('shift');
+  void box.offsetWidth;
+  box.classList.add('shift');
+}
+
+const ACTS = [
+  { k:'A1', title:'第一幕 · 四十七天',   sub:'ACT I · FORTY-SEVEN DAYS',            s3:'map'   },
+  { k:'A2', title:'第二幕 · 让浪去杀浪', sub:'ACT II · LET THE WAVE KILL THE WAVE', s3:'wave'  },
+  { k:'A3', title:'第三幕 · 先摸你的底', sub:'ACT III · ASSESSMENT FIRST',           s3:'ship'  },
+  { k:'CD', title:'尾声 · 点不着',       sub:'CODA · SHE WON’T LIGHT',              s3:'alarm' }
+];
+
+const BEATS = {
+  A1:[
+    { w:MST, t:'坐。' },
+    { w:MST, t:'来了就好。我没时间给你办欢迎仪式。' },
+    { w:MST, t:'海蓝星全部船用燃料储备。按现在的烧法，够跑<b>四十七天</b>。', fx:'num' },
+    { w:MST, t:'四十七天之后，岛和岛之间就断了。<br><b>不是慢，是断。</b>' },
+    { w:MST, t:'这颗星球上没有一块能走车的地。<br>人、货、淡水、药 —— 全在船上。' },
+    { w:MST, t:'所以现在全星球的船都在干一件事：省油。<br>换发动机、改螺旋桨、降航速、砍航线 —— 全试过了。没用。', fx:'dim' },
+    { w:MST, t:'因为我们一直在修船。' },
+    { w:MST, t:'问题不在船上。' },
+    { w:MST, t:'看见船头前面那道墙了吗。', fx:'bow' },
+    { w:MST, t:'那不是浪打过来的。那是<b>船自己推起来的</b>。<br>船往前走，就得一直把水推开；推开的水堆成一道墙，船就得一直往上爬。' },
+    { w:MST, t:'<b>船不是在水里跑。</b><br>它是在爬一座 —— 自己推着走的坡。' },
+    { w:MST, t:'老陈。剩下的你来讲。' }
+  ],
+  A2:[
+    { w:CHN, t:'年轻人。听得到吗。',                                   st:{wave:0} },
+    { w:CHN, t:'我是老陈，破浪实验室首席工程师。',                     st:{wave:0} },
+    { w:CHN, t:'所长说的那道坡，我给你画出来。',                       st:{wave:0} },
+    { w:CHN, t:'船头推起一列波 —— 就是那道水墙。<br>波是<b>带着能量</b>走的。船把自己的动能，一秒一秒地交给这列波，波再把它带到船后面去，铺成两道永远追不上来的白浪。', st:{wave:1} },
+    { w:CHN, t:'这就是<b>兴波阻力</b>。<br>你烧的油，一大半变成了你身后的那两道浪。', st:{wave:1} },
+    { w:CHN, t:'所以我们的办法，不是把浪压下去 —— <b>压不动</b>。',   st:{wave:1} },
+    { w:CHN, t:'是<b>再掀一列波</b>出来。',            fx:'bulb',       st:{wave:2} },
+    { w:CHN, t:'在船头底下，水线下面，装一个球。<br>船头掀一列，这个球也掀一列。', st:{wave:2} },
+    { w:CHN, t:'两列波在同一片水上跑。<br><b>波峰撞上波谷，水就平了。</b>', fx:'cancel', st:{wave:3} },
+    { w:CHN, t:'水一平，船头前面那道墙就矮了。<br>墙矮了，坡就缓了。<br>坡缓了 —— 油就回来了。', st:{wave:3} },
+    { w:CHN, t:'一句话：<b>让浪去杀浪。</b>',           fx:'flash',      st:{wave:3} },
+    { w:CHN, t:'至于怎么让两列波正好撞上 ——<br>什么时候撞、撞在哪、差多少 ——', st:{wave:3} },
+    { w:CHN, t:'我不讲。<br>等你走到<b>打造球鼻艏</b>那一步，所长会把图纸发给你，到时候你自己会画出来。', st:{wave:3} }
+  ],
+  A3:[
+    { w:MST, t:'现在说你。' },
+    { w:MST, t:'新晋船舶流体力学工程师。<br>委任状昨天到，你今天就站在这了 —— 说明上头也急。' },
+    { w:MST, t:'先认门。<br>星海号。深海科考船，也是<b>一艘行走的实验室</b> —— 她有六个实验舱，每一个都是一个能造出海况的水池。', fx:'tanks', st:{tank:2} },
+    { w:MST, t:'往年的新人，都是一号池下水，一路泡到六号池。<br>今年不这么走了。',                                          st:{tank:4} },
+    { w:MST, t:'因为我不知道你站在哪儿。<br>有人早把物理忘干净了，有人波的方程自己就能推 ——<br><b>让会的人从头再泡一遍，是拿这四十七天开玩笑。</b>', st:{tank:6} },
+    { w:SYS, t:'◇ 调度台接入。<br>建议：先执行<b>摸底测评</b>，据此判定起点水池。', fx:'scan', st:{tank:'scan'} },
+    { w:MST, t:'对。先摸底。' },
+    { w:MST, t:'调度台会给你出一份卷子 —— 十几道题，测你振动和波的家底到底在哪儿。', fx:'quiz', st:{tank:'scan'} },
+    { w:MST, t:'测完它替你排路线：<br>哪几个池子你得下去，哪几个你已经会了、可以直接跨过去。<br><b>它判。我说了不算，你说了更不算。</b>' },
+    { w:MST, t:'而且它不是判完就撒手。<br>你下到池子里，它一路跟着 —— 你卡在哪、错在哪、卡了多久，它都记着。<br>真卡死了，它递一句提示。' },
+    { w:MST, t:'但别想着蒙。<br>蒙过去的池子，回头还得回来补 —— 到那时候可没有岸了，<b>是在真海上补</b>。' },
+    { w:MST, t:'还有一条死规矩：<b>不许有「大概」，不许有「应该是」。</b><br>一个数，要么测出来，要么别写。' },
+    { w:MST, t:'每个池子出来，你要给我留一张<b>标定卡</b>。<br>你测出来的数，写上去，下一个池子接着用。<br>一个数进档案，就得跟着这艘船走到底。' },
+    { w:MST, t:'还有一件事。出港之后，中途要拐一趟 ——<br>海底净化塔 <b>K-7</b>，上个月报警，撑不了多久了。<br>那东西一停，下游三个岛的淡水就断。', fx:'k7' },
+    { w:MST, t:'所以这不是试航。是<b>带着任务的试航</b>。' },
+    { w:MST, t:'等你把该下的池子走完，你会带一张图纸回来 ——<br>一张能让星海号穿过<b>风暴海峡</b>的图纸。', fx:'strait' },
+    { w:MST, t:'四十七天。够你走完 —— 前提是<b>别在自己已经会的地方耗着</b>。' },
+    { w:MST, t:'阿洛，带他去看船。' },
+    { w:CAP, t:'所长，星海号这边 —— <b>活塞还没稳住</b>，我六点要解缆！', fx:'radio' },
+    { w:MST, t:'六点准时。他现在过去。' },
+    { w:CAP, t:'……那我等他。' },
+    { w:ALO, t:'走，跟我来。跟紧点，这船里头绕。' }
+  ],
+  CD:[
+    { w:ALO, t:'别让他那数字吓着。老头儿就这毛病 ——<br>先甩一个数，再说事。' },
+    { w:ALO, t:'不过这次他是真急。<br>你昨天拿到的委任状，今天就站这了。' },
+    { w:ALO, t:'刚在无线电里嚷嚷的是我们船长，老钱。<br>嗓门大，人不坏 —— 就是「六点解缆」这事儿，他真干得出来。' },
+    { w:ALO, t:'我叫阿洛，星海号随船机械师。<br>往后这船上的螺丝，你拧我也拧。' },
+    { w:ALO, t:'先说你今晚的活儿 ——<br>星海号明早出港，可<b>主引擎的核心动力活塞一直在乱抖</b>，抖得连冲程都量不准，点火程序一直卡在这儿。' },
+    { w:ALO, t:'那活塞现在就跟洗衣机脱水似的 —— <b>不是转，是蹦</b>。' },
+    { w:SYS, t:'⚠ 主引擎核心动力活塞 —— 振动异常。<br><b>点火程序：否决。</b>', fx:'alarm' },
+    { w:ALO, t:'……你可算来了。', fx:'end' }
+  ]
+};
+
+/* ================================================================
+   【B 区】接入开关 —— 摸底测评（智能体）上线后，只改这里
+   ────────────────────────────────────────────────────────────────
+   href  测评页的相对路径（序章与测评文件夹同级放在桌面）
+   ready false → 结尾自动加一句"（测评尚未上线）"并引导走现有实验室
+         改 true → 那句提示自动消失，主按钮直达测评
+   ================================================================ */
+const QUIZ = { href:'quiz.html', ready:true };
+
+/* ================================================================
+   【A 区 · 4/6】航线卡 ROUTE —— 卡片内容；顺序与 LABS 一一对应
+   字段：n 名称 / t 副题 / open 1=已开放 / href 关卡入口（待建的可不填）
+   注意：这不是"必须挨着走完六关" —— 六池全开放，href 直接进对应关卡
+   ================================================================ */
+const ROUTE = [
+  { n:'第一实验室 · 引擎之心', t:'简谐振动的密码 —— 振幅、周期、频率，振动学方程', open:1, href:'lab1.html' },
+  { n:'第二实验室 · 泥沼绝境', t:'阻尼与共振破局 —— 阻尼振动、受迫振动、共振',   open:1, href:'lab2.html' },
+  { n:'第三关 · 破壳而出',     t:'兴波阻力的真面目 —— 机械波的产生与传播、波前与能流密度', open:1, href:'lab3.html' },
+  { n:'第四关 · 暗礁迷阵',     t:'绕开水下屏障 —— 惠更斯原理、波的衍射',           open:1, href:'lab4.html' },
+  { n:'第五关 · 终极抵消',     t:'打造球鼻艏 —— 波的叠加、相位差、相消干涉',       open:1, href:'lab5.html' },
+  { n:'第六关 · 稳若泰山',     t:'消除船体共振 —— 反射与透射、半波损失、驻波波腹波节', open:1, href:'lab6.html' }
+];
+
+/* ================================================================
+   【A 区 · 5/6】六座水池 LABS —— 第三幕右侧面板的清单
+   与 ROUTE 一一对应（条数必须相同，启动自检会查）
+   ================================================================ */
+const LABS = [
+  ['01','引擎之心'], ['02','泥沼绝境'], ['03','破壳而出'],
+  ['04','暗礁迷阵'], ['05','终极抵消'], ['06','稳若泰山']
+];
+
+/* ================================================================
+   【A 区 · 6/6】结尾文案 ENDTXT —— 结尾面板上出现的每一个字
+   ────────────────────────────────────────────────────────────────
+   btns[].to 取值：'quiz' 摸底测评 / 'route0' 第一张卡 / 'route1' 第二张
+                  / 'reload' 重看序章 / 或直接写死一个相对路径字符串
+   noteOffline 只在 QUIZ.ready === false 时自动追加（不用手动删改）
+   ================================================================ */
+const ENDTXT = {
+  title:'启程',
+  sub:'THE COMMISSION · SEALED',
+  lead:'老所长把委任状推到你面前。<br>' +
+       '「<b>先摸底，再下水。</b>哪几座池子你得下 —— 让调度台判。」<br>' +
+       '六座水池，起点待定；终点是一张能穿过<b>风暴海峡</b>的图纸。',
+  cap :'星海号 · 六座实验水池 —— <b>六池全部开放</b>，从哪一池下水由你决定',
+  note:'<b>六座水池一开始就全部开放</b>，想先啃哪一关都行；摸底测评只负责<b>推荐一个起点</b>，' +
+       '不会锁住后面的池子。随时可以回到<b>舰桥</b>看自己的航图。<br>' +
+       '若按钮不能跳转（本地直接双击打开时可能出现），请手动打开同目录下的 ' +
+       '<b>index.html</b>（舰桥）或 <b>lab1.html</b>（第一实验室）。<br>' +
+       '海蓝星 · 船用燃料储备：47 天 —— 倒计时从你下水那一刻开始。',
+  noteOffline:'<br><span style="color:var(--am)">（测评尚未上线）</span>期间可直接进入下面的实验室：' +
+              '没学过简谐振动就走第一座，学过了可以直接试第二座。',
+  btns:[
+    { t:'参加摸底测评 · 判定起点 →', to:'quiz'  },
+    { t:'第一实验室 · 引擎之心 →',   to:'route0', ghost:true },
+    { t:'第二实验室 · 泥沼绝境 →',   to:'route1', ghost:true },
+    { t:'↺ 重看序章',                to:'reload', ghost:true }
+  ],
+  /* ----------------------------------------------------------------
+     出口 EXIT —— 序章播完 / 按 Esc 跳过后，往哪儿走
+     ────────────────────────────────────────────────────────────────
+     on:   true  → 直接落幕回到【舰桥 index.html】
+                   （与封面上「跳过序章 · 直接登舰」看到的是同一个画面）
+           false → 回到上面的「启程」面板（旧版：在序章里直接选关）
+     href: 回哪儿。默认带回舰桥；?cover=0 表示这次不再弹一次封面。
+           想改回"先弹封面"就写成 'index.html'
+     hold: 落幕停留毫秒；0 = 立刻跳
+     ---------------------------------------------------------------- */
+  exit:{
+    on:true,
+    href:'index.html?cover=0',
+    hold:1900,
+    kicker:'PROLOGUE · SEALED',
+    line:'航行档案已封存',
+    sub:'正在返回舰桥 …'
+  }
+};
+function renderLabs(lit, mode){
+  const b = $('labBody'); if(!b) return;
+  if(b.children.length !== 6){
+    b.innerHTML = '';
+    for(const L of LABS){
+      const d = document.createElement('div');
+      d.className = 'lp-r';
+      d.innerHTML = '<span class="lp-n">' + L[0] + '</span><span class="lp-d"></span><span>' + L[1] + '</span>';
+      b.appendChild(d);
+    }
+  }
+  const wait = (mode === 2);
+  for(let i = 0; i < 6; i++){
+    const r = b.children[i];
+    if(!r) continue;
+    r.classList.toggle('wait', wait);
+    if(!wait && i < lit) r.classList.add('on'); else r.classList.remove('on');
+  }
+  const n = $('labNote');
+  if(n){
+    n.innerHTML = wait
+      ? '◇ 调度台：已接入 · <b>起点待判定</b><br>先做摸底测评，再由它排定要下哪几座池子。'
+      : '◇ 六座水池 · 可造出各段海况';
+  }
+}
+
+/* ================================================================
+   推进
+   ================================================================ */
+let ai = 0, bi = 0, ended = false;
+let setStage3 = function(){};   /* 由 3D 段覆盖 */
+let fx3       = function(){};   /* 由 3D 段覆盖 */
+
+/* ── 权威状态：由每句话的 st 声明写入，3D 与 DOM 面板都只读这里 ──
+   放在推进段（而非 3D 段）是为了不依赖 3D 是否加载成功 —— 3D 挂了，
+   剧情与面板照常工作。改剧情时不用碰这些变量，只写 st 即可。      */
+let waveReq  = 0;     /* A2 波形阶段 0..3 */
+let tankMode = 1;     /* A3 六舱：1=按 tankLit 点亮（介绍） 2=待判定（摸底） */
+let tankLit  = 0;     /* tankMode=1 时点亮的个数 0..6 */
+let scanT    = 99;    /* 扫描光带计时，>=2.6 视为扫完 */
+
+function impact(kind){
+  const box = $('impactFx'); if(!box) return;
+  box.className = kind === 'warn' ? 'warn' : '';
+  void box.offsetWidth;
+  box.classList.add('burst');
+}
+
+/* 把一句话声明的持续状态写进权威状态（幂等，重复调用无害） */
+function applySt(st){
+  if(!st) return;
+  if(typeof st.wave === 'number') waveReq = st.wave;
+  if(st.tank !== undefined){
+    if(st.tank === 'scan'){ tankMode = 2; tankLit = 0; scanT = 0; }  /* 重扫一遍 */
+    else if(st.tank === 'wait'){ tankMode = 2; tankLit = 0; }        /* 保持待判定 */
+    else { tankMode = 1; tankLit = Math.max(0, Math.min(6, st.tank | 0)); }
+  }
+}
+
+function setAct(i){
+  /* 换幕时把状态复位到该幕的起始态（这样单独调试某一幕也能看） */
+  waveReq = 0; tankMode = 1; tankLit = 0; scanT = 99;
+  const p = $('actPlaque');
+  p.querySelector('b').textContent = ACTS[i].title;
+  p.querySelector('.sub').textContent = ACTS[i].sub;
+  p.classList.add('show');
+  const fx = $('stageFx'), tag = $('stageFxTag');
+  if(fx && tag){
+    tag.textContent = ACTS[i].sub;
+    fx.classList.remove('show');
+    void fx.offsetWidth;
+    fx.classList.add('show');
+  }
+  log('— ' + ACTS[i].title + ' —', 'hi');
+}
+
+function showBeat(){
+  const arr = BEATS[ACTS[ai].k];
+  const b = arr[bi];
+  const mk = ACTS[ai].k;
+  if(bi === 0){
+    setAct(ai);
+    setStage3(ACTS[ai].s3);
+    setBG(ACTS[ai].s3);                     /* 底图跟着幕走，3D 挂了也照样切 */
+    $('bigNum').classList.remove('show');   /* 换幕时收起倒计时大字 */
+  }
+  /* 随幕出现的辅助面板 */
+  /* 持续状态：先按本句声明的 st 更新，再交给 3D（3D 没加载也不影响面板） */
+  applySt(b.st);
+
+  /* 3D 一次性特效：fx 名字随便加，3D 里没实现的只会警告，不会打断剧情 */
+  fx3(ACTS[ai].k, bi, b.fx, b.st);
+  if(b.fx === 'bulb' || b.fx === 'cancel' || b.fx === 'flash' || b.fx === 'scan' || b.fx === 'strait') impact('cyan');
+  if(b.fx === 'alarm') impact('warn');
+
+  $('legend').classList.toggle('show', mk === 'A2');
+  $('labPanel').classList.toggle('show', mk === 'A3');
+  if(mk === 'A3') renderLabs(tankLit, tankMode);
+
+  const d = $('dlg');
+  d.className = '';
+  void d.offsetWidth;
+  d.className = 'show' + (b.w.sys ? ' sys' : '');
+  $('dlAv').textContent   = b.w.a;
+  $('dlName').textContent = b.w.n;
+  $('dlRole').textContent = b.w.r;
+  typeHTML($('dlText'), b.t);
+  if(b.w.sys) alarm(); else beep();
+
+  if(b.fx === 'num'){ $('bigNum').classList.add('show'); log('燃料储备：47 天', 'wn'); }
+  if(b.fx === 'scan') log('◇ 调度台接入 · 建议执行摸底测评', 'hi');
+  if(b.fx === 'quiz') log('摸底测评已下发 · 判定起点水池', 'wn');
+  if(b.fx === 'k7')   log('目标追加：海底净化塔 K-7', 'wn');
+  if(b.fx === 'alarm'){ $('redAlert').classList.add('on'); log('⚠ 活塞振动异常 · 点火否决', 'er'); }
+}
+
+function advance(){
+  if(ended) return;
+  if(typing){ finishType(); return; }
+  const arr = BEATS[ACTS[ai].k];
+  bi++;
+  if(bi >= arr.length){
+    ai++; bi = 0;
+    if(ai >= ACTS.length){ showEnd(); return; }
+  }
+  showBeat();
+}
+
+function skipAll(){
+  if(ended) return;
+  finishType();
+  $('bigNum').classList.remove('show');
+  showEnd();
+}
+
+/* ---------- 结尾 ---------- */
+function showEnd(){
+  ended = true;
+  chime();
+  $('dlg').classList.remove('show');
+  $('btnSkip').style.display = 'none';
+  $('redAlert').classList.remove('on');
+  $('bigNum').classList.remove('show');
+  setStage3('end');
+  setBG('end');
+  /* 序章看过就记档：之后回舰桥不会再被封面拦一次 */
+  try{ if(window.Fleet && window.Fleet.mark) window.Fleet.mark('prologue'); }catch(e){}
+  log('预案已签发 · 待摸底判定起点', 'hi');
+
+  const T = ENDTXT;
+
+  /* ── 出口一（默认）：落幕 → 回舰桥，与「跳过序章 · 直接登舰」同一个画面 ──
+     全部由 ENDTXT.exit 控制；把 exit.on 改成 false 就回到下面的旧版启程面板 */
+  if(T.exit && T.exit.on){ runExit(T.exit); return; }
+
+  /* ── 出口二：旧版「启程」面板（在序章里直接选关） ── */
+  $('endTitle').textContent = T.title;
+  $('endSub').textContent   = T.sub;
+  $('endLead').innerHTML    = T.lead;
+  $('routeCap').innerHTML   = T.cap;
+
+  const g = $('routeGrid'); g.innerHTML = '';
+  ROUTE.forEach((r, i) => {
+    const d = document.createElement('div');
+    d.className = 'rcard' + (r.open ? '' : ' locked');
+    d.style.animationDelay = (i * 0.07) + 's';
+    d.innerHTML =
+      '<div class="rnum">' + (i + 1) + '</div>' +
+      '<div><div class="rn">' + r.n + '</div><div class="rt">' + r.t + '</div></div>' +
+      '<div class="rbadge' + (r.open ? '' : ' lock') + '">' + (r.open ? '已开放' : '待建') + '</div>';
+    g.appendChild(d);
+  });
+
+  const row = $('entryRow'); row.innerHTML = '';
+  const mk = (txt, href, ghost) => {
+    const a = document.createElement('a');
+    a.className = 'ebtn' + (ghost ? ' ghost' : '');
+    a.textContent = txt;
+    if(href){ a.href = href; }
+    else { a.href = '#'; a.onclick = ev => { ev.preventDefault(); location.reload(); }; }
+    row.appendChild(a);
+  };
+  /* 按钮也来自数据：to 支持 'quiz' / 'route0'..'routeN' / 'reload' / 直接写相对路径 */
+  const hrefOf = to => {
+    if(to === 'quiz')   return QUIZ.href;
+    if(to === 'reload') return null;
+    const m = /^route(\d+)$/.exec(String(to));
+    if(m) return (ROUTE[+m[1]] || {}).href || null;
+    return (typeof to === 'string' && to) ? to : null;
+  };
+  T.btns.forEach(b => mk(b.t, hrefOf(b.to), b.ghost));
+
+  $('endNote').innerHTML = T.note + (QUIZ.ready ? '' : T.noteOffline);
+  $('endPanel').classList.add('show');
+}
+
+/* ---------- 落幕：淡出，然后回舰桥 ---------- */
+function runExit(x){
+  const c = $('curtain');
+  if(!c){ location.replace(x.href || 'index.html'); return; }
+  if($('ctKicker')) $('ctKicker').textContent = x.kicker || '';
+  if($('ctLine'))   $('ctLine').textContent   = x.line   || '';
+  if($('ctSub'))    $('ctSub').textContent    = x.sub    || '';
+  c.hidden = false;
+  void c.offsetWidth;
+  c.classList.add('show');
+  const go = () => { try{ location.replace(x.href || 'index.html'); }
+                     catch(e){ location.href = x.href || 'index.html'; } };
+  const hold = Math.max(0, Number(x.hold) || 0);
+  if(hold) setTimeout(go, hold); else go();
+}
+
+/* ---------- 输入 ---------- */
+$('dlg').addEventListener('click', advance);
+$('btnSkip').addEventListener('click', ev => { ev.stopPropagation(); skipAll(); });
+document.addEventListener('keydown', e => {
+  if(e.code === 'Space' || e.code === 'Enter'){ e.preventDefault(); advance(); }
+  else if(e.code === 'Escape'){ skipAll(); }
+});
+
+/* ================================================================
+   启动自检 —— 剧情数据写错在这里立刻报出来，而不是播到那句才崩
+   ────────────────────────────────────────────────────────────────
+   改完 BEATS / LABS / ROUTE / ENDTXT 后打开页面看 console：
+   没有问题会打印「[剧本自检] 通过」，有问题会逐条列出（不阻断播放）。
+   ================================================================ */
+const FX_KNOWN = ['num','dim','bow','bulb','cancel','flash','tanks','scan','quiz','k7','strait','radio','alarm','end'];
+
+function auditScript(){
+  const w = [], roles = Object.keys(CAST).map(k => CAST[k]);
+  let n = 0;
+  ACTS.forEach(a => {
+    const arr = BEATS[a.k];
+    if(!arr || !arr.length){ w.push(`幕 ${a.k} 在 BEATS 里没有对应的对白数组`); return; }
+    arr.forEach((b, j) => {
+      n++;
+      const at = `${a.k}#${j}`;
+      if(!roles.includes(b.w))        w.push(`${at}: 说话人不在 CAST 里（新角色要先登记）`);
+      if(typeof b.t !== 'string' || !b.t.trim()) w.push(`${at}: 文本为空`);
+      if(b.fx && !FX_KNOWN.includes(b.fx)) w.push(`${at}: fx「${b.fx}」3D 里没有对应表现（剧情照常播，可先不管）`);
+      const st = b.st || {};
+      if(st.wave !== undefined && !(st.wave >= 0 && st.wave <= 3))
+        w.push(`${at}: st.wave 只能是 0..3`);
+      if(st.tank !== undefined){
+        const ok = st.tank === 'scan' || st.tank === 'wait' ||
+                   (typeof st.tank === 'number' && st.tank >= 0 && st.tank <= 6);
+        if(!ok) w.push(`${at}: st.tank 只能是 0..6 或 'scan' / 'wait'`);
+      }
+    });
+  });
+  if(ROUTE.length !== LABS.length) w.push(`ROUTE(${ROUTE.length}) 与 LABS(${LABS.length}) 条数不一致`);
+  if(!QUIZ || !QUIZ.href)          w.push('QUIZ.href 缺失，摸底测评入口会失效');
+  ['lead','cap','note','btns'].forEach(k => { if(!ENDTXT[k]) w.push(`ENDTXT 缺字段 ${k}`); });
+  if(ENDTXT.btns && !ENDTXT.btns.length) w.push('ENDTXT.btns 为空，结尾没有入口');
+  /* 出口：走「落幕回舰桥」这条时，href 必须有，否则跳不出去 */
+  if(ENDTXT.exit && ENDTXT.exit.on && !ENDTXT.exit.href)
+    w.push('ENDTXT.exit.on 为 true 但 exit.href 为空，序章结束会停在落幕幕布上');
+  if(!ENDTXT.exit) w.push('ENDTXT.exit 缺失，序章结束会回落到旧版「启程」面板');
+
+  const res = { ok:(w.length === 0), beats:n, warns:w };
+  if(w.length) console.warn('[剧本自检] ' + w.length + ' 处问题（不阻断播放）：\n- ' + w.join('\n- '));
+  else         console.log('[剧本自检] 通过 · ' + n + ' 句对白 / ' + ACTS.length + ' 幕');
+  return res;
+}
+const AUDIT = auditScript();
+
+/* ---------- 测试钩子 ---------- */
+window.__pro = {
+  get ai(){ return ai; }, get bi(){ return bi; }, get ended(){ return ended; },
+  get act(){ return ACTS[ai] ? ACTS[ai].k : null; },
+  next(){ advance(); }, skip(){ skipAll(); },
+  get total(){ return ACTS.reduce((s,a)=>s + BEATS[a.k].length, 0); },
+  audit: AUDIT,
+  /* 供外部（如摸底测评页）直接读配置，避免两处各写一份 */
+  get quiz(){ return QUIZ; }, get route(){ return ROUTE; }, get labs(){ return LABS; },
+  get endtxt(){ return ENDTXT; }
+};
+
+/* ---------- 启动 ---------- */
+log('破浪实验室 · 总控厅', 'hi');
+showBeat();
+
+/* ================================================================
+   3D：海蓝星海图 / 兴波相消演示 / 星海号六舱 / 动力舱警报
+   ================================================================ */
+let HAS3D = false, THREE = null, scene = null, camera = null, renderer = null, clock = null;
+const REDUCE_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+/* --- 场景对象 --- */
+let sea = null, seaGeo = null, seaBase = null;
+let mapGroup = null, waveGroup = null, shipGroup = null;
+let routeTubes = [], routeTgt = [], routeCur = [];
+let isles = [];
+let bowShip = null, bowWall = null, bowOn = false;
+let waveSea = null, waveSeaGeo = null, waveSeaBase = null;
+let hullMesh = null, bulbMesh = null;
+let waveLines = [], waveArrs = [];
+let tankBoxes = [], tankRings = [];
+let k7Mark = null, straitGate = null, alarmLight = null;
+
+/* --- 状态 --- */
+let stage = 'map', stageT = 0;
+let wavePhase = 0;          /* 0 单列波  1 强调流失  2 两列（相长）  3 反相相消 */
+let phaseMix = 0;           /* 相位差插值 0 → 1（对应 0 → π） */
+let ampMix = 0;             /* 第二列波振幅 0 → 1 */
+let bulbMix = 0;
+let tanksOn = false, k7On = false, straitOn = false, alarmOn = false;
+/* tankLit / tankMode / scanT / waveReq 由推进段的 applySt 维护（见【C 区】上方），
+   3D 只读不写 —— 这样 3D 加载失败时剧情与面板依然正确。 */
+let pulse = 0, t3 = 0, tankPulse = 0;
+
+/* --- 镜头目标 --- */
+const CAMS = {
+  map:   { p:[0,  45, 45], l:[0,  0,  0] },
+  bow:   { p:[5.5,  3, 6.5], l:[0,  0.5, 1.3] },
+  wave:  { p:[5,  5.2, 15], l:[0.5, 1.7, -0.8] },
+  ship:  { p:[0,  4.6, 26], l:[0,  0.2, 0] },
+  alarm: { p:[3,  3.0, 14], l:[0.5, 0, 0] },
+  end:   { p:[0,  12, 36], l:[0,  0,  0] }
+};
+let camKey = 'map';
+const camP = { x:0, y:45, z:45 }, camL = { x:0, y:0, z:0 };
+function setCam(k){ if(CAMS[k]) camKey = k; }
+
+/* ---------- 波形参数 ---------- */
+const WK = 2.24;                 /* 波数 k = 2π/λ，λ≈2.8 */
+const WA = 0.62;                 /* 单列波振幅 */
+function waveAt(x, t, a2, ph){
+  const w1 = WA * Math.sin(WK * x - t * 2.1);
+  const w2 = a2 * WA * Math.sin(WK * x - t * 2.1 + ph);
+  return { w1, w2, sum: w1 + w2 };
+}
+
+/* ================================================================
+   构建
+   ================================================================ */
+async function boot3D(){
+  try{
+    THREE = await import('three');
+    const host = $('scene');
+    scene = new THREE.Scene();
+    scene.background = PROBG.on ? null : new THREE.Color(0x050f14);   /* 开背景图时留空，让底图透上来 */
+    scene.fog = new THREE.Fog(0x050f14, 42, 168);
+
+    camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, 0.1, 400);
+    camera.position.set(camP.x, camP.y, camP.z);
+
+    renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+    renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setClearColor(0x050f14, PROBG.on ? 0 : 1);   /* 背景图开着就透明 */
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    host.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0x3c5a63, 0.62));
+    scene.add(new THREE.HemisphereLight(0xbcd6d0, 0x08161a, 0.55));
+    const key = new THREE.DirectionalLight(0xffeccb, 1.25);
+    key.position.set(11, 18, 9); scene.add(key);
+    const rim = new THREE.DirectionalLight(0x66e6d0, 0.70);
+    rim.position.set(-10, 7, -11); scene.add(rim);
+    alarmLight = new THREE.PointLight(0xff3c3c, 0, 26, 2);
+    alarmLight.position.set(0, 2.4, 2); scene.add(alarmLight);
+
+    buildSea();
+    buildMap();
+    buildWave();
+    buildShip();
+
+    clock = new THREE.Clock();
+    HAS3D = true;
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+    sync3();
+    tick3();
+  }catch(e){
+    console.warn('3D 初始化失败：', e && e.message);
+    const m = $('errMsg'); if(m) m.classList.add('show');
+  }
+}
+
+/* ---------- 公共海面 ---------- */
+function buildSea(){
+  seaGeo = new THREE.PlaneGeometry(150, 100, 70, 46);
+  seaGeo.rotateX(-Math.PI / 2);
+  seaBase = Float32Array.from(seaGeo.attributes.position.array);
+  const mat = new THREE.MeshStandardMaterial({
+    color:0x15434f, roughness:0.50, metalness:0.18, flatShading:false
+  });
+  sea = new THREE.Mesh(seaGeo, mat);
+  sea.position.y = -2.2;
+  scene.add(sea);
+}
+
+/* ---------- 第一幕：岛群海图 + 航线 ---------- */
+function buildMap(){
+  mapGroup = new THREE.Group(); scene.add(mapGroup);
+
+  let seed = 987654321;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+
+  /* 岛屿：11 座沿一圈分布（俯视才像海图） */
+  const N = 11;
+  for(let i = 0; i < N; i++){
+    const ang = (i / N) * Math.PI * 2 + (rnd() - 0.5) * 0.26;
+    const rad = 15 + rnd() * 12;
+    const x = Math.cos(ang) * rad;
+    const z = Math.sin(ang) * rad * 0.70;
+    const r = 1.9 + rnd() * 2.5;
+    const g = new THREE.IcosahedronGeometry(r, 0);
+    g.scale(1, 0.62 + rnd() * 0.42, 1);
+    const m = new THREE.MeshStandardMaterial({
+      color:0x3d6659, roughness:0.92, metalness:0.02, flatShading:true
+    });
+    const mesh = new THREE.Mesh(g, m);
+    mesh.position.set(x, -1.9, z);
+    mesh.rotation.y = rnd() * 6.28;
+    mapGroup.add(mesh);
+    isles.push({ x, z });
+  }
+
+  /* 航线：环上相邻相连 + 两条跨岛直连，贴海面起伏 */
+  const mkRoute = (a, b, h) => {
+    const dx = b.x - a.x, dz = b.z - a.z;
+    const len = Math.hypot(dx, dz);
+    const pts = [
+      new THREE.Vector3(a.x, 0.30, a.z),
+      new THREE.Vector3(a.x + dx * 0.30, h * 0.55, a.z + dz * 0.30 - len * 0.04),
+      new THREE.Vector3((a.x + b.x) / 2, h, (a.z + b.z) / 2 + len * 0.05),
+      new THREE.Vector3(a.x + dx * 0.70, h * 0.55, a.z + dz * 0.70 + len * 0.04),
+      new THREE.Vector3(b.x, 0.30, b.z)
+    ];
+    const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.35);
+    const mat = new THREE.MeshStandardMaterial({
+      color:0x17414c, emissive:0x4fe0c8, emissiveIntensity:0.85, roughness:0.42
+    });
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 64, 0.068, 6, false), mat);
+    mapGroup.add(tube);
+    routeTubes.push(tube); routeCur.push(0.85); routeTgt.push(0.85);
+  };
+  for(let i = 0; i < N; i++) mkRoute(isles[i], isles[(i + 1) % N], 1.5 + rnd() * 0.9);
+  mkRoute(isles[0], isles[5], 2.4);
+  mkRoute(isles[3], isles[8], 2.1);
+
+  /* 演示用的小船 + 船头水墙 */
+  bowShip = new THREE.Group();
+  const hull = new THREE.Mesh(
+    new THREE.BoxGeometry(1.0, 0.55, 2.8),
+    new THREE.MeshStandardMaterial({ color:0x8f9aa0, roughness:0.5, metalness:0.35 })
+  );
+  hull.position.y = 0.1; bowShip.add(hull);
+  const prow = new THREE.Mesh(
+    new THREE.ConeGeometry(0.52, 1.1, 12),
+    new THREE.MeshStandardMaterial({ color:0x8f9aa0, roughness:0.5, metalness:0.35 })
+  );
+  prow.rotation.x = -Math.PI / 2; prow.position.set(0, 0.1, 1.9); bowShip.add(prow);
+  const deck = new THREE.Mesh(
+    new THREE.BoxGeometry(0.86, 0.42, 1.0),
+    new THREE.MeshStandardMaterial({ color:0xcfd8d4, roughness:0.6 })
+  );
+  deck.position.set(0, 0.52, -0.5); bowShip.add(deck);
+  bowShip.visible = false; mapGroup.add(bowShip);
+
+  /* 水墙：开口圆柱的一段，立在船头前方 */
+  const wallGeo = new THREE.CylinderGeometry(1.9, 1.9, 1.15, 26, 1, true, -0.72, 1.44);
+  const wallMat = new THREE.MeshStandardMaterial({
+    color:0x2fa8c8, emissive:0x2fa8c8, emissiveIntensity:0.55,
+    transparent:true, opacity:0.42, side:THREE.DoubleSide, roughness:0.25
+  });
+  bowWall = new THREE.Mesh(wallGeo, wallMat);
+  bowWall.position.set(0, 0.15, 2.4);
+  bowWall.visible = false;
+  bowShip.add(bowWall);
+}
+
+/* ---------- 第二幕：兴波相消演示 ---------- */
+function buildWave(){
+  waveGroup = new THREE.Group(); waveGroup.visible = false; scene.add(waveGroup);
+
+  /* 船体侧剖面：Shape + 薄挤出 */
+  const sh = new THREE.Shape();
+  sh.moveTo(-3.2, 0.55);
+  sh.lineTo(3.0, 0.55);
+  sh.quadraticCurveTo(4.15, 0.42, 3.95, -0.30);
+  sh.lineTo(2.2, -0.86);
+  sh.lineTo(-2.4, -0.86);
+  sh.quadraticCurveTo(-3.6, -0.55, -3.2, 0.55);
+  const hg = new THREE.ExtrudeGeometry(sh, { depth:1.5, bevelEnabled:true, bevelSize:0.06, bevelThickness:0.06, bevelSegments:2 });
+  hg.translate(0, 0, -0.75);
+  hullMesh = new THREE.Mesh(hg, new THREE.MeshStandardMaterial({
+    color:0x93a0a6, roughness:0.45, metalness:0.42
+  }));
+  hullMesh.position.y = 0.30;
+  waveGroup.add(hullMesh);
+
+  /* 上层建筑 */
+  const sb = new THREE.Mesh(
+    new THREE.BoxGeometry(1.5, 0.62, 1.2),
+    new THREE.MeshStandardMaterial({ color:0xd6dcd8, roughness:0.62 })
+  );
+  sb.position.set(-0.7, 1.22, 0); waveGroup.add(sb);
+
+  /* 球鼻艏（phase 2 起出现） */
+  bulbMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.44, 18, 14),
+    new THREE.MeshStandardMaterial({ color:0xffc857, roughness:0.35, metalness:0.5,
+      emissive:0x6b4d10, emissiveIntensity:0.9 })
+  );
+  bulbMesh.scale.set(2.4, 1.2, 1.2);
+  bulbMesh.position.set(4.85, -0.52, 0);   /* 船艏前下方，露出船体才看得见 */
+  bulbMesh.scale.setScalar(0.001);
+  waveGroup.add(bulbMesh);
+
+  /* 三条波形曲线 */
+  const cols = [0x4fe0c8, 0xffc857, 0xffffff];
+  for(let i = 0; i < 3; i++){
+    const N = 130;
+    const arr = new Float32Array(N * 3);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+    const m = new THREE.LineBasicMaterial({ color:cols[i], transparent:true, opacity:i === 2 ? 0.95 : 0.72 });
+    const ln = new THREE.Line(g, m);
+    ln.frustumCulled = false;
+    waveGroup.add(ln);
+    waveLines.push(ln); waveArrs.push(arr);
+  }
+
+  /* 演示水面 */
+  waveSeaGeo = new THREE.PlaneGeometry(26, 11, 90, 30);
+  waveSeaGeo.rotateX(-Math.PI / 2);
+  waveSeaBase = Float32Array.from(waveSeaGeo.attributes.position.array);
+  waveSea = new THREE.Mesh(waveSeaGeo, new THREE.MeshStandardMaterial({
+    color:0x0d2f3a, roughness:0.42, metalness:0.22
+  }));
+  waveSea.position.set(0, -1.05, 0);
+  waveGroup.add(waveSea);
+
+  /* 图例：三个小色块不方便做文字，用三条短竖线代替 */
+}
+
+/* ---------- 第三幕：星海号六舱 ---------- */
+function buildShip(){
+  shipGroup = new THREE.Group(); shipGroup.visible = false; scene.add(shipGroup);
+
+  const sh = new THREE.Shape();
+  sh.moveTo(-6.4, 1.10);
+  sh.lineTo(6.0, 1.10);
+  sh.quadraticCurveTo(8.3, 0.84, 7.9, -0.60);
+  sh.lineTo(4.4, -1.72);
+  sh.lineTo(-4.8, -1.72);
+  sh.quadraticCurveTo(-7.2, -1.10, -6.4, 1.10);
+  const hg = new THREE.ExtrudeGeometry(sh, { depth:3.0, bevelEnabled:true, bevelSize:0.10, bevelThickness:0.10, bevelSegments:2 });
+  hg.translate(0, 0, -1.5);
+  const hull = new THREE.Mesh(hg, new THREE.MeshStandardMaterial({
+    color:0x8c9aa1, roughness:0.46, metalness:0.40
+  }));
+  shipGroup.add(hull);
+
+  const sup = new THREE.Mesh(
+    new THREE.BoxGeometry(3.0, 1.25, 2.4),
+    new THREE.MeshStandardMaterial({ color:0xd6dcd8, roughness:0.62 })
+  );
+  sup.position.set(-1.4, 2.42, 0); shipGroup.add(sup);
+
+  /* 六个实验舱 */
+  /* 舱位做成贴在船壳外表面的发光窗口 —— 埋进船体里就看不见了 */
+  const xs = [-5.0, -3.0, -1.0, 1.0, 3.0, 5.0];
+  for(let i = 0; i < 6; i++){
+    const mat = new THREE.MeshStandardMaterial({
+      color:0x123038, emissive:0x4fe0c8, emissiveIntensity:0.05, roughness:0.5
+    });
+    const b = new THREE.Mesh(new THREE.BoxGeometry(1.30, 1.30, 0.34), mat);
+    b.position.set(xs[i], -0.32, 1.62);
+    shipGroup.add(b); tankBoxes.push(b);
+
+    const rm = new THREE.MeshBasicMaterial({ color:0x4fe0c8, transparent:true, opacity:0, side:THREE.DoubleSide });
+    const r = new THREE.Mesh(new THREE.RingGeometry(1.05, 1.24, 28), rm);
+    r.position.set(xs[i], -0.32, 1.84);
+    shipGroup.add(r); tankRings.push(r);
+  }
+
+  /* K-7 标记 */
+  const kg = new THREE.Group();
+  const dot = new THREE.Mesh(
+    new THREE.SphereGeometry(0.42, 16, 12),
+    new THREE.MeshStandardMaterial({ color:0xffc857, emissive:0xffc857, emissiveIntensity:1.1 })
+  );
+  kg.add(dot);
+  const kr = new THREE.Mesh(
+    new THREE.RingGeometry(0.85, 1.05, 30),
+    new THREE.MeshBasicMaterial({ color:0xffc857, transparent:true, opacity:0.55, side:THREE.DoubleSide })
+  );
+  kr.rotation.x = -Math.PI / 2.1; kg.add(kr);
+  kg.position.set(-10.5, 1.0, 7.0);   /* 浮在海面上，沉下去会被海面挡住 */
+  kg.visible = false;
+  shipGroup.add(kg); k7Mark = kg;
+
+  /* 风暴海峡：航线末端的两道门柱 */
+  const sg = new THREE.Group();
+  for(let i = 0; i < 2; i++){
+    const p = new THREE.Mesh(
+      new THREE.BoxGeometry(0.7, 5.2, 0.7),
+      new THREE.MeshStandardMaterial({ color:0x2a4a52, roughness:0.85, flatShading:true })
+    );
+    p.position.set(i === 0 ? -3.2 : 3.2, 0.6, 0);
+    sg.add(p);
+  }
+  const arch = new THREE.Mesh(
+    new THREE.TorusGeometry(3.4, 0.20, 8, 40, Math.PI),
+    new THREE.MeshStandardMaterial({ color:0x4fe0c8, emissive:0x4fe0c8, emissiveIntensity:0.9, roughness:0.35 })
+  );
+  arch.position.set(0, 3.1, 0); sg.add(arch);
+  sg.position.set(11.5, 0.4, -7.5);
+  sg.visible = false;
+  shipGroup.add(sg); straitGate = sg;
+}
+
+/* ================================================================
+   舞台切换与特效
+   ================================================================ */
+setStage3 = function(s){
+  stage = s;
+  if(!HAS3D) return;
+  stageT = 0;
+  if(mapGroup)  mapGroup.visible  = (s === 'map');
+  if(waveGroup) waveGroup.visible = (s === 'wave');
+  if(shipGroup) shipGroup.visible = (s === 'ship' || s === 'alarm' || s === 'end');
+  if(s === 'map')   setCam('map');
+  if(s === 'wave'){ setCam('wave'); wavePhase = 0; ampMix = 0; phaseMix = 0; bulbMix = 0; }
+  if(s === 'ship'){ setCam('ship'); }
+  if(s === 'alarm'){ setCam('alarm'); }
+  if(s === 'end'){ setCam('end'); }
+};
+
+fx3 = function(act, bi, fx, st){
+  if(!HAS3D) return;
+  applySt(st);                 /* 与推进段共用同一套状态；sync3 重放时靠它补进度 */
+  if(act === 'A1'){
+    if(fx === 'dim'){
+      /* 环上只留四条在航，其余"砍线"熄灭 */
+      const keep = new Set([0, 3, 6, 9]);
+      for(let i = 0; i < routeTgt.length; i++) routeTgt[i] = keep.has(i) ? 0.85 : 0.035;
+    }
+    if(fx === 'bow'){ bowOn = true; if(bowShip) bowShip.visible = true; if(bowWall) bowWall.visible = true; setCam('bow'); }
+  }
+  if(act === 'A2'){
+    /* 波形阶段来自该句的 st.wave —— 不写"第几句"，改台词不会错位 */
+    if(fx === 'bulb')   pulse = 0.7;    /* 球鼻艏长出来时闪一下 */
+    if(fx === 'flash')  pulse = 1.0;    /* "让浪去杀浪"全场闪光 */
+  }
+  if(act === 'A3'){
+    if(fx === 'tanks') tanksOn = true;
+    /* 六舱状态由 st.tank 决定（'scan' 触发扫描光带），这里只放一次性脉冲 */
+    if(fx === 'scan'){ tanksOn = true; pulse = 0.55; }
+    if(fx === 'quiz'){ pulse = 0.35; }
+    if(fx === 'k7')     { k7On = true; if(k7Mark) k7Mark.visible = true; }
+    if(fx === 'strait') { straitOn = true; if(straitGate) straitGate.visible = true; pulse = 0.8; }
+    if(fx === 'radio')  { pulse = 0.5; }
+  }
+  if(act === 'CD'){
+    if(fx === 'alarm'){ alarmOn = true; if(alarmLight) alarmLight.intensity = 22; }
+  }
+};
+
+/* 3D 异步加载完成后，把已经发生过的进度补上 */
+function sync3(){
+  if(!HAS3D) return;
+  const cur = ACTS[ai] ? ACTS[ai].s3 : 'map';   /* 必须用 s3（'map'/'wave'/'ship'），不是 k（'A1'） */
+  setStage3(cur);
+  for(let a = 0; a <= ai; a++){
+    const k = ACTS[a].k, arr = BEATS[k];
+    const upto = (a === ai) ? bi : arr.length - 1;
+    for(let i = 0; i <= upto; i++) fx3(k, i, arr[i].fx, arr[i].st);
+  }
+}
+
+/* ================================================================
+   每帧
+   ================================================================ */
+let d3Err = false;
+function tick3(){
+  requestAnimationFrame(tick3);
+  try{
+    const dt = clock ? Math.min(0.05, clock.getDelta()) : 0.016;
+    t3 += dt; stageT += dt;
+    if(pulse > 0) pulse = Math.max(0, pulse - dt * 1.1);
+
+    /* --- 公共海面起伏 --- */
+    if(seaGeo){
+      const p = seaGeo.attributes.position, b = seaBase;
+      for(let i = 0; i < p.count; i++){
+        const x = b[i*3], z = b[i*3+2];
+        p.array[i*3+1] = 0.42*Math.sin(x*0.11 + t3*0.55) + 0.30*Math.sin(z*0.15 - t3*0.42)
+                       + 0.16*Math.sin((x+z)*0.24 + t3*0.9);
+      }
+      p.needsUpdate = true; seaGeo.computeVertexNormals();
+    }
+
+    /* --- 第一幕：航线亮灭 + 小船 --- */
+    if(mapGroup && mapGroup.visible){
+      for(let i = 0; i < routeTubes.length; i++){
+        routeCur[i] += (routeTgt[i] - routeCur[i]) * Math.min(1, dt * 1.6);
+        const m = routeTubes[i].material;
+        m.emissiveIntensity = routeCur[i] * (1 + 0.16*Math.sin(t3*1.4 + i));
+        m.color.setHex(routeCur[i] > 0.3 ? 0x1d4650 : 0x14262c);
+      }
+      if(bowOn && bowShip){
+        /* 船位固定：让海面在动，读起来才像"她在前进" */
+        bowShip.position.set(0, 0.25 + 0.07 * Math.sin(t3 * 1.7), 0);
+        bowShip.rotation.z = 0.030 * Math.sin(t3 * 1.3);
+        bowShip.rotation.x = 0.018 * Math.sin(t3 * 0.9 + 1.2);
+        if(bowWall){
+          bowWall.material.opacity = 0.34 + 0.12 * Math.sin(t3 * 3.1);
+          bowWall.scale.y = 1 + 0.05 * Math.sin(t3 * 2.2);
+        }
+      }
+    }
+
+    /* --- 第二幕：两列波相消 --- */
+    if(waveGroup && waveGroup.visible){
+      /* 阶段来自剧情数据的 st.wave（推进段维护），不在 3D 里写死第几句 */
+      wavePhase = waveReq;
+      /* 目标值 → 插值 */
+      let tgtAmp = 0, tgtPh = 0, tgtBulb = 0;
+      if(wavePhase >= 2){ tgtAmp = 1; tgtBulb = 1; }   /* 球鼻艏也掀一列波 */
+      if(wavePhase >= 3){ tgtPh = 1; }                 /* 反相 → 相消 */
+      ampMix  += (tgtAmp  - ampMix)  * Math.min(1, dt * 1.5);
+      phaseMix += (tgtPh  - phaseMix) * Math.min(1, dt * 1.1);
+      bulbMix += (tgtBulb - bulbMix) * Math.min(1, dt * 2.2);
+      if(bulbMesh) bulbMesh.scale.set(2.4 * bulbMix + 0.001, 1.2 * bulbMix + 0.001, 1.2 * bulbMix + 0.001);
+
+      const ph = phaseMix * Math.PI;
+      const a2 = ampMix;
+      const N = 130;
+      for(let li = 0; li < 3; li++){
+        const arr = waveArrs[li];
+        for(let i = 0; i < N; i++){
+          const x = -6.5 + (13.0 * i) / (N - 1);
+          const w = waveAt(x, t3, a2, ph);
+          const v = li === 0 ? w.w1 : li === 1 ? w.w2 : w.sum;
+          /* 三条线分层排开，各自看清：船艏波 / 球鼻艏波 / 合成波 */
+          const baseY = li === 0 ? 5.30 : li === 1 ? 3.50 : 1.70;
+          arr[i*3]     = x;
+          arr[i*3 + 1] = baseY + v * 0.55;
+          arr[i*3 + 2] = -1.6;
+        }
+        waveLines[li].geometry.attributes.position.needsUpdate = true;
+      }
+      waveLines[1].material.opacity = 0.20 + 0.52 * ampMix;
+      waveLines[2].material.opacity = 0.55 + 0.45 * phaseMix;
+      waveLines[2].material.color.setHex(phaseMix > 0.6 ? 0x8affd8 : 0xffffff);
+
+      /* 演示水面：用合成波驱动高度 */
+      if(waveSeaGeo){
+        const p = waveSeaGeo.attributes.position, b = waveSeaBase;
+        for(let i = 0; i < p.count; i++){
+          const x = b[i*3], z = b[i*3+2];
+          const w = waveAt(x * 0.9, t3, a2, ph);
+          p.array[i*3+1] = w.sum * 0.30 + 0.07*Math.sin(z*0.7 + t3*0.8);
+        }
+        p.needsUpdate = true; waveSeaGeo.computeVertexNormals();
+      }
+    }
+
+    /* --- 第三幕：六舱 --- */
+    if(shipGroup && shipGroup.visible){
+      tankPulse += dt;
+      if(scanT < 2.6) scanT += dt;
+      /* 扫描进度：光带位置 0..1，来回扫一趟 */
+      const scanP = scanT < 2.6 ? Math.min(1, scanT / 2.0) : -1;
+      for(let i = 0; i < 6; i++){
+        let on = false, tgt = 0.05, rt = 0, hex = 0x123038;
+        if(tankMode === 1){
+          /* 介绍阶段：依次点亮，告诉玩家"船上有六座水池" */
+          on  = tanksOn && i < tankLit;
+          tgt = on ? 0.55 + 0.30*Math.sin(tankPulse*2.1 + i*0.7) : 0.05;
+          hex = on ? 0x1d5560 : 0x123038;
+          rt  = on ? 0.20 + 0.16*Math.sin(tankPulse*1.7 + i*0.9) : 0;
+        } else if(tankMode === 2){
+          /* 摸底阶段：全部转"待判定"—— 暗着，只有扫描光带扫过时亮一下 */
+          const head = (i + 0.5) / 6;
+          const hit  = scanP >= 0 ? Math.max(0, 1 - Math.abs(head - scanP) * 7) : 0;
+          tgt = 0.05 + 0.85 * hit + (scanP < 0 ? 0.06 * (1 + Math.sin(tankPulse*1.6 + i*0.8)) : 0);
+          hex = hit > 0.05 ? 0x2a6a72 : 0x123038;
+          rt  = 0.10 * (1 + Math.sin(tankPulse*1.4 + i*0.6)) + 0.45 * hit;
+        }
+        const mat = tankBoxes[i].material;
+        mat.emissiveIntensity += (tgt - mat.emissiveIntensity) * Math.min(1, dt * 6.5);
+        mat.color.setHex(hex);
+        const rr = tankRings[i].material;
+        rr.opacity += (rt - rr.opacity) * Math.min(1, dt * 6.5);
+      }
+      if(k7On && k7Mark){
+        k7Mark.children[0].material.emissiveIntensity = 0.9 + 0.5*Math.sin(t3*2.6);
+        k7Mark.children[1].material.opacity = 0.42 + 0.28*Math.sin(t3*2.6);
+        k7Mark.children[1].rotation.z += dt * 0.5;
+      }
+      if(straitOn && straitGate){
+        straitGate.children[2].material.emissiveIntensity = 0.7 + 0.5*Math.sin(t3*1.8);
+      }
+      if(alarmOn && alarmLight){
+        alarmLight.intensity = 14 + 12*Math.abs(Math.sin(t3*4.2));
+      }
+      /* 缓慢摆动，避免画面死板 */
+      shipGroup.rotation.y = 0.06 * Math.sin(t3 * 0.28);
+      shipGroup.position.y = 0.12 * Math.sin(t3 * 0.45);
+    }
+
+    /* --- 全场脉冲 --- */
+    if(pulse > 0){
+      const k = pulse * pulse;
+      scene.fog.near = 42 - 20 * k;
+    } else if(scene.fog){
+      scene.fog.near += (42 - scene.fog.near) * Math.min(1, dt * 2);
+    }
+
+    /* --- 镜头 --- */
+    const c = CAMS[camKey];
+    const k = Math.min(1, dt * 1.35);
+    camP.x += (c.p[0] - camP.x) * k; camP.y += (c.p[1] - camP.y) * k; camP.z += (c.p[2] - camP.z) * k;
+    camL.x += (c.l[0] - camL.x) * k; camL.y += (c.l[1] - camL.y) * k; camL.z += (c.l[2] - camL.z) * k;
+    const drift = REDUCE_MOTION ? 0 : (camKey === 'alarm' ? 0.055 : 0.16);
+    camera.position.set(camP.x + Math.sin(t3*.24)*drift, camP.y + Math.sin(t3*.31)*drift*.55, camP.z);
+    camera.lookAt(camL.x + Math.sin(t3*.19)*drift*.35, camL.y, camL.z);
+
+    renderer.render(scene, camera);
+  }catch(e){
+    if(!d3Err){ d3Err = true; console.warn('3D 帧更新异常（已忽略）：', e && e.message); }
+  }
+}
+
+boot3D();
+
+</script>
+<!-- 舰桥导航坞：回舰桥 / 看标定卡进度 -->
+<script>
+/* 进入序章即视为「已越过封面」，中途回舰桥不会再被封面拦一次 */
+try{ window.Fleet && window.Fleet.mark && window.Fleet.mark('cover'); }catch(e){}
+try{ window.Fleet && window.Fleet.mountDock({label:'序章'}); }catch(e){}
+</script>
+</body>
+</html>

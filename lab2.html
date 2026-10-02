@@ -1,0 +1,1762 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>第二实验室 · 泥沼绝境 —— 阻尼与共振破局</title>
+<style>
+:root{
+  --deep:#071a17; --deep2:#0d2621; --panel:rgba(9,32,28,0.90); --edge:rgba(96,196,168,0.30);
+  --amber:#ffb347; --amber2:#ff8f3c; --teal:#4fe0c8; --teal2:#2fb8a0;
+  --ink:#d8f2ea; --dim:#7fa79b; --dim2:#5c8a7e;
+  --bad:#ff6b5c; --good:#7ef0c2; --warn:#ffd166; --pale:#cfe8e0;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;}
+body{background:var(--deep);color:var(--ink);
+  font-family:"Consolas","Courier New","PingFang SC","Microsoft YaHei",monospace;
+  user-select:none;}
+
+/* ============ 3D 场景 ============ */
+#scene{position:fixed;inset:0;z-index:0;}
+#scene canvas{display:block;}
+
+/* 黏液层色调叠加 —— ζ 越大越浓稠越暗 */
+#slimeTint{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 62%, rgba(120,86,30,0.00) 30%, rgba(74,52,16,0.55) 100%);
+  opacity:.55;transition:opacity .4s;}
+
+/* ============ 顶部标题 ============ */
+#topbar{position:fixed;left:0;right:0;top:0;height:62px;z-index:8;
+  background:linear-gradient(180deg,rgba(7,26,23,0.94),rgba(7,26,23,0.00));
+  display:flex;align-items:center;gap:16px;padding:0 20px;}
+#topbar .mark{font-size:26px;}
+#topbar h1{margin:0;font-size:19px;font-weight:700;letter-spacing:1px;color:var(--amber);}
+#topbar .sub{font-size:12px;color:var(--dim);letter-spacing:.5px;}
+#topbar .tide{margin-left:auto;text-align:right;font-size:12px;color:var(--dim);line-height:1.5;}
+#topbar .tide b{color:var(--teal);font-size:15px;}
+
+/* ============ 右上读数 ============ */
+#readout{position:fixed;right:14px;top:70px;width:300px;z-index:9;
+  background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:12px 14px;
+  backdrop-filter:blur(4px);}
+#readout .rh{font-size:12px;color:var(--dim);letter-spacing:1px;margin-bottom:8px;
+  border-bottom:1px dashed rgba(96,196,168,0.25);padding-bottom:6px;}
+.rrow{display:flex;justify-content:space-between;align-items:baseline;
+  font-size:14px;padding:3px 0;}
+.rrow .k{color:var(--dim);font-size:12px;}
+.rrow .v{font-size:16px;font-weight:700;color:var(--pale);
+  font-variant-numeric:tabular-nums;}
+.rrow .v.hl{color:var(--amber);}
+.rrow .v.ok{color:var(--good);}
+.rrow .v.bad{color:var(--bad);}
+.rrow .u{font-size:11px;color:var(--dim2);font-weight:400;margin-left:2px;}
+.sep{height:1px;background:rgba(96,196,168,0.18);margin:7px 0;}
+
+/* 四判定灯 */
+#lamps{margin-top:9px;}
+.lamp{display:flex;align-items:center;gap:7px;font-size:12px;padding:3px 0;color:var(--dim);}
+.lamp .dot{width:11px;height:11px;border-radius:50%;background:#2a3b37;
+  border:1px solid rgba(96,196,168,0.35);flex:none;transition:all .25s;}
+.lamp.on .dot{background:var(--good);box-shadow:0 0 9px var(--good);border-color:var(--good);}
+.lamp.on{color:var(--good);}
+.lamp.off .dot{background:var(--bad);box-shadow:0 0 7px rgba(255,107,92,.6);border-color:var(--bad);}
+
+/* ============ 右侧仪器列 ============ */
+#instruments{position:fixed;right:14px;top:330px;width:300px;z-index:9;display:flex;
+  flex-direction:column;gap:10px;}
+.icard{background:var(--panel);border:1px solid var(--edge);border-radius:10px;
+  padding:8px 10px 6px;backdrop-filter:blur(4px);}
+.icard .ih{font-size:12px;color:var(--dim);letter-spacing:1px;margin-bottom:5px;
+  display:flex;justify-content:space-between;}
+.icard .ih .tag{color:var(--teal);font-size:11px;}
+.icard canvas{width:100%;display:block;border-radius:6px;background:#061512;}
+#bodeCard canvas{height:186px;}
+#scopeCard canvas{height:150px;}
+#phasorCard canvas{height:128px;}
+
+/* ============ 左侧诊断 ============ */
+#diag{position:fixed;left:14px;top:70px;width:250px;z-index:9;
+  background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:12px 14px;
+  backdrop-filter:blur(4px);}
+#diag .dh{font-size:12px;color:var(--dim);letter-spacing:1px;margin-bottom:9px;
+  border-bottom:1px dashed rgba(96,196,168,0.25);padding-bottom:6px;}
+.fault{display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 0;
+  cursor:pointer;color:var(--dim);transition:color .2s;}
+.fault:hover{color:var(--pale);}
+.fault .sw{width:34px;height:17px;border-radius:9px;background:#2a3b37;flex:none;
+  border:1px solid rgba(96,196,168,0.35);position:relative;transition:all .25s;}
+.fault .sw::after{content:'';position:absolute;left:2px;top:2px;width:11px;height:11px;
+  border-radius:50%;background:var(--dim2);transition:all .25s;}
+.fault.on .sw{background:rgba(126,240,194,.28);border-color:var(--good);}
+.fault.on .sw::after{left:19px;background:var(--good);box-shadow:0 0 7px var(--good);}
+.fault.on{color:var(--good);}
+.fault .fx{margin-left:auto;font-size:11px;color:var(--dim2);}
+/* 未解锁的开关是「灰但可点」——点击会给提示，不能用 pointer-events:none（那样点了像死界面） */
+.fault.locked{opacity:.45;cursor:not-allowed}
+.fault.locked:hover{color:var(--dim2)}
+.fault.nudge{animation:nudge .34s ease}
+@keyframes nudge{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+#diagNote{margin-top:9px;padding-top:8px;border-top:1px dashed rgba(96,196,168,0.20);
+  font-size:11px;color:var(--dim2);line-height:1.6;}
+
+/* ============ 日志 ============ */
+#logBox{position:fixed;left:14px;width:250px;top:322px;z-index:9;
+  background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:9px 12px;
+  font-size:11px;color:var(--dim);line-height:1.65;overflow-y:auto;}
+#logBox .lh{font-size:11px;color:var(--dim2);letter-spacing:1px;margin-bottom:5px;}
+#logBox div.e{padding:1px 0;}
+#logBox div.e b{color:var(--amber);font-weight:600;}
+#logBox div.e.ok b{color:var(--good);}
+#logBox div.e.bad b{color:var(--bad);}
+
+/* ============ 控制台 ============ */
+#console{position:fixed;left:16px;right:330px;bottom:14px;z-index:12;
+  max-height:44vh;overflow-y:auto;
+  background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:12px 16px;
+  backdrop-filter:blur(5px);}
+.ctlRow{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;}
+.ctl{flex:1 1 210px;min-width:190px;}
+.ctl .cap{font-size:11px;color:var(--dim);letter-spacing:.5px;margin-bottom:5px;
+  display:flex;justify-content:space-between;}
+.ctl .cap .cur{color:var(--amber);font-size:13px;font-weight:700;
+  font-variant-numeric:tabular-nums;}
+.ctl .fx{font-size:10px;color:var(--dim2);margin-top:3px;line-height:1.4;}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;
+  border-radius:3px;background:linear-gradient(90deg,#1d3b35,#2c5a50);outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+  width:19px;height:19px;border-radius:50%;background:var(--amber);cursor:pointer;
+  border:2px solid #0d2621;box-shadow:0 0 8px rgba(255,179,71,.55);}
+input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;
+  background:var(--amber);cursor:pointer;border:2px solid #0d2621;}
+input[type=range]:disabled{opacity:.35;cursor:not-allowed;}
+input[type=range]:disabled::-webkit-slider-thumb{background:#4a5c58;box-shadow:none;}
+
+.btnRow{display:flex;gap:9px;margin-top:11px;flex-wrap:wrap;}
+button{font-family:inherit;font-size:13px;padding:8px 15px;border-radius:7px;
+  border:1px solid var(--teal2);background:rgba(20,70,62,0.75);color:var(--pale);
+  cursor:pointer;transition:all .18s;letter-spacing:.5px;}
+button:hover:not(:disabled){background:rgba(32,110,96,0.92);border-color:var(--teal);
+  color:#fff;transform:translateY(-1px);}
+button:disabled{opacity:.32;cursor:not-allowed;}
+button.pri{border-color:var(--amber2);background:rgba(120,62,14,0.72);color:var(--amber);}
+button.pri:hover:not(:disabled){background:rgba(170,86,18,0.92);color:#fff;}
+button.on{background:rgba(126,240,194,0.22);border-color:var(--good);color:var(--good);}
+
+/* ============ 任务条 ============ */
+#missionBar{position:fixed;left:16px;right:330px;bottom:220px;z-index:11;
+  background:rgba(7,26,23,0.90);border:1px solid var(--edge);border-left:4px solid var(--amber);
+  border-radius:9px;padding:9px 14px;backdrop-filter:blur(4px);}
+#missionLine{font-size:14px;line-height:1.6;color:var(--pale);}
+#missionLine .step{display:inline-block;background:rgba(255,179,71,0.16);color:var(--amber);
+  font-size:11px;padding:2px 8px;border-radius:4px;margin-right:9px;letter-spacing:.5px;}
+#missionLine .tl{color:var(--teal);font-weight:700;}
+#missionLine .em{color:var(--amber);font-weight:700;}
+#principleLine{font-size:12px;color:var(--dim);margin-top:5px;line-height:1.55;}
+#principleLine b{color:var(--teal);}
+
+/* ============ 蓄能条 ============ */
+#chargeWrap{position:fixed;left:16px;right:330px;bottom:186px;z-index:11;display:none;}
+#chargeWrap .cl{font-size:11px;color:var(--dim);display:flex;justify-content:space-between;
+  margin-bottom:4px;}
+#chargeWrap .cl b{color:var(--amber);}
+#chargeTrack{height:9px;border-radius:5px;background:#122b26;overflow:hidden;
+  border:1px solid rgba(96,196,168,0.25);}
+#chargeFill{height:100%;width:0%;border-radius:5px;
+  background:linear-gradient(90deg,var(--teal2),var(--amber),var(--amber2));
+  transition:width .08s linear;}
+
+/* ============ 提示行 ============ */
+#hintLine{position:fixed;left:16px;right:330px;bottom:158px;z-index:11;
+  font-size:12px;color:var(--warn);text-align:center;letter-spacing:.5px;
+  min-height:18px;text-shadow:0 0 8px rgba(0,0,0,.6);}
+
+/* ============ 弹窗 ============ */
+.ov{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;
+  background:rgba(3,12,10,0.90);backdrop-filter:blur(3px);}
+.ov.show{display:flex;}
+.card{max-width:660px;width:92%;background:var(--deep2);border:1px solid var(--edge);
+  border-radius:14px;padding:26px 30px;box-shadow:0 18px 60px rgba(0,0,0,.65);}
+.card h2{margin:0 0 4px;font-size:22px;color:var(--amber);letter-spacing:1px;}
+.card .code{font-size:11px;color:var(--dim2);letter-spacing:2px;margin-bottom:16px;}
+.card p{font-size:14px;line-height:1.85;color:var(--pale);margin:9px 0;}
+.card p b{color:var(--teal);}
+.card .goal{margin-top:14px;padding:12px 15px;border-radius:9px;
+  background:rgba(255,179,71,0.09);border-left:3px solid var(--amber);
+  font-size:13px;line-height:1.75;color:var(--pale);}
+.card .goal small{color:var(--dim);font-size:11.5px;}
+.card .eq{margin:12px 0;padding:11px 14px;background:#061512;border-radius:8px;
+  border:1px dashed rgba(96,196,168,0.28);font-size:13px;color:var(--teal);
+  line-height:1.9;font-family:"Consolas",monospace;}
+.card .btnRow{justify-content:center;margin-top:20px;}
+
+/* 工程师立绘（内联 SVG，无外部图片） */
+#mentor{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
+#mentor svg{flex:none;}
+#mentor .nm{font-size:15px;color:var(--amber);font-weight:700;}
+#mentor .ro{font-size:11.5px;color:var(--dim);}
+
+#calibContent{font-size:13px;line-height:1.9;color:var(--pale);background:#061512;
+  border:1px dashed rgba(96,196,168,0.30);border-radius:9px;padding:14px 17px;margin-top:14px;}
+#calibContent .ttl{color:var(--amber);font-size:14px;margin-bottom:7px;letter-spacing:1px;}
+#calibContent b{color:var(--teal);font-size:15px;}
+
+/* 3D 失败提示 */
+/* 3D 加载失败：顶部横幅（原来是一块全屏不透明遮罩，会把剧情简报和控制台全盖住） */
+#errMsg{position:fixed;left:0;right:0;top:0;z-index:95;display:none;
+  padding:10px 16px;background:rgba(7,26,23,.96);
+  border-bottom:1px solid rgba(255,181,71,.34);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+#errMsg .ec{max-width:1120px;margin:0 auto;display:flex;align-items:center;gap:12px;
+  flex-wrap:wrap;color:var(--pale);font-size:12.5px;line-height:1.75;text-align:left}
+#errMsg h2{margin:0;font-size:13.5px;color:var(--amber);white-space:nowrap}
+#errMsg .ec b{color:var(--teal)}
+
+/* 窄窗口布局保护 */
+@media (max-height:820px){
+  #instruments{display:none;}
+  #logBox{display:none;}
+}
+@media (max-width:1180px){
+  #readout{width:250px;} #instruments{width:250px;} #diag{width:200px;} #logBox{width:200px;}
+  #console{right:280px;} #missionBar{right:280px;} #chargeWrap{right:280px;} #hintLine{right:280px;}
+}
+</style>
+</head>
+<body>
+
+<div id="scene"></div>
+<div id="slimeTint"></div>
+
+<!-- ===== 顶部 ===== -->
+<div id="topbar">
+  <div class="mark">🫧</div>
+  <div>
+    <h1>泥沼绝境 · 阻尼与共振破局</h1>
+    <div class="sub">SECOND LAB · DAMPING &amp; RESONANCE　|　胶质海原 K-7 海域</div>
+  </div>
+  <div class="tide">
+    风暴潮汐节拍<br><b id="tideVal">1.600</b> Hz
+  </div>
+</div>
+
+<!-- ===== 左：故障诊断 ===== -->
+<div id="diag">
+  <div class="dh">▍ 胶质海原 · 障碍排查</div>
+  <div class="fault" id="swFin"><div class="sw"></div>减摇鳍收起<span class="fx" id="fxFin">ζ 锁死</span></div>
+  <div class="fault" id="swBallast"><div class="sw"></div>压载泵停摆<span class="fx" id="fxBallast">m 锁死</span></div>
+  <div class="fault" id="swCouple"><div class="sw"></div>脉冲耦合器脱开<span class="fx" id="fxCouple">无驱动</span></div>
+  <div id="diagNote">
+    黏液中机械能被疯狂吞噬。先测衰减定 ζ，再解锁三项控制，最后把共振峰推到潮汐节拍上。
+  </div>
+</div>
+
+<!-- ===== 日志 ===== -->
+<div id="logBox"><div class="lh">▍ 实验日志</div><div id="logList"></div></div>
+
+<!-- ===== 右上：读数 ===== -->
+<div id="readout">
+  <div class="rh">▍ 振动参数实时读数</div>
+  <div class="rrow"><span class="k">阻尼比 ζ</span><span class="v" id="rdZeta">0.350</span></div>
+  <div class="rrow"><span class="k">品质因数 Q</span><span class="v" id="rdQ">1.43</span></div>
+  <div class="rrow"><span class="k">对数衰减率 δ</span><span class="v" id="rdDelta">--</span></div>
+  <div class="sep"></div>
+  <div class="rrow"><span class="k">固有频率 f₀</span><span class="v" id="rdF0">--<span class="u">Hz</span></span></div>
+  <div class="rrow"><span class="k">共振频率 f<sub>r</sub></span><span class="v hl" id="rdFr">--<span class="u">Hz</span></span></div>
+  <div class="rrow"><span class="k">驱动频率 f<sub>d</sub></span><span class="v" id="rdFd">--<span class="u">Hz</span></span></div>
+  <div class="rrow"><span class="k">频率比 r</span><span class="v" id="rdR">--</span></div>
+  <div class="sep"></div>
+  <div class="rrow"><span class="k">稳态振幅 A</span><span class="v" id="rdA">--<span class="u">m</span></span></div>
+  <div class="rrow"><span class="k">峰值加速度 a<sub>max</sub></span><span class="v" id="rdAcc">--<span class="u">m/s²</span></span></div>
+  <div class="rrow"><span class="k">相位滞后 φ</span><span class="v" id="rdPhi">--<span class="u">°</span></span></div>
+  <div id="lamps">
+    <div class="lamp" id="lampFr"><span class="dot"></span>共振峰对准潮汐 1.60 Hz</div>
+    <div class="lamp" id="lampFd"><span class="dot"></span>驱频锁定共振峰顶</div>
+    <div class="lamp" id="lampA"><span class="dot"></span>振幅够撕开黏液 ≥ 0.26 m</div>
+    <div class="lamp" id="lampAcc"><span class="dot"></span>龙骨应力未超限 ≤ 34 m/s²</div>
+    <div class="lamp" id="lampPhi"><span class="dot"></span>相位滞后 ≈ 90°（真共振）</div>
+  </div>
+</div>
+
+<!-- ===== 右：仪器 ===== -->
+<div id="instruments">
+  <div class="icard" id="scopeCard">
+    <div class="ih"><span>▍ 双通道示波器</span><span class="tag">x(t) / F(t)÷k</span></div>
+    <canvas id="scope" width="560" height="300"></canvas>
+  </div>
+  <div class="icard" id="bodeCard">
+    <div class="ih"><span>▍ 幅频响应（共振曲线）</span><span class="tag" id="bodeTag">待扫频</span></div>
+    <canvas id="bode" width="560" height="372"></canvas>
+  </div>
+  <div class="icard" id="phasorCard">
+    <div class="ih"><span>▍ 旋转相量图</span><span class="tag">F 超前 x</span></div>
+    <canvas id="phasor" width="560" height="256"></canvas>
+  </div>
+</div>
+
+<!-- ===== 控制台 ===== -->
+<div id="console">
+  <div class="ctlRow">
+    <div class="ctl">
+      <div class="cap"><span>减摇鳍展开度 → 阻尼比 ζ</span><span class="cur" id="valZ">0.350</span></div>
+      <input type="range" id="railZ" min="0.020" max="0.400" step="0.001" value="0.350" disabled>
+      <div class="fx">鳍张开排开黏液 → ζ 下降 → Q=1/(2ζ) 升高 → 共振峰更尖更高</div>
+    </div>
+    <div class="ctl">
+      <div class="cap"><span>压载水量 → 船体质量 m</span><span class="cur" id="valM">30000 kg</span></div>
+      <input type="range" id="railM" min="14000" max="30000" step="25" value="30000" disabled>
+      <div class="fx">m 变大 → f₀=√(k/m)/2π 下降 → 整条共振曲线左右平移</div>
+    </div>
+    <div class="ctl">
+      <div class="cap"><span>潮汐脉冲节拍 → 驱动频率 f<sub>d</sub></span><span class="cur" id="valF">1.600 Hz</span></div>
+      <input type="range" id="railF" min="1.000" max="2.400" step="0.002" value="1.600" disabled>
+      <div class="fx">借力只能用潮汐节拍：最终必须锁回 <b style="color:var(--teal)">1.600 Hz</b></div>
+    </div>
+  </div>
+  <div class="btnRow">
+    <button id="btnRelease">⛵ 释放船体（自由衰减）</button>
+    <button id="btnSweep" disabled>📈 自动扫频</button>
+    <button id="btnDrive" disabled>🌀 施加潮汐驱动</button>
+    <button id="btnCharge" class="pri" disabled>⚡ 共振蓄能破局</button>
+    <button id="btnReset">↺ 重置</button>
+  </div>
+</div>
+
+<!-- ===== 蓄能条 ===== -->
+<div id="chargeWrap">
+  <div class="cl"><span>▍ 振幅建立中（瞬态 → 稳态）</span><span><b id="chargePct">0%</b> · 时间常数 τ=1/(ζω₀)</span></div>
+  <div id="chargeTrack"><div id="chargeFill"></div></div>
+</div>
+
+<!-- ===== 任务条 ===== -->
+<div id="missionBar">
+  <div id="missionLine">── 系统待命 ──</div>
+  <div id="principleLine"></div>
+</div>
+<div id="hintLine"></div>
+
+<!-- ===== 开场简报 ===== -->
+<div class="ov show" id="briefOverlay">
+  <div class="card">
+    <div id="mentor">
+      <svg width="62" height="62" viewBox="0 0 62 62">
+        <defs><linearGradient id="mg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#2c5a50"/><stop offset="1" stop-color="#122b26"/></linearGradient></defs>
+        <circle cx="31" cy="31" r="29" fill="url(#mg)" stroke="#4fe0c8" stroke-width="1.6"/>
+        <circle cx="31" cy="24" r="10" fill="#ffb347" opacity=".85"/>
+        <path d="M15 52 Q31 36 47 52" stroke="#4fe0c8" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+        <circle cx="26" cy="24" r="1.9" fill="#071a17"/><circle cx="36" cy="24" r="1.9" fill="#071a17"/>
+      </svg>
+      <div><div class="nm">老所长 · 海事总工</div><div class="ro">破浪实验室 · 胶质海原救援现场</div></div>
+    </div>
+    <h2>第二实验室 · 泥沼绝境</h2>
+    <div class="code">ACT II · DAMPING &amp; RESONANCE</div>
+    <p>为抢修海底净化塔，科考船误入黏度极高的<b>胶质海原</b>。黏稠海水形成的强阻尼正疯狂吞噬机械能——船体起伏急剧衰减，动力彻底停滞。</p>
+    <div class="eq">
+      阻尼振动：x(t) = A₀·e<sup>−ζω₀t</sup>·cos(ω<sub>d</sub>t + φ)　ω<sub>d</sub> = ω₀√(1−ζ²)<br>
+      受迫振动稳态：A = (F₀/k) / √[(1−r²)² + (2ζr)²]　r = f<sub>d</sub>/f₀<br>
+      共振峰：f<sub>r</sub> = f₀√(1−2ζ²)　　Q = 1/(2ζ) = A<sub>max</sub> ÷ (F₀/k)
+    </div>
+    <p>蛮力推不动这船。唯一的出路是<b>借力</b>：抓住海面周期性<b>风暴潮汐的节奏</b>施加动力脉冲，让驱动频率撞上船体浮力固有频率，用<b>共振</b>把振幅放大到足以撕开黏液层。</p>
+    <div class="goal">🎯 任务：<b>先测衰减定 ζ</b> → <b>解锁三项控制</b> → <b>把共振峰推到潮汐 1.600 Hz</b> → <b>锁峰顶蓄能撕裂黏液</b>。<br>
+    <small>陷阱：振幅太小撕不开；共振太猛（ζ 过小）龙骨加速度超限会当场解体。两头堵，只能精调。</small></div>
+    <div class="btnRow"><button class="pri" id="btnStart">进入胶质海原 →</button></div>
+  </div>
+</div>
+
+<!-- ===== 通关 ===== -->
+<div class="ov" id="winOverlay">
+  <div class="card">
+    <div style="font-size:48px;text-align:center;margin-bottom:6px">🫧💥</div>
+    <h2 style="text-align:center">黏液层撕裂 · 破局成功</h2>
+    <div class="code" style="text-align:center">SLIME LAYER RUPTURED · SHIP FREED</div>
+    <p>振幅被共振一路上推，船体起伏终于越过黏液层的屈服极限——胶质被整片撕开，动力恢复，科考船脱困驶出胶质海原。</p>
+    <p>你刚刚亲手完成的，是<b>受迫振动的稳态解</b>：驱动频率对上固有频率，阻尼只决定峰值能冲多高。</p>
+    <div id="calibContent"></div>
+    <div class="btnRow"><button class="pri" id="btnAgain">再来一次</button></div>
+  </div>
+</div>
+
+<!-- ===== 失败 ===== -->
+<div class="ov" id="failOverlay">
+  <div class="card">
+    <div style="font-size:44px;text-align:center;margin-bottom:6px">💀</div>
+    <h2 style="text-align:center;color:var(--bad)">龙骨断裂 · 船体解体</h2>
+    <div class="code" style="text-align:center">KEEL OVERSTRESS · HULL BREACHED</div>
+    <p id="failMsg"></p>
+    <p style="font-size:13px;color:var(--dim)">共振放大是双刃剑：<b style="color:var(--amber)">Q 越高，峰值越猛，龙骨越危险</b>。把 ζ 调大一点点，牺牲一点振幅换安全。</p>
+    <div class="btnRow"><button class="pri" id="btnRetry">重新调参 →</button></div>
+  </div>
+</div>
+
+<!-- ===== 3D 失败 ===== -->
+<div id="errMsg"><div class="ec">
+  <h2>⚠ 3D 海面未能加载</h2>
+  <span>本关的 3D 海面需要 <b>WebGL</b> 并<b>联网加载 3D 引擎</b>。物理计算、示波器、曲线与全部判定<b>都不依赖 3D</b>，可以继续以纯仪器模式闯关。</span>
+  <button id="btnNo3D">继续（纯仪器模式）</button>
+</div></div>
+
+<!-- 舰桥进度内核：全站解锁状态的唯一真源（见 fleet.js） -->
+<script src="fleet.js"></script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+
+<script type="module">
+/* ================================================================
+   第二实验室 · 泥沼绝境 —— 阻尼与共振破局
+   知识点边界：阻尼振动 / 对数衰减率 / 品质因数 Q / 受迫振动稳态解 /
+               幅频响应与共振峰 f_r / 共振的相位判据
+   本关不涉及：机械波传播、干涉、衍射、驻波（属后续实验室）
+   ================================================================ */
+const $ = id => document.getElementById(id);
+const TAU = Math.PI * 2;
+
+/* ---------------- 物理常量 ---------------- */
+const K      = 2.4e6;   // N/m   船体浮力刚度（复原力系数）
+const X0     = 0.05;    // m     静位移 F₀/k（驱动脉冲力幅 F₀ = 1.2×10⁵ N）
+const F_TIDE = 1.600;   // Hz    风暴潮汐节拍 —— 驱动只能借这个频率
+const A_NEED = 0.26;    // m     撕开黏液层所需的最小稳态振幅
+const ACC_LIM= 34;      // m/s²  龙骨强度上限（超限解体）
+const A0_REL = 0.35;    // m     释放船体时的初始位移
+const WIN_T  = 5.0;     // s     示波器时间窗
+const TOL_FR = 0.02;    // f_r 与潮汐的容许相对偏差
+const TOL_FD = 0.015;   // f_d 与共振峰顶的容许相对偏差
+const TOL_PHI= [76, 104]; // 相位滞后判定区间（真共振 ≈ 90°）
+
+/* ---------------- 状态 ---------------- */
+const S = {
+  zeta: 0.350, m: 30000, fd: F_TIDE,
+  finOn: false, ballastOn: false, coupleOn: false,
+  mode: 'idle',          // idle | free | drive | charge | win | fail
+  t: 0,                  // 当前阶段已用时间
+  tGlob: 0,              // 全局时间（保证波形相位连续）
+  tStart: 0,
+  measZeta: null, measDelta: null,
+  swept: false,
+  chargeT: 0,
+  sweep: null,           // {t0, dur}
+  failHard: false
+};
+
+/* ---------------- 派生量 ---------------- */
+const w0 = () => Math.sqrt(K / S.m);
+const f0 = () => w0() / TAU;
+const wd = () => { const z = S.zeta; return z < 1 ? w0() * Math.sqrt(1 - z * z) : 0; };
+const fr = () => { const z = S.zeta; const v = 1 - 2 * z * z; return v > 0 ? f0() * Math.sqrt(v) : 0; };
+/** 稳态振幅 A(f) = (F₀/k) / √[(1−r²)² + (2ζr)²] */
+function ampAt(f){
+  const r = f / f0(), z = S.zeta;
+  return X0 / Math.sqrt((1 - r * r) ** 2 + (2 * z * r) ** 2);
+}
+/** 相位滞后 φ = atan2(2ζr, 1−r²)，F 超前 x 的角度 */
+function phiAt(f){
+  const r = f / f0(), z = S.zeta;
+  return Math.atan2(2 * z * r, 1 - r * r);
+}
+const ampNow = () => ampAt(S.fd);
+const phiNow = () => phiAt(S.fd);
+const accNow = () => (TAU * S.fd) ** 2 * ampNow();
+const qNow   = () => 1 / (2 * S.zeta);
+/** 对数衰减率 δ = 2πζ/√(1−ζ²) */
+const deltaNow = () => S.zeta < 1 ? TAU * S.zeta / Math.sqrt(1 - S.zeta * S.zeta) : NaN;
+/** 由 δ 反解 ζ */
+const zetaFromDelta = d => d / Math.sqrt(TAU * TAU + d * d);
+/** 瞬态建立时间常数 τ = 1/(ζω₀) */
+const tauNow = () => 1 / Math.max(1e-6, S.zeta * w0());
+
+/* ---------------- 判定 ---------------- */
+function evaluate(){
+  const A = ampNow(), a = accNow(), r = S.fd / f0(), ph = phiNow() * 180 / Math.PI, FR = fr();
+  return {
+    A, a, r, phi: ph, fr: FR,
+    okFr : Math.abs(FR - F_TIDE) / F_TIDE <= TOL_FR,      // 共振峰是否落在潮汐节拍上
+    okFd : Math.abs(S.fd - FR) / FR <= TOL_FD,            // 驱频是否锁在峰顶
+    okA  : A >= A_NEED,                                   // 振幅够不够撕开黏液
+    okAcc: a <= ACC_LIM,                                  // 龙骨会不会断
+    okPhi: ph >= TOL_PHI[0] && ph <= TOL_PHI[1]           // 是不是真共振（相位 90°）
+  };
+}
+
+/* ---------------- 波形（解析式，不做数值积分） ---------------- */
+function xAt(tRel){
+  const z = S.zeta;
+  if(S.mode === 'free'){
+    // 欠阻尼自由衰减：x = A₀·e^(−ζω₀t)·cos(ω_d t)
+    if(z >= 1) return A0_REL * Math.exp(-w0() * tRel);   // 过阻尼：单调爬回，不振
+    return A0_REL * Math.exp(-z * w0() * tRel) * Math.cos(wd() * tRel);
+  }
+  if(S.mode === 'drive' || S.mode === 'charge'){
+    const w = TAU * S.fd, A = ampNow(), ph = phiNow();
+    if(S.mode === 'charge'){
+      // 振幅建立：包络 A_ss(1 − e^(−ζω₀t))，时间常数 τ = 1/(ζω₀)
+      const env = A * (1 - Math.exp(-z * w0() * tRel));
+      return env * Math.cos(w * tRel - ph);
+    }
+    return A * Math.cos(w * tRel - ph);
+  }
+  return 0;
+}
+/** 驱动力（除以 k 后与位移同量纲）：F(t)/k = X₀·cos(ωt) */
+function fAt(tRel){
+  if(S.mode !== 'drive' && S.mode !== 'charge') return 0;
+  return X0 * Math.cos(TAU * S.fd * tRel);
+}
+/** 包络（正值） */
+function envAt(tRel){
+  const z = S.zeta;
+  if(S.mode === 'free') return z >= 1 ? A0_REL * Math.exp(-w0() * tRel) : A0_REL * Math.exp(-z * w0() * tRel);
+  if(S.mode === 'charge') return ampNow() * (1 - Math.exp(-z * w0() * tRel));
+  return ampNow();
+}
+
+/* ---------------- 衰减测量 ---------------- */
+function analyzeDecay(){
+  const N = 4000, dt = WIN_T / N, xs = [];
+  for(let i = 0; i <= N; i++) xs.push(A0_REL * Math.exp(-S.zeta * w0() * i * dt) * Math.cos(wd() * i * dt));
+  const all = [];
+  for(let i = 1; i < N; i++){
+    if(xs[i] > 1e-9 && xs[i] > xs[i - 1] && xs[i] >= xs[i + 1]) all.push(xs[i]);
+  }
+  // 只保留高于首峰万分之一的前若干个（强阻尼 ζ=0.35 下仍有 4 个峰可用）
+  const peaks = [];
+  for(const v of all){ if(v > all[0] * 1e-4) peaks.push(v); else break; }
+  if(peaks.length < 3) return null;
+  // 对 ln(峰高) 关于峰序号做最小二乘拟合，斜率即 −δ；比逐对比值更抗采样噪声
+  let sx = 0, sy = 0, sxx = 0, sxy = 0;
+  for(let i = 0; i < peaks.length; i++){
+    const y = Math.log(peaks[i]);
+    sx += i; sy += y; sxx += i * i; sxy += i * y;
+  }
+  const n = peaks.length, den = n * sxx - sx * sx;
+  const delta = den === 0 ? 0 : -(n * sxy - sx * sy) / den;
+  return { delta, zeta: zetaFromDelta(delta), peaks: peaks.slice(0, 6) };
+}
+
+/* ================================================================
+   仪器绘制
+   ================================================================ */
+function fitCanvas(c){
+  const r = c.getBoundingClientRect();
+  const w = Math.max(280, Math.round(r.width)), h = Math.max(90, Math.round(r.height));
+  const dpr = 2;
+  if(c.width !== w * dpr || c.height !== h * dpr){ c.width = w * dpr; c.height = h * dpr; }
+  const g = c.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  return { g, w, h };
+}
+
+/* ---------- 示波器 ---------- */
+function drawScope(){
+  const { g, w, h } = fitCanvas($('scope'));
+  const mid = h * 0.5, ampPx = h * 0.40, PAD = 8;
+  g.fillStyle = '#061512'; g.fillRect(0, 0, w, h);
+
+  // 网格
+  g.strokeStyle = 'rgba(96,196,168,0.13)'; g.lineWidth = 1.4;
+  for(let i = 0; i <= WIN_T * 2; i++){
+    const x = PAD + (w - 2 * PAD) * i / (WIN_T * 2);
+    g.beginPath(); g.moveTo(x, 4); g.lineTo(x, h - 4); g.stroke();
+  }
+  for(let i = -2; i <= 2; i++){
+    const y = mid + ampPx * i / 2;
+    g.beginPath(); g.moveTo(PAD, y); g.lineTo(w - PAD, y); g.stroke();
+  }
+  // 零线
+  g.strokeStyle = 'rgba(96,196,168,0.42)'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(PAD, mid); g.lineTo(w - PAD, mid); g.stroke();
+
+  const scale = ampPx / Math.max(0.42, A0_REL * 1.05);
+  const tNow = Math.min(S.t, WIN_T);
+  const T0 = Math.max(0, S.t - WIN_T);
+
+  // 包络
+  g.strokeStyle = 'rgba(255,179,71,0.40)'; g.lineWidth = 2; g.setLineDash([7, 5]);
+  [1, -1].forEach(sgn => {
+    g.beginPath();
+    for(let px = 0; px <= w - 2 * PAD; px++){
+      const t = T0 + WIN_T * px / (w - 2 * PAD);
+      const y = mid - sgn * envAt(t) * scale;
+      px ? g.lineTo(PAD + px, y) : g.moveTo(PAD + px, y);
+    }
+    g.stroke();
+  });
+  g.setLineDash([]);
+
+  // 驱动力通道 F(t)/k
+  if(S.mode === 'drive' || S.mode === 'charge'){
+    g.strokeStyle = '#4fe0c8'; g.lineWidth = 2.6; g.beginPath();
+    for(let px = 0; px <= w - 2 * PAD; px++){
+      const t = T0 + WIN_T * px / (w - 2 * PAD);
+      const y = mid - fAt(t) * scale;
+      px ? g.lineTo(PAD + px, y) : g.moveTo(PAD + px, y);
+    }
+    g.stroke();
+  }
+
+  // 位移通道 x(t)
+  g.strokeStyle = '#ffb347'; g.lineWidth = 3.6; g.beginPath();
+  for(let px = 0; px <= w - 2 * PAD; px++){
+    const t = T0 + WIN_T * px / (w - 2 * PAD);
+    const y = mid - xAt(t) * scale;
+    px ? g.lineTo(PAD + px, y) : g.moveTo(PAD + px, y);
+  }
+  g.stroke();
+
+  // 游标
+  const cx = PAD + (w - 2 * PAD) * tNow / WIN_T;
+  g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(cx, 6); g.lineTo(cx, h - 6); g.stroke();
+  g.fillStyle = '#ffb347'; g.beginPath(); g.arc(cx, mid - xAt(S.t) * scale, 6, 0, TAU); g.fill();
+
+  // 标注
+  g.font = '26px Consolas, monospace';
+  g.fillStyle = '#ffb347'; g.fillText('x(t)  船体位移', PAD + 6, 30);
+  if(S.mode === 'drive' || S.mode === 'charge'){
+    g.fillStyle = '#4fe0c8'; g.fillText('F(t)÷k  潮汐驱动力', PAD + 6, 58);
+  } else if(S.mode === 'free'){
+    g.fillStyle = '#7fa79b'; g.fillText('自由衰减 e^(−ζω₀t)', PAD + 6, 58);
+  }
+  g.fillStyle = '#5c8a7e'; g.font = '24px Consolas, monospace';
+  g.fillText('每格 0.5 s', w - PAD - 100, h - 10);
+
+  // 衰减峰标记
+  if(S.mode === 'free' && S.zeta < 1){
+    const N = 900, dt = WIN_T / N;
+    for(let i = 1; i < N; i++){
+      const a = A0_REL * Math.exp(-S.zeta * w0() * (i - 1) * dt) * Math.cos(wd() * (i - 1) * dt);
+      const b = A0_REL * Math.exp(-S.zeta * w0() * i * dt) * Math.cos(wd() * i * dt);
+      const c = A0_REL * Math.exp(-S.zeta * w0() * (i + 1) * dt) * Math.cos(wd() * (i + 1) * dt);
+      if(b > 0.03 * A0_REL && b > a && b >= c){
+        const x = PAD + (w - 2 * PAD) * (i * dt - T0) / WIN_T;
+        if(x >= PAD && x <= w - PAD){
+          g.fillStyle = '#7ef0c2'; g.beginPath(); g.arc(x, mid - b * scale, 5, 0, TAU); g.fill();
+        }
+      }
+    }
+  }
+}
+
+/* ---------- 幅频响应（共振曲线） ---------- */
+const F_LO = 1.00, F_HI = 2.40, A_HI = 0.58;
+function drawBode(){
+  const { g, w, h } = fitCanvas($('bode'));
+  const PL = 46, PR = 12, PT = 16, PB = 30;
+  const x0 = PL, x1 = w - PR, y0 = PT, y1 = h - PB;
+  g.fillStyle = '#061512'; g.fillRect(0, 0, w, h);
+  const fx = f => x0 + (x1 - x0) * (f - F_LO) / (F_HI - F_LO);
+  const ay = a => y1 - (y1 - y0) * Math.min(1, a / A_HI);
+
+  // 网格
+  g.strokeStyle = 'rgba(96,196,168,0.12)'; g.lineWidth = 1.3;
+  for(let f = 1.0; f <= 2.4001; f += 0.2){
+    const x = fx(f); g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y1); g.stroke();
+  }
+  for(let a = 0; a <= A_HI; a += 0.1){
+    const y = ay(a); g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
+  }
+  g.strokeStyle = 'rgba(96,196,168,0.40)'; g.lineWidth = 1.8;
+  g.beginPath(); g.moveTo(x0, y1); g.lineTo(x1, y1); g.stroke();
+  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0, y1); g.stroke();
+
+  // 解体区（a_max > ACC_LIM ⇔ A > ACC_LIM/(2πf)²）
+  g.fillStyle = 'rgba(255,107,92,0.13)';
+  g.beginPath(); g.moveTo(fx(F_LO), y0);
+  for(let px = 0; px <= x1 - x0; px++){
+    const f = F_LO + (F_HI - F_LO) * px / (x1 - x0);
+    g.lineTo(x0 + px, ay(Math.min(A_HI, ACC_LIM / (TAU * f) ** 2)));
+  }
+  g.lineTo(x1, y0); g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(255,107,92,0.65)'; g.lineWidth = 2; g.setLineDash([6, 4]);
+  g.beginPath();
+  for(let px = 0; px <= x1 - x0; px++){
+    const f = F_LO + (F_HI - F_LO) * px / (x1 - x0);
+    const y = ay(Math.min(A_HI, ACC_LIM / (TAU * f) ** 2));
+    px ? g.lineTo(x0 + px, y) : g.moveTo(x0 + px, y);
+  }
+  g.stroke(); g.setLineDash([]);
+
+  // 撕裂所需振幅线
+  g.strokeStyle = 'rgba(126,240,194,0.75)'; g.lineWidth = 2.2; g.setLineDash([9, 6]);
+  g.beginPath(); g.moveTo(x0, ay(A_NEED)); g.lineTo(x1, ay(A_NEED)); g.stroke(); g.setLineDash([]);
+
+  // 响应曲线
+  g.strokeStyle = '#ffb347'; g.lineWidth = 3.4; g.beginPath();
+  for(let px = 0; px <= x1 - x0; px++){
+    const f = F_LO + (F_HI - F_LO) * px / (x1 - x0);
+    const y = ay(ampAt(f));
+    px ? g.lineTo(x0 + px, y) : g.moveTo(x0 + px, y);
+  }
+  g.stroke();
+
+  // 潮汐节拍线
+  const xt = fx(F_TIDE);
+  g.strokeStyle = '#ffd166'; g.lineWidth = 2.4; g.setLineDash([5, 4]);
+  g.beginPath(); g.moveTo(xt, y0); g.lineTo(xt, y1); g.stroke(); g.setLineDash([]);
+
+  // 共振峰 f_r
+  const FR = fr();
+  if(FR > F_LO && FR < F_HI){
+    const xr = fx(FR);
+    g.strokeStyle = 'rgba(79,224,200,0.85)'; g.lineWidth = 2; g.setLineDash([3, 3]);
+    g.beginPath(); g.moveTo(xr, y0); g.lineTo(xr, y1); g.stroke(); g.setLineDash([]);
+    // 半功率带宽 Δf ≈ f₀/Q（二分求 A = A_max/√2 的两个交点）
+    const Amax = ampAt(FR), half = Amax / Math.SQRT2;
+    let a1 = F_LO, b1 = FR;                       // 左支：A 随 f 递增
+    for(let k = 0; k < 40; k++){ const mid = (a1 + b1) / 2; if(ampAt(mid) > half) b1 = mid; else a1 = mid; }
+    let a2 = FR, b2 = F_HI;                       // 右支：A 随 f 递减
+    for(let k = 0; k < 40; k++){ const mid = (a2 + b2) / 2; if(ampAt(mid) > half) a2 = mid; else b2 = mid; }
+    const f1 = (a1 + b1) / 2, f2 = (a2 + b2) / 2;
+    g.fillStyle = 'rgba(79,224,200,0.16)';
+    g.fillRect(fx(f1), y0, fx(f2) - fx(f1), y1 - y0);
+  }
+
+  // 当前工作点
+  const cxp = fx(S.fd), cyp = ay(ampAt(S.fd));
+  g.fillStyle = '#ff6b5c'; g.strokeStyle = '#fff'; g.lineWidth = 2;
+  g.beginPath(); g.arc(cxp, cyp, 7, 0, TAU); g.fill(); g.stroke();
+
+  // 文字
+  g.font = '24px Consolas, monospace';
+  g.fillStyle = '#ffb347'; g.fillText('A(f)', x0 - 34, y0 + 14);
+  g.fillStyle = '#5c8a7e'; g.font = '22px Consolas, monospace';
+  g.fillText(F_LO.toFixed(1), x0 - 4, y1 + 22);
+  g.fillText(F_HI.toFixed(1), x1 - 26, y1 + 22);
+  g.fillText('f_d (Hz)', (x0 + x1) / 2 - 34, y1 + 22);
+  g.fillStyle = '#7ef0c2'; g.fillText('撕液线', x1 - 62, ay(A_NEED) - 7);
+  g.fillStyle = '#ff8f7a'; g.fillText('解体区', x1 - 62, y0 + 18);
+  g.fillStyle = '#ffd166'; g.fillText('潮汐', xt + 5, y0 + 18);
+}
+
+/* ---------- 旋转相量图 ---------- */
+function drawPhasor(){
+  const { g, w, h } = fitCanvas($('phasor'));
+  const cx = w * 0.34, cy = h * 0.5, R = Math.min(w * 0.22, h * 0.36);
+  g.fillStyle = '#061512'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(96,196,168,0.30)'; g.lineWidth = 2;
+  g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke();
+  g.strokeStyle = 'rgba(96,196,168,0.22)'; g.lineWidth = 1.6;
+  g.beginPath(); g.moveTo(cx - R - 16, cy); g.lineTo(cx + R + 16, cy); g.stroke();
+  g.beginPath(); g.moveTo(cx, cy - R - 14); g.lineTo(cx, cy + R + 14); g.stroke();
+
+  const wv = S.mode === 'free' ? wd() : TAU * S.fd;
+  const th = wv * S.t;                 // 驱动相量角
+  const ph = S.mode === 'free' ? 0 : phiNow();
+  const sc = R / Math.max(0.10, X0 * 1.15);
+
+  // 相位差扇形
+  if(S.mode !== 'free'){
+    g.fillStyle = 'rgba(255,209,102,0.18)';
+    g.beginPath(); g.moveTo(cx, cy);
+    g.arc(cx, cy, R * 0.55, -(th), -(th - ph), false); g.closePath(); g.fill();
+  }
+  // 驱动力相量 F/k（青）
+  const fx = cx + X0 * sc * Math.cos(th), fy = cy - X0 * sc * Math.sin(th);
+  g.strokeStyle = '#4fe0c8'; g.lineWidth = 4;
+  g.beginPath(); g.moveTo(cx, cy); g.lineTo(fx, fy); g.stroke();
+  g.fillStyle = '#4fe0c8'; g.beginPath(); g.arc(fx, fy, 6, 0, TAU); g.fill();
+  // 位移相量 x（琥珀）
+  const A = S.mode === 'free' ? envAt(S.t) : ampNow();
+  const thx = th - ph;
+  const xx = cx + A * sc * Math.cos(thx), xy = cy - A * sc * Math.sin(thx);
+  g.strokeStyle = '#ffb347'; g.lineWidth = 4;
+  g.beginPath(); g.moveTo(cx, cy); g.lineTo(xx, xy); g.stroke();
+  g.fillStyle = '#ffb347'; g.beginPath(); g.arc(xx, xy, 6, 0, TAU); g.fill();
+
+  // 投影（x 轴）
+  g.strokeStyle = 'rgba(255,179,71,0.45)'; g.lineWidth = 2.4;
+  g.beginPath(); g.moveTo(xx, xy); g.lineTo(xx, cy); g.stroke();
+
+  g.font = '26px Consolas, monospace';
+  g.fillStyle = '#4fe0c8'; g.fillText('F(t)÷k', w * 0.62, h * 0.34);
+  g.fillStyle = '#ffb347'; g.fillText('x(t)', w * 0.62, h * 0.56);
+  g.fillStyle = '#ffd166'; g.font = '30px Consolas, monospace';
+  g.fillText('φ = ' + (S.mode === 'free' ? '--' : (ph * 180 / Math.PI).toFixed(1) + '°'), w * 0.62, h * 0.80);
+  g.fillStyle = '#5c8a7e'; g.font = '22px Consolas, monospace';
+  g.fillText('共振时 F 超前 x 恰好 90°', w * 0.10, h - 10);
+}
+
+/* ================================================================
+   读数 / 灯 / 任务条
+   ================================================================ */
+function refreshReadout(){
+  const e = evaluate();
+  $('rdZeta').textContent = S.zeta.toFixed(3);
+  $('rdQ').textContent    = qNow().toFixed(2);
+  $('rdDelta').textContent= S.zeta < 1 ? deltaNow().toFixed(3) : '过阻尼';
+  $('rdF0').innerHTML     = f0().toFixed(4) + '<span class="u">Hz</span>';
+  $('rdFr').innerHTML     = (fr() > 0 ? fr().toFixed(4) : '--') + '<span class="u">Hz</span>';
+  $('rdFd').innerHTML     = S.fd.toFixed(3) + '<span class="u">Hz</span>';
+  $('rdR').textContent    = (S.fd / f0()).toFixed(3);
+  $('rdA').innerHTML      = e.A.toFixed(4) + '<span class="u">m</span>';
+  $('rdAcc').innerHTML    = e.a.toFixed(2) + '<span class="u">m/s²</span>';
+  $('rdPhi').innerHTML    = (S.mode === 'free' ? '--' : e.phi.toFixed(1)) + '<span class="u">°</span>';
+
+  const set = (id, on, neg) => {
+    const el = $(id); el.classList.remove('on', 'off');
+    if(on) el.classList.add('on'); else if(neg) el.classList.add('off');
+  };
+  const live = S.mode === 'drive' || S.mode === 'charge';
+  set('lampFr',  e.okFr,  true);
+  set('lampFd',  e.okFd,  true);
+  set('lampA',   e.okA,   live);
+  set('lampAcc', e.okAcc, live);
+  set('lampPhi', e.okPhi, live);
+
+  $('rdA').className   = 'v ' + (e.okA ? 'ok' : (live ? 'bad' : ''));
+  $('rdAcc').className = 'v ' + (e.okAcc ? 'ok' : (live ? 'bad' : ''));
+  $('rdPhi').className = 'v ' + (e.okPhi ? 'ok' : (live ? 'bad' : ''));
+
+  // 黏液浓度随 ζ 变化
+  $('slimeTint').style.opacity = (0.30 + S.zeta * 1.3).toFixed(2);
+}
+
+const STEPS = [
+  { txt:'在<b>控制台</b>点【⛵ 释放船体】，看船体在黏液中自由衰减。波形会自己画出一条衰减包络。',
+    pri:'阻尼振动 <b>x(t)=A₀·e^(−ζω₀t)·cos(ω_d t)</b>；包络越陡，说明黏液吞能量越狠。',
+    done:()=>S.measZeta !== null },
+  { txt:'系统已从<b>对数衰减率 δ</b> 反解出 ζ。现在点左侧<b>【减摇鳍收起】</b>开关，展开减摇鳍排开黏液。',
+    pri:'δ = ln(xₙ/xₙ₊₁) = 2πζ/√(1−ζ²)　→　<b>ζ = δ/√(4π²+δ²)</b>；品质因数 <b>Q = 1/(2ζ)</b>。',
+    done:()=>S.finOn },
+  { txt:'拖动<b>减摇鳍展开度</b>把 ζ 从 0.350 降下来，同时点开<b>【压载泵停摆】</b>。',
+    pri:'ζ 越小 Q 越高、共振峰越尖越猛；但别忘了船体有<b>强度上限</b>——不是越低越好。',
+    done:()=>S.ballastOn },
+  { txt:'拖动<b>压载水量</b>改船体质量 m，看 f₀=√(k/m)/2π 与<b>共振峰 f_r</b> 一起左右移动。',
+    pri:'<b>f₀ = √(k/m)/2π</b>；共振峰 <b>f_r = f₀√(1−2ζ²)</b>。目标是把峰推到潮汐 <b>1.600 Hz</b> 上。',
+    done:()=>S.coupleOn },
+  { txt:'点<b>【🌀 施加潮汐驱动】</b>再点<b>【📈 自动扫频】</b>，让仪器扫出整条<b>幅频响应曲线</b>，看清峰在哪、半功率带宽多宽。',
+    pri:'稳态 <b>A = (F₀/k)/√[(1−r²)²+(2ζr)²]</b>，<b>r = f_d/f₀</b>。半功率带宽 <b>Δf ≈ f₀/Q</b>——Q 越高峰越尖。',
+    done:()=>S.swept && S.mode === 'drive' },
+  { txt:'把<b>共振峰</b>推到 <b class="tl">1.600 Hz</b>：调压载 m 使 f_r 对准潮汐；调 ζ 使峰高落在<b>撕液线之上、解体区之下</b>；最后确认 f_d 锁在 1.600。',
+    pri:'这是双边界问题：<b>振幅太小撕不开黏液，共振太猛龙骨会断</b>。中间那条缝才是解。',
+    done:()=>{ const e = evaluate(); return e.okFr && e.okFd && e.okA && e.okAcc && e.okPhi; } },
+  { txt:'五盏灯全绿——按<b class="em">【⚡ 共振蓄能破局】</b>！振幅会按 <b>1−e^(−ζω₀t)</b> 一路爬升，直到撕开黏液层。',
+    pri:'瞬态建立时间常数 <b>τ = 1/(ζω₀)</b>：Q 越高蓄能越慢——选频性和响应速度天生矛盾。',
+    done:()=>S.mode === 'win' }
+];
+function renderMission(){
+  let idx = STEPS.findIndex(s => !s.done());
+  if(idx < 0) idx = STEPS.length - 1;
+  const done = STEPS[idx].done();
+  $('missionLine').innerHTML =
+    '<span class="step">STEP ' + (idx + 1) + '/' + STEPS.length + '</span>' + STEPS[idx].txt +
+    (done ? ' <span style="color:#7ef0c2">✓</span>' : '');
+  $('principleLine').innerHTML = STEPS[idx].pri;
+}
+
+/* ---------------- 日志 ---------------- */
+function log(msg, cls){
+  const d = document.createElement('div');
+  d.className = 'e ' + (cls || '');
+  d.innerHTML = msg;
+  $('logList').appendChild(d);
+  $('logBox').scrollTop = $('logBox').scrollHeight;
+  while($('logList').children.length > 40) $('logList').removeChild($('logList').firstChild);
+}
+function hint(t){ $('hintLine').innerHTML = t; }
+
+/* ================================================================
+   交互
+   ================================================================ */
+function doRelease(){
+  if(S.mode === 'charge') return;
+  S.mode = 'free'; S.t = 0; S.tStart = S.tGlob;
+  $('btnRelease').classList.add('on');
+  log('释放船体 —— 初始位移 ' + A0_REL.toFixed(2) + ' m，观察自由衰减');
+  hint('波形正在衰减…… 数一数相邻波峰，比值就是 e^(−δ)');
+  setTimeout(() => {
+    const r = analyzeDecay();
+    if(r){
+      S.measZeta = r.zeta; S.measDelta = r.delta;
+      log('抓到 ' + r.peaks.length + ' 个波峰 → <b>δ = ' + r.delta.toFixed(3) +
+          '</b> → <b>ζ = ' + r.zeta.toFixed(3) + '</b> → Q = ' + (1 / (2 * r.zeta)).toFixed(2), 'ok');
+      hint('ζ = ' + S.zeta.toFixed(3) + ' —— 黏液在疯狂吞噬能量。点【减摇鳍收起】展开它！');
+      unlockFault('swFin'); $('fxFin').textContent = '点我展开';
+    }
+    refreshAll();
+  }, 2600);
+  refreshAll();
+}
+/** 把三个故障开关设为未解锁态（灰着但仍可点 —— 点了会告诉玩家该先做什么） */
+function lockFaults(){
+  ['swFin', 'swBallast', 'swCouple'].forEach(id => {
+    $(id).classList.add('locked');
+    $(id).style.pointerEvents = '';
+    $(id).style.opacity = '';
+  });
+}
+/** 解锁某个开关 */
+function unlockFault(id){
+  $(id).classList.remove('locked');
+}
+/** 点了还没解锁的开关：抖一下 + 说明前置条件 */
+function nudge(id, why){
+  const el = $(id);
+  el.classList.remove('nudge'); void el.offsetWidth; el.classList.add('nudge');
+  setTimeout(() => el.classList.remove('nudge'), 400);
+  hint(why);
+}
+
+function doSweep(){
+  if(!S.coupleOn) return;
+  S.mode = 'drive'; S.t = 0; S.tStart = S.tGlob;
+  S.sweep = { t0: S.tGlob, dur: 2.6 };
+  $('bodeTag').textContent = '扫频中…';
+  log('自动扫频：f_d 从 ' + F_LO + ' 扫到 ' + F_HI + ' Hz');
+  refreshAll();
+}
+
+function doDrive(){
+  if(!S.coupleOn) return;
+  S.mode = 'drive'; S.t = 0; S.tStart = S.tGlob;
+  $('btnDrive').classList.add('on');
+  log('潮汐脉冲耦合 —— 进入<b>受迫振动稳态</b>', 'ok');
+  hint('扫频找峰，或手动拖 f_d 感受振幅变化');
+  refreshAll();
+}
+
+function doCharge(){
+  const e = evaluate();
+  if(!(e.okFr && e.okFd)){ hint('先把共振峰和驱频都对准，再蓄能'); return; }
+  S.mode = 'charge'; S.t = 0; S.tStart = S.tGlob; S.chargeT = 0;
+  $('chargeWrap').style.display = 'block';
+  $('railZ').disabled = true; $('railM').disabled = true; $('railF').disabled = true;
+  $('btnCharge').disabled = true;
+  log('共振蓄能开始 —— 振幅按 1−e^(−ζω₀t) 建立，τ = ' + tauNow().toFixed(2) + ' s');
+  refreshAll();
+}
+
+function doReset(){
+  lockFaults();
+  S.zeta = 0.350; S.m = 30000; S.fd = F_TIDE;
+  S.finOn = S.ballastOn = S.coupleOn = false;
+  S.mode = 'idle'; S.t = 0; S.measZeta = null; S.measDelta = null;
+  S.swept = false; S.chargeT = 0; S.sweep = null; S.failHard = false;
+  $('railZ').value = '0.350'; $('railM').value = '30000'; $('railF').value = '1.600';
+  $('railZ').disabled = true; $('railM').disabled = true; $('railF').disabled = true;
+  ['swFin', 'swBallast', 'swCouple'].forEach(id => { $(id).classList.remove('on'); });
+  $('fxFin').textContent = 'ζ 锁死'; $('fxBallast').textContent = 'm 锁死'; $('fxCouple').textContent = '无驱动';
+  ['btnRelease', 'btnSweep', 'btnDrive', 'btnCharge'].forEach(id => $(id).classList.remove('on'));
+  $('chargeWrap').style.display = 'none';
+  $('winOverlay').classList.remove('show'); $('failOverlay').classList.remove('show');
+  $('logList').innerHTML = '';
+  tearT = 0; shake = 0;
+  if(slimeMat) slimeMat.opacity = 0.93;      // 复位被撕开的黏液层
+  if(burst) burst.material.opacity = 0;
+  log('实验重置 —— 胶质海原 K-7，等待释放船体');
+  refreshAll();
+}
+
+/* 三个故障开关 */
+function wireFaults(){
+  $('swFin').onclick = () => {
+    if(!S.measZeta) { nudge('swFin', '先点【⛵ 释放船体】测出 ζ，才能动减摇鳍'); return; }
+    S.finOn = !S.finOn;
+    $('swFin').classList.toggle('on', S.finOn);
+    $('railZ').disabled = !S.finOn;
+    $('fxFin').textContent = S.finOn ? '已展开' : 'ζ 锁死';
+    if(S.finOn){
+      log('减摇鳍展开 —— 阻尼比现在<b>可调</b>（0.020 ~ 0.400）', 'ok');
+      unlockFault('swBallast'); $('fxBallast').textContent = '点我启动';
+      hint('拖 ζ 往下调 —— Q=1/(2ζ) 会立刻升高');
+    }
+  };
+  $('swBallast').onclick = () => {
+    if(!S.finOn) { nudge('swBallast', '先展开减摇鳍（上面那一行），压载泵才能启动'); return; }
+    S.ballastOn = !S.ballastOn;
+    $('swBallast').classList.toggle('on', S.ballastOn);
+    $('railM').disabled = !S.ballastOn;
+    $('fxBallast').textContent = S.ballastOn ? '已启动' : 'm 锁死';
+    if(S.ballastOn){
+      log('压载泵启动 —— 船体质量<b>可调</b>（14000 ~ 30000 kg）', 'ok');
+      unlockFault('swCouple'); $('fxCouple').textContent = '点我啮合';
+      hint('拖 m —— f₀=√(k/m)/2π 会把整条共振曲线左右平移');
+    }
+  };
+  $('swCouple').onclick = () => {
+    if(!S.ballastOn) { nudge('swCouple', '先启动压载泵（上面那一行），耦合器才能啮合'); return; }
+    S.coupleOn = !S.coupleOn;
+    $('swCouple').classList.toggle('on', S.coupleOn);
+    $('railF').disabled = !S.coupleOn;
+    $('btnDrive').disabled = !S.coupleOn;
+    $('btnSweep').disabled = !S.coupleOn;
+    $('fxCouple').textContent = S.coupleOn ? '已啮合' : '无驱动';
+    if(S.coupleOn){
+      log('脉冲耦合器啮合 —— 可施加<b>潮汐驱动力</b> F₀ = 1.2×10⁵ N', 'ok');
+      hint('点【🌀 施加潮汐驱动】，再点【📈 自动扫频】看共振曲线');
+    }
+  };
+}
+
+function wireRails(){
+  $('railZ').oninput = e => {
+    S.zeta = parseFloat(e.target.value);
+    $('valZ').textContent = S.zeta.toFixed(3);
+    if(S.mode === 'drive' || S.mode === 'charge'){ S.t = 0; S.tStart = S.tGlob; }
+    refreshAll();
+  };
+  $('railM').oninput = e => {
+    S.m = parseFloat(e.target.value);
+    $('valM').textContent = S.m.toFixed(0) + ' kg';
+    if(S.mode === 'drive' || S.mode === 'charge'){ S.t = 0; S.tStart = S.tGlob; }
+    refreshAll();
+  };
+  $('railF').oninput = e => {
+    S.fd = parseFloat(e.target.value);
+    $('valF').textContent = S.fd.toFixed(3) + ' Hz';
+    if(S.mode === 'drive' || S.mode === 'charge'){ S.t = 0; S.tStart = S.tGlob; }
+    refreshAll();
+  };
+}
+
+function wireButtons(){
+  $('btnRelease').onclick = doRelease;
+  $('btnSweep').onclick  = doSweep;
+  $('btnDrive').onclick  = doDrive;
+  $('btnCharge').onclick = doCharge;
+  $('btnReset').onclick  = doReset;
+  $('btnStart').onclick  = () => { $('briefOverlay').classList.remove('show'); log('进入胶质海原 —— 动力停滞，等待诊断'); hint('第 1 步：点【⛵ 释放船体】，看自由衰减 → 测出 ζ'); };
+  $('btnNo3D').onclick   = () => { $('errMsg').style.display = 'none'; hint('纯仪器模式 —— 参数、曲线与判定全部照常可用'); };
+  $('btnAgain').onclick  = doReset;
+  $('btnRetry').onclick  = () => { $('failOverlay').classList.remove('show'); S.mode = 'drive'; S.t = 0; S.tStart = S.tGlob; $('railZ').disabled = false; $('railM').disabled = false; $('railF').disabled = false; refreshAll(); };
+}
+
+/* ---------------- 胜负 ---------------- */
+function showWin(){
+  /* 通关 → 通知舰桥：本关标定卡已签发（fleet.js） */
+  try{ if(window.Fleet) window.Fleet.clear(2); }catch(e){}
+  S.mode = 'win'; tearT = 0;
+  if(typeof burst !== 'undefined' && burst) burst.material.opacity = 0.95;
+  if(typeof slimeMat !== 'undefined' && slimeMat) slimeMat.opacity = 0.93;
+  const e = evaluate();
+  $('calibContent').innerHTML =
+    '<div class="ttl">▍ 共振标定卡 · ACT II</div>' +
+    '浮力刚度 k = <b>2.40×10⁶</b> N/m　驱动幅 F₀/k = <b>' + X0.toFixed(3) + '</b> m<br>' +
+    '阻尼比 ζ = <b>' + S.zeta.toFixed(3) + '</b>　品质因数 Q = <b>' + qNow().toFixed(2) + '</b><br>' +
+    '船体质量 m = <b>' + S.m.toFixed(0) + '</b> kg　固有频率 f₀ = <b>' + f0().toFixed(4) + '</b> Hz<br>' +
+    '共振频率 f_r = <b>' + fr().toFixed(4) + '</b> Hz　驱动锁在 <b>' + S.fd.toFixed(3) + '</b> Hz<br>' +
+    '稳态振幅 A = <b>' + e.A.toFixed(4) + '</b> m　峰值加速度 = <b>' + e.a.toFixed(2) + '</b> m/s²<br>' +
+    '相位滞后 φ = <b>' + e.phi.toFixed(1) + '</b>°（真共振判据）<br>' +
+    '<span style="color:#7fa79b">→ 半功率带宽 Δf ≈ f₀/Q = ' + (f0() / qNow()).toFixed(3) +
+    ' Hz；蓄能时间常数 τ = ' + tauNow().toFixed(2) + ' s</span>';
+  $('winOverlay').classList.add('show');
+  log('黏液层撕裂 —— <b>破局成功</b>，科考船脱困', 'ok');
+}
+function showFail(msg){
+  S.mode = 'fail'; S.failHard = true;
+  shake = 0.9;                       // 一次性触发，随后自然衰减
+  $('failMsg').innerHTML = msg;
+  $('failOverlay').classList.add('show');
+  log('<b>龙骨断裂</b> —— ' + msg, 'bad');
+}
+
+/** 蓄能键只在「峰已对准潮汐 + 驱频锁在峰顶」时开放 */
+function updateChargeBtn(){
+  $('btnCharge').disabled = !(S.mode === 'drive' && evaluate().okFr && evaluate().okFd);
+}
+function refreshAll(){ refreshReadout(); renderMission(); updateChargeBtn(); }
+
+/* ---------------- 布局保护 ---------------- */
+function layout(){
+  const h = ($('console').offsetHeight || 180);
+  $('missionBar').style.bottom = (h + 96) + 'px';
+  $('chargeWrap').style.bottom = (h + 62) + 'px';
+  $('hintLine').style.bottom = (h + 34) + 'px';
+  const lb = $('logBox');
+  lb.style.maxHeight = Math.max(80, innerHeight - 470) + 'px';
+}
+window.addEventListener('resize', layout);
+
+/* ================================================================
+   3D 场景：胶质海原 —— 黏稠海面 + 科考船 + 潮汐脉冲环
+   ================================================================ */
+let THREE = null, HAS3D = false;
+let scene, camera, renderer, clock;
+let ship, hullMat, slime, slimeMat, bubbles, rings = [], burst = null;
+let strands = null, globs = null, tmpCol = null, radarSpin = null, gooCollar = null;
+let gooCur = null, gooVel = null;                  // 黏液高度/速度场（滞后跟随）
+const SURF_Y = -0.12;                              // 黏液面高度（世界坐标）
+let camAz = 0.72, camPol = 1.12, camDist = 13.5;
+let shake = 0, tearT = 0, colorFrame = 1;
+const VIS = 3.2;          // 位移 → 场景单位的放大倍数
+
+/* 给任意 Promise 加一个超时兜底：超时就用 fallback 继续，不让页面卡在 await 上 */
+function withTimeout(p, ms, fallback){
+  return Promise.race([
+    p,
+    new Promise(res => setTimeout(() => res(fallback), ms || 8000))
+  ]);
+}
+
+async function boot3D(){
+  try{
+    THREE = await import('three');
+  }catch(e){
+    console.warn('three.js 加载失败：', e && e.message);
+    return false;
+  }
+  try{
+    const host = $('scene');
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a1a17);
+    scene.fog = new THREE.FogExp2(0x0a1a17, 0.034);
+
+    camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, 0.1, 300);
+
+    renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    host.appendChild(renderer.domElement);
+
+    /* ---- 灯光：浑浊、低照度 ---- */
+    scene.add(new THREE.AmbientLight(0x5c7268, 0.55));
+    scene.add(new THREE.HemisphereLight(0xc6d6cd, 0x4a3610, 0.70));
+    const key  = new THREE.DirectionalLight(0xffeccb, 2.10); key.position.set(7, 13, 6);  scene.add(key);
+    const fill = new THREE.DirectionalLight(0xc2d8de, 0.85); fill.position.set(-5, 5, 11); scene.add(fill);
+    const rim  = new THREE.DirectionalLight(0x66e6d0, 0.95); rim.position.set(-9, 4, -7); scene.add(rim);
+    const under = new THREE.PointLight(0xff8f3c, 1.1, 30); under.position.set(0, -2.4, 0); scene.add(under);
+
+    /* ============================================================
+       胶质海面：厚黏液层
+       ① 高细分网格 + 逐顶点「弹簧-阻尼」滞后 → 越黏越迟滞
+       ② 顶点色模拟剪切油膜光泽
+       ③ 下层深色底板 → 看不透，读起来是"厚"而不是"水"
+       ============================================================ */
+    const SEG = 84;
+    const sg = new THREE.PlaneGeometry(120, 120, SEG, SEG);
+    sg.rotateX(-Math.PI / 2);
+    const NV = sg.attributes.position.count;
+    sg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(NV * 3), 3));
+    slimeMat = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff, vertexColors: true,
+      roughness: 0.50, metalness: 0.06,
+      clearcoat: 0.45, clearcoatRoughness: 0.52,   // 厚腻的湿面：宽高光、不打镜面耀斑
+      sheen: 0.22, sheenRoughness: 0.80, sheenColor: new THREE.Color(0xd6e4c4),
+      emissive: 0x1d2a08, emissiveIntensity: 0.45,
+      transparent: true, opacity: 0.99, side: THREE.DoubleSide
+    });
+    slime = new THREE.Mesh(sg, slimeMat);
+    slime.position.y = SURF_Y;
+    scene.add(slime);
+
+    const deep = new THREE.Mesh(new THREE.PlaneGeometry(120, 120),
+      new THREE.MeshStandardMaterial({ color: 0x101c0f, roughness: 1, metalness: 0 }));
+    deep.rotation.x = -Math.PI / 2; deep.position.y = SURF_Y - 2.2; scene.add(deep);
+
+    gooCur = new Float32Array(NV); gooVel = new Float32Array(NV);
+    tmpCol = new THREE.Color();
+
+    /* ============================================================
+       科考船「海燕号」：壳板用放样曲面生成（非方块拼装）
+       —— 站线 beamAt(u) × 半宽剖面 wAt(v)，艏艉收细、舷弧上翘
+       ============================================================ */
+    const YKEEL = -0.78, YDECK = 0.55, XS = -2.85, XB = 3.05, HB = 1.02;
+    const deckY  = u => YDECK + 0.22 * Math.pow(u, 2.4);                    // 舷弧：艏部上翘
+    const beamAt = u => (u < 0.40)
+      ? HB * (0.62 + 0.38 * Math.pow(u / 0.40, 0.75))                       // 艉 → 舯：渐宽
+      : HB * (1 - Math.pow((u - 0.40) / 0.60, 2.3) * 0.97);                 // 舯 → 艏：收成尖
+    const wAt = v => {                                                       // v: 0 龙骨 → 1 舷顶
+      let w = 0.20 + 0.80 * Math.pow(Math.sin(v * Math.PI / 2), 0.62);      // 圆舭
+      if(v > 0.78){ const q = (v - 0.78) / 0.22; w *= 1 - 0.10 * q * q; }   // 舷顶内倾
+      return w;
+    };
+    const px = u => XS + u * (XB - XS);                                      // 站线 x 坐标
+
+    // 壳板放样：沿站线扫掠一段剖面 [v0,v1]；off 可为常数或 off(v) 函数
+    function loftHull(v0, v1, off, ns, m){
+      const ofv = (typeof off === 'function') ? off : (() => off);
+      const pos = [], idx = [], ring = 2 * m + 1;
+      for(let i = 0; i <= ns; i++){
+        const u = i / ns, x = px(u), beam = beamAt(u), dy = deckY(u) - YKEEL;
+        for(let j = 0; j <= m; j++){                       // 右舷：舷顶 → 龙骨
+          const v = v1 - (v1 - v0) * (j / m), b = beam + ofv(v);
+          pos.push(x, YKEEL + v * dy, wAt(v) * b);
+        }
+        for(let j = 1; j <= m; j++){                       // 左舷：龙骨 → 舷顶
+          const v = v0 + (v1 - v0) * (j / m), b = beam + ofv(v);
+          pos.push(x, YKEEL + v * dy, -wAt(v) * b);
+        }
+      }
+      for(let i = 0; i < ns; i++)
+        for(let j = 0; j < ring - 1; j++){
+          const a = i * ring + j, b2 = a + ring;
+          idx.push(a, b2, b2 + 1, a, b2 + 1, a + 1);
+        }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setIndex(idx); g.computeVertexNormals(); return g;
+    }
+    // 艏艉封板（剖面多边形扇形填充）
+    function capGeo(u, m){
+      const x = px(u), b = beamAt(u), dy = deckY(u) - YKEEL, pts = [];
+      for(let j = 0; j <= m; j++){ const v = 1 - j / m; pts.push([x, YKEEL + v * dy,  wAt(v) * b]); }
+      for(let j = 1; j <= m; j++){ const v =     j / m; pts.push([x, YKEEL + v * dy, -wAt(v) * b]); }
+      let cx = 0, cy = 0, cz = 0;
+      pts.forEach(p => { cx += p[0]; cy += p[1]; cz += p[2]; });
+      const n = pts.length, pos = [cx/n, cy/n, cz/n], idx = [];
+      pts.forEach(p => pos.push(p[0], p[1], p[2]));
+      for(let j = 0; j < n; j++) idx.push(0, 1 + j, 1 + (j + 1) % n);
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setIndex(idx); g.computeVertexNormals(); return g;
+    }
+    // 主甲板
+    function deckGeo(ns){
+      const pos = [], idx = [];
+      for(let i = 0; i <= ns; i++){
+        const u = i / ns, w = wAt(1) * beamAt(u) * 0.99;
+        pos.push(px(u), deckY(u), w, px(u), deckY(u), -w);
+      }
+      for(let i = 0; i < ns; i++){ const a = i * 2; idx.push(a, a + 1, a + 3, a, a + 3, a + 2); }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setIndex(idx); g.computeVertexNormals(); return g;
+    }
+    // 圆角箱体（上层建筑，比方块耐看）
+    function rb(w, h, d, r){
+      const s = new THREE.Shape(), x = -w / 2, y = -d / 2;
+      s.moveTo(x + r, y);
+      s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
+      s.lineTo(x + w, y + d - r); s.quadraticCurveTo(x + w, y + d, x + w - r, y + d);
+      s.lineTo(x + r, y + d); s.quadraticCurveTo(x, y + d, x, y + d - r);
+      s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+      const g = new THREE.ExtrudeGeometry(s, { depth: h, bevelEnabled: true,
+        bevelSize: 0.025, bevelThickness: 0.025, bevelSegments: 2, curveSegments: 6 });
+      g.rotateX(-Math.PI / 2);                              // 挤出方向转到 +Y，底面在 y=0
+      return g;
+    }
+
+    hullMat  = new THREE.MeshStandardMaterial({ color: 0xe9eff2, roughness: 0.40, metalness: 0.35, side: THREE.DoubleSide });
+    const lowMat   = new THREE.MeshStandardMaterial({ color: 0x6f2a21, roughness: 0.55, metalness: 0.25, side: THREE.DoubleSide });
+    const bootMat  = new THREE.MeshStandardMaterial({ color: 0x1b2d31, roughness: 0.45, metalness: 0.30, side: THREE.DoubleSide });
+    const deckMat  = new THREE.MeshStandardMaterial({ color: 0x3b5f56, roughness: 0.85, metalness: 0.10, side: THREE.DoubleSide });
+    const trimMat  = new THREE.MeshStandardMaterial({ color: 0xff8f3c, roughness: 0.55, metalness: 0.30 });
+    const darkMat  = new THREE.MeshStandardMaterial({ color: 0x1a2724, roughness: 0.80, metalness: 0.15 });
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xdfe7e6, roughness: 0.60, metalness: 0.15 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x0d2b33, roughness: 0.12, metalness: 0.60,
+                        emissive: 0x2fd3ee, emissiveIntensity: 0.55 });
+    const lampMat  = new THREE.MeshStandardMaterial({ color: 0xffe3b0, roughness: 0.40,
+                        emissive: 0xffc46a, emissiveIntensity: 1.5 });
+
+    ship = new THREE.Group();
+    const NS = 46, M = 14;
+    ship.add(new THREE.Mesh(loftHull(0.520, 1.000, 0,     NS, M), hullMat));   // 水线以上：浅灰
+    ship.add(new THREE.Mesh(loftHull(0.000, 0.410, 0,     NS, M), lowMat));    // 水线以下：防污漆红
+    ship.add(new THREE.Mesh(loftHull(0.400, 0.530, 0.018, NS, M), bootMat));   // 水线漆带
+    ship.add(new THREE.Mesh(capGeo(0, M), bootMat));                           // 艉封板
+    ship.add(new THREE.Mesh(capGeo(1, M), hullMat));                           // 艏柱
+    ship.add(new THREE.Mesh(deckGeo(NS), deckMat));                            // 主甲板
+
+    // 球鼻艏（水下的水滴状突出体）
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.36, 24, 18), trimMat);
+    bulb.scale.set(1.55, 0.88, 0.88);
+    bulb.position.set(3.02, YKEEL + 0.26, 0);
+    ship.add(bulb);
+
+    // 舷侧锚
+    [1, -1].forEach(s => {
+      const an = new THREE.Mesh(new THREE.TorusGeometry(0.10, 0.028, 6, 14), darkMat);
+      an.position.set(px(0.80), YKEEL + 0.62 * (deckY(0.80) - YKEEL), s * 0.60);
+      ship.add(an);
+    });
+
+    // 上层建筑
+    const dh = new THREE.Mesh(rb(2.45, 0.95, 1.55, 0.14), whiteMat);
+    dh.position.set(px(0.30), deckY(0.30) - 0.02, 0); ship.add(dh);
+    const br = new THREE.Mesh(rb(1.60, 0.62, 1.32, 0.12), whiteMat);
+    br.position.set(px(0.31), deckY(0.31) + 0.95, 0); ship.add(br);
+    const win = new THREE.Mesh(new THREE.BoxGeometry(1.63, 0.24, 1.36), glassMat);
+    win.position.set(px(0.31), deckY(0.31) + 1.22, 0); ship.add(win);
+    const brTop = new THREE.Mesh(rb(1.76, 0.10, 1.46, 0.06), darkMat);
+    brTop.position.set(px(0.31), deckY(0.31) + 1.57, 0); ship.add(brTop);
+
+    // 烟囱（带黑顶与色带）
+    const fun = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.25, 0.92, 20), trimMat);
+    fun.position.set(px(0.40), deckY(0.30) + 1.42, 0); fun.rotation.z = -0.03; ship.add(fun);
+    const funCap = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.13, 20), darkMat);
+    funCap.position.set(px(0.40) + 0.01, deckY(0.30) + 1.94, 0); ship.add(funCap);
+    const funBand = new THREE.Mesh(new THREE.CylinderGeometry(0.262, 0.262, 0.10, 20), darkMat);
+    funBand.position.set(px(0.40), deckY(0.30) + 1.72, 0); ship.add(funBand);
+
+    // 桅杆 + 旋转雷达 + 横桁
+    const mb = deckY(0.62);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 2.5, 10), whiteMat);
+    mast.position.set(px(0.62), mb + 1.25, 0); ship.add(mast);
+    const yard = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.05, 0.05), whiteMat);
+    yard.position.set(px(0.62), mb + 1.95, 0); ship.add(yard);
+    radarSpin = new THREE.Group();
+    radarSpin.position.set(px(0.62), mb + 2.45, 0);
+    const radar = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.08, 0.10), darkMat);
+    radarSpin.add(radar);
+    const radarLed = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), lampMat);
+    radarLed.position.set(0.34, 0.02, 0); radarSpin.add(radarLed);
+    ship.add(radarSpin);
+
+    // 救生艇（两侧吊架）
+    [1, -1].forEach(s => {
+      const boat = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), trimMat);
+      boat.scale.set(1.9, 0.78, 0.78);
+      boat.position.set(px(0.18), deckY(0.18) + 0.30, s * 0.92); ship.add(boat);
+      const dav = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.42, 8), darkMat);
+      dav.position.set(px(0.18), deckY(0.18) + 0.60, s * 0.80); ship.add(dav);
+    });
+
+    // 艏部甲板仪器箱 + 起重柱
+    [[0.70, 0x4fe0c8], [0.78, 0xffd166], [0.85, 0xff8f3c]].forEach(([u, c]) => {
+      const bx = new THREE.Mesh(rb(0.44, 0.40, 0.52, 0.05),
+        new THREE.MeshStandardMaterial({ color: c, roughness: 0.60, metalness: 0.20 }));
+      bx.position.set(px(u), deckY(u) + 0.01, 0); ship.add(bx);
+    });
+    const derrick = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 1.25, 10), whiteMat);
+    derrick.position.set(px(0.92), deckY(0.92) + 0.62, 0); ship.add(derrick);
+
+    // 舷墙栏杆（沿甲板边线的折线）
+    (function(){
+      const pts = [], us = [], H = 0.32;
+      for(let i = 0; i <= 20; i++) us.push(0.10 + i * (0.97 - 0.10) / 20);
+      [1, -1].forEach(s => {
+        const p = us.map(u => new THREE.Vector3(px(u), deckY(u), s * wAt(1) * beamAt(u) * 0.96));
+        for(let i = 0; i + 1 < p.length; i++){
+          pts.push(p[i].x, p[i].y + H, p[i].z, p[i+1].x, p[i+1].y + H, p[i+1].z);
+          pts.push(p[i].x, p[i].y + H * 0.55, p[i].z, p[i+1].x, p[i+1].y + H * 0.55, p[i+1].z);
+        }
+        p.forEach(v => pts.push(v.x, v.y, v.z, v.x, v.y + H, v.z));
+      });
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+      ship.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({
+        color: 0xbdd3ca, transparent: true, opacity: 0.72 })));
+    })();
+
+    // 甲板灯
+    [[0.14, 0, 0.06], [0.31, 0.68, 1.04], [0.90, 0.30, 0.10], [0.90, -0.30, 0.10]].forEach(p => {
+      const lp = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), lampMat);
+      lp.position.set(px(p[0]), deckY(p[0]) + p[2], p[1]); ship.add(lp);
+    });
+    const warm = new THREE.PointLight(0xffcf8a, 0.75, 10);
+    warm.position.set(px(0.31), deckY(0.31) + 1.30, 0); ship.add(warm);
+
+    scene.add(ship);
+
+    /* ---- 水线黏附环：裹着船体的黏液堆（半跟随船体升降 → 黏） ---- */
+    gooCollar = new THREE.Mesh(
+      loftHull(0.18, 0.90, v => 0.34 * Math.exp(-((v - 0.48) * (v - 0.48)) / 0.0060) - 0.016, NS, 24),
+      new THREE.MeshPhysicalMaterial({
+        color: 0x93711f, roughness: 0.42, metalness: 0.08,
+        clearcoat: 0.60, clearcoatRoughness: 0.45,
+        sheen: 0.34, sheenRoughness: 0.70, sheenColor: new THREE.Color(0xd8e6c6),
+        emissive: 0x33230a, emissiveIntensity: 0.95, side: THREE.DoubleSide }));
+    gooCollar.renderOrder = 1;
+    scene.add(gooCollar);
+
+    /* ---- 黏液拉丝：船体升起时从壳体拽出的黏丝 ---- */
+    (function(){
+      const P = [], NSG = 10, ROWS = NSG + 1;
+      for(let i = 0; i < 14; i++){
+        const u = 0.07 + i * (0.93 / 13), s = (i % 2) ? 1 : -1;
+        const v = 0.48, dy = deckY(u) - YKEEL;      // 挂点取在水线黏附环最鼓处、再外挪一点，避免被环埋住
+        P.push([px(u), YKEEL + v * dy + 0.06, s * wAt(v) * (beamAt(u) + 0.48)]);
+      }
+      const nv = P.length * ROWS * 2;
+      const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), idx = [];
+      for(let k = 0; k < P.length; k++){
+        const base = k * ROWS * 2;
+        for(let r = 0; r < ROWS - 1; r++){
+          const a = base + r * 2;
+          idx.push(a, a + 1, a + 3, a, a + 3, a + 2);
+        }
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+      g.setIndex(idx);
+      // 黏丝做成有厚度的"带状"网格（LineBasicMaterial 线宽恒为 1px，在泥面底色上看不见）
+      strands = new THREE.Mesh(g, new THREE.MeshPhysicalMaterial({
+        color: 0xe9cd8a, roughness: 0.22, metalness: 0.04,
+        clearcoat: 0.92, clearcoatRoughness: 0.20,
+        emissive: 0x7d6024, emissiveIntensity: 1.25,
+        side: THREE.DoubleSide }));   // 不透明：走不透明通道，深度关系确定，不会被黏液面盖住
+      strands.userData.pts = P; strands.userData.seg = NSG; strands.userData.rows = ROWS;
+      scene.add(strands);
+    })();
+
+    /* ---- 海面漂浮的黏液团块 ---- */
+    globs = new THREE.Group();
+    const globGeo = new THREE.SphereGeometry(0.30, 14, 10);
+    const globMat = new THREE.MeshPhysicalMaterial({ color: 0x8a6a24, roughness: 0.26, metalness: 0.12,
+      emissive: 0x2a1e06, emissiveIntensity: 0.55, clearcoat: 0.85, clearcoatRoughness: 0.20,
+      sheen: 0.6, sheenColor: new THREE.Color(0x9fe6b4) });
+    for(let i = 0; i < 16; i++){
+      const gm = new THREE.Mesh(globGeo, globMat);
+      const rs = 0.85 + Math.random() * 1.0;
+      gm.scale.set(rs, (0.28 + Math.random() * 0.18), rs * (0.8 + Math.random() * 0.4));
+      const a = Math.random() * TAU, r = 3.4 + Math.random() * 15;
+      gm.position.set(Math.cos(a) * r * 1.6, SURF_Y + 0.02, Math.sin(a) * r);
+      gm.userData.ph = Math.random() * TAU;
+      globs.add(gm);
+    }
+    scene.add(globs);
+
+    /* ---- 黏液气泡：黏稠 → 上浮极慢、边浮边晃 ---- */
+    const bp = new Float32Array(700 * 3);
+    for(let i = 0; i < 700; i++){
+      // 四成气泡集中在船体周围 —— 黏液被困住的沼气泡
+      if(i % 5 < 2){
+        const a = Math.random() * TAU, r = 1.6 + Math.random() * 4.2;
+        bp[i*3] = Math.cos(a) * r * 1.9; bp[i*3+2] = Math.sin(a) * r;
+      } else {
+        bp[i*3] = (Math.random() - 0.5) * 54; bp[i*3+2] = (Math.random() - 0.5) * 54;
+      }
+      bp[i*3+1] = SURF_Y + Math.random() * 5.2;
+    }
+    const bg = new THREE.BufferGeometry();
+    bg.setAttribute('position', new THREE.BufferAttribute(bp, 3));
+    bubbles = new THREE.Points(bg, new THREE.PointsMaterial({
+      color: 0xd8b978, size: 0.15, transparent: true, opacity: 0.52, depthWrite: false }));
+    scene.add(bubbles);
+
+    /* ---- 潮汐脉冲环 ---- */
+    for(let i = 0; i < 4; i++){
+      const pts = [];
+      for(let a = 0; a <= 96; a++){
+        const t = a / 96 * Math.PI * 2;
+        pts.push(new THREE.Vector3(Math.cos(t), 0, Math.sin(t)));
+      }
+      const lg = new THREE.BufferGeometry().setFromPoints(pts);
+      const ring = new THREE.LineLoop(lg, new THREE.LineBasicMaterial({
+        color: 0x4fe0c8, transparent: true, opacity: 0.0 }));
+      ring.position.y = SURF_Y + 0.08;
+      ring.userData.phase = i / 4;
+      scene.add(ring); rings.push(ring);
+    }
+
+    /* ---- 撕裂粒子（通关特效） ---- */
+    const np = 420, tp = new Float32Array(np * 3), tv = [];
+    for(let i = 0; i < np; i++){
+      tp[i*3] = (Math.random() - 0.5) * 5; tp[i*3+1] = SURF_Y; tp[i*3+2] = (Math.random() - 0.5) * 3;
+      tv.push(new THREE.Vector3((Math.random()-0.5)*4.5, 2.5 + Math.random()*5, (Math.random()-0.5)*4.5));
+    }
+    const tg = new THREE.BufferGeometry();
+    tg.setAttribute('position', new THREE.BufferAttribute(tp, 3));
+    burst = new THREE.Points(tg, new THREE.PointsMaterial({
+      color: 0xffb347, size: 0.20, transparent: true, opacity: 0 }));
+    burst.userData.vel = tv;
+    scene.add(burst);
+
+    clock = new THREE.Clock();
+    bindOrbit(renderer.domElement);
+    onResize();
+    return true;
+  }catch(e){
+    console.warn('3D 场景构建失败：', e && e.message);
+    return false;
+  }
+}
+
+/* ---- 简易鼠标拖拽转视角 ---- */
+function bindOrbit(el){
+  let down = false, lx = 0, ly = 0;
+  el.addEventListener('pointerdown', e => { down = true; lx = e.clientX; ly = e.clientY; });
+  window.addEventListener('pointerup', () => { down = false; });
+  window.addEventListener('pointermove', e => {
+    if(!down) return;
+    camAz   -= (e.clientX - lx) * 0.005;
+    camPol  -= (e.clientY - ly) * 0.005;
+    camPol = Math.max(0.30, Math.min(1.48, camPol));
+    lx = e.clientX; ly = e.clientY;
+  });
+  el.addEventListener('wheel', e => {
+    e.preventDefault();
+    camDist = Math.max(7, Math.min(26, camDist + e.deltaY * 0.012));
+  }, { passive:false });
+}
+
+function onResize(){
+  if(!HAS3D) return;
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+}
+
+/* ---- 每帧更新 3D ---- */
+function update3D(dt){
+  if(!HAS3D) return;
+  const t = S.tGlob;
+  const z = S.zeta;
+
+  // 相机（放在最前：黏丝带要按相机方向定带宽轴）
+  camera.position.set(Math.cos(camAz) * Math.sin(camPol) * camDist,
+                      Math.cos(camPol) * camDist + 2.2,
+                      Math.sin(camAz) * Math.sin(camPol) * camDist);
+  camera.lookAt(0, 0.5, 0);
+
+  // 船体起伏（解析位移 × 视觉放大）
+  const xv = (S.mode === 'idle') ? 0 : xAt(S.t);
+  ship.position.y = xv * VIS;
+  ship.rotation.z = -xv * VIS * 0.055;                 // 起伏带一点纵摇
+  ship.rotation.x = Math.sin(t * 0.7) * 0.012 * (1 + z);
+
+  // 黏液稠度：ζ 越大 → 越亮泽、越厚腻、跟随越迟滞
+  slimeMat.roughness = 0.52 - z * 0.22;
+  slimeMat.clearcoatRoughness = 0.55 - z * 0.20;
+  slimeMat.emissiveIntensity = 0.30 + z * 0.85;
+
+  // 黏液面：目标高度场 → 弹簧-阻尼滞后 → 黏稠的"跟不上"手感
+  const pos = slime.geometry.attributes.position;
+  const col = slime.geometry.attributes.color;
+  const base = slime.geometry.userData.base || (slime.geometry.userData.base = Float32Array.from(pos.array));
+  const stiff = 30, damp = 7.2 + z * 13;            // ζ↑ → 过阻尼 → 黏液拖不动
+  const driven = (S.mode === 'drive' || S.mode === 'charge');
+  const pull = xv * VIS;                             // 船体视觉位移
+  colorFrame = (colorFrame + 1) % 2;                 // 顶点色隔帧刷（首帧必刷）
+  const colorDue = colorFrame === 0;
+  for(let i = 0; i < pos.count; i++){
+    const bx = base[i*3], bz = base[i*3+2];
+    const d = Math.hypot(bx, bz);
+    // ① 黏液自身的厚重涌动：波长大、移速慢、层层鼓起
+    let hgt = 0.16 * Math.sin(bx * 0.37 + t * 0.20) * Math.cos(bz * 0.30 - t * 0.14)
+            + 0.11 * Math.sin((bx + bz) * 0.21 + t * 0.12)
+            + 0.07 * Math.sin(bz * 0.58 - t * 0.30)
+            + 0.05 * Math.sin(bx * 0.88 + t * 0.52) * Math.sin(bz * 0.79 - t * 0.41);  // 团块感
+    // ② 潮汐驱动的行波
+    if(driven) hgt += 0.17 * Math.sin(TAU * S.fd * t - d * 0.42) * Math.exp(-d * 0.040);
+    // ③ 船体排开 + 拽起黏液（宽尺度，保证在网格上可分辨）
+    const q = Math.hypot(bx / 3.05, bz / 1.02);
+    hgt += pull * 0.50 * Math.exp(-q * q * 0.85);
+    hgt += 0.15 * Math.exp(-q * q * 0.26);                       // 被船体顶起来的整体隆起
+    // ④ 滞后跟随
+    gooVel[i] += (hgt - gooCur[i]) * stiff * dt;
+    gooVel[i] -= gooVel[i] * damp * dt;
+    gooCur[i] += gooVel[i] * dt;
+    pos.array[i*3+1] = gooCur[i];
+    // ⑤ 剪切油膜：缓慢漂移的虹彩光泽（顶点色，隔帧更新省开销）
+    if(colorDue){
+      const sh  = 0.5 + 0.5 * Math.sin(bx * 0.62 + t * 0.26) * Math.cos(bz * 0.53 - t * 0.19);
+      const sh2 = 0.5 + 0.5 * Math.sin((bx - bz) * 1.15 - t * 0.34);
+      tmpCol.setHSL(0.140 - z * 0.050 + 0.032 * sh, 0.46 + z * 0.28,
+                    0.080 + 0.21 * sh * sh + 0.045 * sh2 + z * 0.045);
+      col.array[i*3] = tmpCol.r; col.array[i*3+1] = tmpCol.g; col.array[i*3+2] = tmpCol.b;
+    }
+  }
+  pos.needsUpdate = true;
+  if(colorDue){ col.needsUpdate = true; }
+  slime.geometry.computeVertexNormals();
+
+  /* ---- 水线黏附环：半跟随船体 → 被拽起、被拉长 ---- */
+  if(gooCollar){
+    gooCollar.position.y = ship.position.y * 0.28;   // 拖得越慢越"黏"
+    gooCollar.scale.y = 1 + Math.abs(ship.position.y) * 0.38;
+  }
+
+  /* ---- 黏液团块随波起伏 ---- */
+  if(globs) globs.children.forEach(g => {
+    g.position.y = SURF_Y + 0.02 + 0.11 * Math.sin(t * 0.8 + g.userData.ph);
+    g.rotation.y += dt * 0.12;
+  });
+
+  /* ---- 黏液拉丝：船体抬升时从壳体拽出 ---- */
+  if(strands){
+    const P = strands.userData.pts, SG = strands.userData.seg, ROWS = strands.userData.rows;
+    const sp = strands.geometry.attributes.position, sn = strands.geometry.attributes.normal;
+    const posA = sp.array, norA = sn.array;
+    const camX = camera.position.x, camY = camera.position.y, camZ = camera.position.z;
+    let gsum = 0;
+    for(let k = 0; k < P.length; k++){
+      const p = P[k];
+      const dd = Math.hypot(p[0], p[2]), qq = Math.hypot(p[0] / 3.05, p[2] / 1.02);
+      const surf = SURF_Y
+        + 0.16 * Math.sin(p[0] * 0.37 + t * 0.20) * Math.cos(p[2] * 0.30 - t * 0.14)
+        + 0.11 * Math.sin((p[0] + p[2]) * 0.21 + t * 0.12)
+        + 0.07 * Math.sin(p[2] * 0.58 - t * 0.30)
+        + 0.15 * Math.exp(-qq * qq * 0.26)
+        + pull * 0.50 * Math.exp(-qq * qq * 0.85)
+        + (driven ? 0.17 * Math.sin(TAU * S.fd * t - dd * 0.42) * Math.exp(-dd * 0.040) : 0);
+      // 黏丝挂在船体水线上（跟船全量升降）：船被抬起时，黏丝被拽成长丝
+      const topY = ship.position.y + p[1];
+      const gap = topY - surf; gsum += Math.max(0, gap);
+      const hgt = Math.max(1e-3, gap);
+      const ws = 0.10 * Math.sin(t * 1.7 + p[0] * 2.1);      // 黏丝摆动
+      for(let r = 0; r < ROWS; r++){
+        const s = r / SG;
+        const sx = p[0] + ws * s;
+        const sy = topY - hgt * s - 0.05 * Math.sin(Math.PI * s);
+        const sz = p[2] + ws * 0.6 * s;
+        const tx = ws, ty = -(hgt + 0.157 * Math.cos(Math.PI * s)), tz = 0.6 * ws;   // 切向
+        let vx = camX - sx, vy = camY - sy, vz = camZ - sz;
+        const vl = Math.hypot(vx, vy, vz) || 1; vx /= vl; vy /= vl; vz /= vl;
+        let wx = ty * vz - tz * vy, wy = tz * vx - tx * vz, wz = tx * vy - ty * vx;  // 带宽轴 = T×V
+        const wl = Math.hypot(wx, wy, wz) || 1; wx /= wl; wy /= wl; wz /= wl;
+        const wid = 0.10 * (1 - 0.55 * s);
+        const nx = ty * wz - tz * wy, ny = tz * wx - tx * wz, nz = tx * wy - ty * wx;
+        const nl = Math.hypot(nx, ny, nz) || 1;
+        const o = (k * ROWS + r) * 6;
+        posA[o]     = sx - wx * wid; posA[o + 1] = sy - wy * wid; posA[o + 2] = sz - wz * wid;
+        posA[o + 3] = sx + wx * wid; posA[o + 4] = sy + wy * wid; posA[o + 5] = sz + wz * wid;
+        norA[o] = nx / nl; norA[o + 1] = ny / nl; norA[o + 2] = nz / nl;
+        norA[o + 3] = nx / nl; norA[o + 4] = ny / nl; norA[o + 5] = nz / nl;
+      }
+    }
+    sp.needsUpdate = true; sn.needsUpdate = true;
+    const mean = gsum / P.length;
+    strands.visible = mean > 0.03;
+    strands.material.emissiveIntensity = Math.max(0.7, 1.45 - mean * 0.45);   // 拉得越长越"绷"
+  }
+
+  /* ---- 雷达旋转 ---- */
+  if(radarSpin) radarSpin.rotation.y += dt * 1.1;
+
+  // 潮汐脉冲环（仅在施加驱动时显形）
+  const wv = (S.mode === 'drive' || S.mode === 'charge') ? TAU * S.fd : 0;
+  rings.forEach((r, i) => {
+    const ph = (t * (S.mode === 'idle' ? 0 : 1) + r.userData.phase) % 1;
+    const rr = 1.2 + ph * 15;
+    r.scale.set(rr, 1, rr);
+    r.material.opacity = (S.mode === 'drive' || S.mode === 'charge')
+      ? Math.max(0, 0.55 * Math.cos(TAU * S.fd * t + r.userData.phase * TAU)) * (1 - ph) : 0;
+  });
+
+  // 气泡：黏液中上浮极慢，且左右摇晃（黏滞阻力）
+  const bp = bubbles.geometry.attributes.position;
+  for(let i = 0; i < bp.count; i++){
+    bp.array[i*3+1] += dt * (0.055 + 0.030 * Math.sin(i * 1.7));
+    bp.array[i*3]   += dt * 0.045 * Math.sin(t * 0.7 + i);
+    if(bp.array[i*3+1] > SURF_Y + 5.2) bp.array[i*3+1] = SURF_Y;
+  }
+  bp.needsUpdate = true;
+
+  // 通关撕裂特效
+  if(S.mode === 'win'){
+    tearT += dt;
+    burst.material.opacity = Math.max(0, 0.95 - tearT * 0.32);
+    const tp = burst.geometry.attributes.position;
+    for(let i = 0; i < tp.count; i++){
+      const v = burst.userData.vel[i];
+      tp.array[i*3]   += v.x * dt;
+      tp.array[i*3+1] += v.y * dt;
+      tp.array[i*3+2] += v.z * dt;
+      v.y -= 5.2 * dt;
+    }
+    tp.needsUpdate = true;
+    slimeMat.opacity = Math.max(0.45, 0.99 - tearT * 0.16);
+  }
+
+  // 抖动：每帧重设（绝不累加，避免随机游走漂移）
+  if(shake > 0){
+    scene.position.set((Math.random()-0.5)*shake*0.16, (Math.random()-0.5)*shake*0.16, 0);
+    shake = Math.max(0, shake - dt * 0.9);
+  } else {
+    scene.position.set(0, 0, 0);
+  }
+
+  renderer.render(scene, camera);
+}
+
+/* ================================================================
+   主循环
+   ================================================================ */
+let lastMission = -1, d3Err = false;
+function tick(){
+  requestAnimationFrame(tick);   // 先排下一帧：本帧即使抛异常也不会把整个循环冻死
+  const dt = clock ? Math.min(0.05, clock.getDelta()) : 0.016;
+  S.tGlob += dt;
+  if(S.mode !== 'win' && S.mode !== 'fail' && S.mode !== 'idle') S.t = S.tGlob - S.tStart;
+
+  /* ---- 自动扫频动画 ---- */
+  if(S.sweep){
+    const p = Math.min(1, (S.tGlob - S.sweep.t0) / S.sweep.dur);
+    S.fd = F_LO + (F_HI - F_LO) * p;
+    $('railF').value = S.fd.toFixed(3);
+    $('valF').textContent = S.fd.toFixed(3) + ' Hz';
+    if(p >= 1){
+      S.swept = true; S.sweep = null;
+      S.fd = F_TIDE;
+      $('railF').value = F_TIDE.toFixed(3);
+      $('valF').textContent = F_TIDE.toFixed(3) + ' Hz';
+      S.t = 0; S.tStart = S.tGlob;
+      $('bodeTag').textContent = '峰 ' + fr().toFixed(3) + ' Hz';
+      log('扫频完成 —— 共振峰 f_r = <b>' + fr().toFixed(3) + '</b> Hz，' +
+          '半功率带宽 Δf ≈ <b>' + (f0() / qNow()).toFixed(3) + '</b> Hz', 'ok');
+      hint('峰在 ' + fr().toFixed(3) + ' Hz —— 把拖它到潮汐 1.600：调压载 m！');
+    }
+  }
+
+  /* ---- 蓄能过程 ---- */
+  if(S.mode === 'charge'){
+    const env = ampNow() * (1 - Math.exp(-S.zeta * w0() * S.t));
+    const pct = Math.min(100, env / Math.max(1e-9, ampNow()) * 100);
+    const aNow = (TAU * S.fd) ** 2 * env;
+    $('chargeFill').style.width = pct.toFixed(1) + '%';
+    $('chargePct').textContent = pct.toFixed(0) + '%';
+    if(aNow > ACC_LIM){
+      showFail('振幅冲到 <b>' + env.toFixed(3) + ' m</b>，峰值加速度 <b>' + aNow.toFixed(1) +
+               ' m/s²</b> 已越过龙骨强度上限 ' + ACC_LIM + ' m/s²——船体在共振中被自己撕碎。');
+      shake = 1.0;
+    } else if(pct >= 97){
+      if(env >= A_NEED){
+        showWin(); shake = 0.8;
+      } else {
+        S.mode = 'drive'; S.t = 0; S.tStart = S.tGlob;
+        $('chargeWrap').style.display = 'none';
+        $('railZ').disabled = false; $('railM').disabled = false; $('railF').disabled = false;
+        log('蓄能到顶 <b>' + env.toFixed(3) + ' m</b> —— 不足以撕开黏液层（需 ≥ ' +
+            A_NEED + ' m），黏液只裂了一道缝', 'bad');
+        hint('振幅不够！把 ζ 再调小一点（Q 更高 → 峰更高），或把峰对准得更准');
+      }
+    }
+  }
+
+  /* ---- 仪器 ---- */
+  drawScope(); drawBode(); drawPhasor();
+  refreshReadout();
+
+  /* ---- 蓄能按钮可用性 ---- */
+  updateChargeBtn();
+
+  /* ---- 任务条（节流） ---- */
+  let idx = STEPS.findIndex(s => !s.done());
+  if(idx < 0) idx = STEPS.length - 1;
+  if(idx !== lastMission){ lastMission = idx; renderMission(); }
+
+  try{ update3D(dt); }
+  catch(e){ if(!d3Err){ d3Err = true; console.warn('3D 更新异常（已忽略，物理与判定不受影响）：', e && e.message); } }
+}
+
+/* ================================================================
+   启动
+   ================================================================ */
+lockFaults();
+wireFaults();
+wireRails();
+wireButtons();
+layout();
+log('胶质海原 K-7 —— 船体动力停滞，黏液强阻尼中。点【⛵ 释放船体】开始诊断。');
+hint('第 1 步：点【⛵ 释放船体】，看自由衰减 → 测出 ζ');
+refreshAll();
+
+/* 先让物理与仪器跑起来，再等 3D：
+   three.js 走 CDN，网络慢/被墙时 await 可能长时间不返回 —— 那样整页会像卡死
+   （按钮不响应、曲线不动）。所以 tick() 提前，3D 再给 8 秒的机会。 */
+tick();
+HAS3D = await withTimeout(boot3D(), 8000, false);
+if(!HAS3D){
+  $('errMsg').style.display = 'block';
+  log('3D 海面未能加载（需 WebGL + 联网）—— 已切换<b>纯仪器模式</b>，物理与判定不受影响', 'bad');
+}
+
+window.addEventListener('resize', () => { onResize(); layout(); });
+window.addEventListener('keydown', e => {
+  if(e.code === 'Space'){ e.preventDefault(); doRelease(); }
+  if(e.code === 'Escape'){ ['briefOverlay','winOverlay','failOverlay'].forEach(id => $(id).classList.remove('show')); }
+});
+
+/* 供离线逻辑验证使用 */
+window.__lab2 = { S, evaluate, ampAt, phiAt, f0, fr, w0, qNow, tauNow, deltaNow, zetaFromDelta,
+                  analyzeDecay, STEPS, doRelease, doDrive, doSweep, doCharge, doReset, refreshAll,
+                  log, hint, showWin, showFail, layout, drawScope, drawBode, drawPhasor, tick,
+                  __tick: tick };
+</script>
+<!-- 舰桥导航坞：回舰桥 / 看标定卡进度 -->
+<!-- 导航坞嵌进控制台最上方（不再浮在左下角，避免压住【⛵ 释放船体】） -->
+<script>try{ window.Fleet && window.Fleet.mountDock({label:'第二实验室', host:'#console', hostFirst:true, hostGap:'0 0 10px'}); }catch(e){}</script>
+</body>
+</html>

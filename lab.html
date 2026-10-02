@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>实验舱建造中 · 星海号</title>
+<style>
+:root{
+  --bg:#050f14; --ink:#dff0f2; --dim:#7fa3ab; --faint:#4d6b73;
+  --cy:#4fe0c8; --am:#ffc857; --sx:#9fd8e8;
+  --panel:rgba(8,22,28,.86); --line:rgba(79,224,200,.22);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;min-height:100vh}
+body{display:flex;align-items:center;justify-content:center;padding:40px 22px;
+  background:radial-gradient(900px 520px at 50% 10%,rgba(79,224,200,.08),transparent 62%),var(--bg)}
+.box{max-width:640px;width:100%;border:1px solid var(--line);border-radius:14px;
+  background:var(--panel);padding:28px 30px;overflow:hidden}
+/* 预告大图 */
+.photo{margin:-28px -30px 20px;position:relative;background:#04121a}
+.photo img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}
+.photo::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(0deg,rgba(8,22,28,.97) 3%,rgba(8,22,28,.30) 46%,transparent 80%)}
+.photo .cap{position:absolute;left:20px;bottom:11px;z-index:2;font-size:10.5px;
+  color:#9fd8e8;letter-spacing:1.4px;
+  border:1px solid rgba(159,216,232,.30);border-radius:6px;padding:3px 9px;background:rgba(4,13,18,.5)}
+.locked .photo img{filter:grayscale(.85) brightness(.5)}
+.tag{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--am);letter-spacing:2px}
+h1{font-size:23px;margin:8px 0 4px;letter-spacing:1.5px}
+.sub{font-size:12.5px;color:var(--cy);letter-spacing:.6px;margin-bottom:18px}
+.row{font-size:13px;line-height:1.95;color:var(--dim);border-top:1px dashed var(--line);padding:12px 0 0}
+.row b{color:var(--ink)}
+.k{display:inline-block;min-width:74px;color:var(--faint);font-size:11.5px}
+.warn{margin-top:16px;font-size:12px;line-height:1.85;color:var(--am);
+  border-left:2px solid rgba(255,200,87,.45);padding:7px 0 7px 12px}
+.hint{margin-top:6px;font-size:12px;line-height:1.85;color:var(--dim)}
+.acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.a{font-size:13px;padding:10px 18px;border-radius:10px;cursor:pointer;text-decoration:none;
+  border:1px solid var(--line);background:rgba(79,224,200,.10);color:var(--cy);letter-spacing:.5px}
+.a.ghost{background:transparent;color:var(--dim)}
+.a.ghost:hover{color:var(--ink)}
+/* 建造进度条 */
+.bar{height:6px;border-radius:4px;background:rgba(79,224,200,.10);margin-top:14px;overflow:hidden;position:relative}
+.bar i{display:block;height:100%;width:36%;background:repeating-linear-gradient(90deg,var(--am) 0 10px,transparent 10px 20px);
+  opacity:.75;animation:mv 1.6s linear infinite}
+@keyframes mv{to{background-position:20px 0}}
+</style>
+</head>
+<body>
+<div class="box" id="box">
+  <div class="photo" id="photo"><img id="photoImg" src="" alt=""><span class="cap" id="photoCap"></span></div>
+  <div class="tag" id="tag">— 号实验舱</div>
+  <h1 id="name">—</h1>
+  <div class="sub" id="sub">—</div>
+
+  <div class="row"><span class="k">知识点</span><b id="topic">—</b></div>
+  <div class="row"><span class="k">剧情预告</span><b id="plot">—</b></div>
+  <div class="row"><span class="k">当前状态</span><b id="status">—</b></div>
+
+  <div class="bar"><i></i></div>
+
+  <div class="warn" id="warn"></div>
+  <div class="hint" id="hint"></div>
+
+  <div class="acts">
+    <a class="a" id="btnBack" href="index.html">⇱ 返回舰桥</a>
+    <a class="a ghost" id="btnPrev" href="index.html">← 回到当前水池</a>
+    <a class="a ghost" href="prologue.html">📜 序章</a>
+  </div>
+</div>
+
+<script src="fleet.js"></script>
+<script>
+/* ================================================================================
+   【A 区 · 待建关卡的预告文案】某一关建好后，把它的 file 写进 fleet.js 的 LABS
+   并把它从 FORECAST 里删掉即可 —— 这里不需要动。
+   ================================================================================ */
+var FORECAST = {
+  3:'星海号驶出港口。第一次全速前进，你终于看清了老所长说的那道水墙 —— 它不在海上，' +
+    '它就长在船头前面，跟着船一起走。这一池要测的，是你烧掉的油都去了哪儿。',
+  4:'前方是暗礁区。声呐上那片屏障挡得死死的，可波有一种本事：它能绕过障碍。' +
+    '用惠更斯的法子，给这条船找一条能穿过去的缝。',
+  5:'老所长发来绝密图纸。要让两列波正好波峰撞波谷，差之毫厘就前功尽弃 —— ' +
+    '相位、波长、球鼻伸出的距离，一个都不能拍脑袋。',
+  6:'最后一池。船自己也是个弹性体，浪一拍就抖，抖到某个频率上，整条船会跟着共振。' +
+    '让星海号稳下来，她才敢进风暴海峡。'
+};
+
+/* 施工图：locked（还没轮到）用吊装图，其余用该池的主题预告图 */
+var ART = { locked:'assets/img/building.jpg' };
+
+var F = window.Fleet;
+function el(id){ return document.getElementById(id); }
+
+var q = new URLSearchParams(location.search);
+var n = parseInt(q.get('n') || '3', 10);
+if(!(n >= 1 && n <= F.COUNT)) n = 3;
+
+var L  = F.lab(n);
+var st = F.statusOf(n);
+var next = F.nextPlay() || 1;
+
+el('tag').textContent  = L.code + ' 实验舱 · ' + n + ' / ' + F.COUNT;
+el('name').textContent = L.name;
+el('sub').textContent  = L.sub;
+el('topic').textContent = L.topic;
+el('plot').textContent  = FORECAST[n] || '剧情排期中。';
+
+var STM = {
+  cleared:['已通关','这一池你已经过了。'],
+  open:   ['已解锁 · 建造中','判定上你已经可以下水，但实验舱还没造好。'],
+  pending:['已解锁 · 建造中','判定上你已经可以下水，但实验舱还没造好。'],
+  locked: ['未解锁','这一池还锁着 —— 逐关解锁模式下得先过前一关（全开放模式下不会出现这个状态）。'],
+  mastered:['已达标','摸底判定你已达标，这池可以跳过；六池全开放，想进照样能进。']
+};
+var m = STM[st] || STM.locked;
+el('status').textContent = m[0];
+el('hint').textContent = m[1];
+
+/* 预告大图（图在 fleet.js 的 LABS[n].img；缺图就整块不显示） */
+(function(){
+  var locked = (st === 'locked');
+  var src = (locked && ART.locked) ? ART.locked : (F.imgFor ? F.imgFor(n) : '');
+  if(!src){ el('photo').style.display = 'none'; return; }
+  el('photoImg').src = src;
+  el('photoCap').textContent = (locked ? '施工中 · 尚未解锁' : '施工蓝图') + ' · ' + L.name;
+  if(locked) el('box').classList.add('locked');
+})();
+
+if(st === 'locked'){
+  el('warn').textContent = '这一池还锁着：逐关解锁模式下要先通过第 ' + (n - 1) + ' 号池 · ' + F.lab(n - 1).name +
+    '（当前六池是全开放模式，正常情况下不会看到这一页）。';
+} else {
+  el('warn').textContent = '实验舱正在建造。造好后它会出现在舰桥上，届时这一页会被真正的关卡替换 —— 地址不变。';
+}
+
+if(F.nextPlay()){                        /* 没有可推进的池子时，别硬指一个 */
+  el('btnPrev').textContent = '← 第 ' + next + ' 号池 · ' + F.lab(next).name;
+  el('btnPrev').href = F.hrefFor(next);
+} else {
+  el('btnPrev').style.display = 'none';
+}
+
+F.mountDock({ label: L.code + ' ' + L.name });
+</script>
+</body>
+</html>

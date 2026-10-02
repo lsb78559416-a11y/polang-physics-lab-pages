@@ -1,0 +1,2303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第五关 · 前情：风暴海峡的密令 ｜ 破浪实验室</title>
+<style>
+:root{
+  --paper:#f2e7cd; --paper2:#e9d9b5; --paper3:#dac59a;
+  --ink:#3a2c1b; --ink2:#5c4a32; --ink3:#8a7458;
+  --navy:#1f5f8b; --navy-deep:#153f5e;
+  --rope:#7a5c33; --brass:#b8892e;
+  --red:#b5462e; --red-d:#8e3623;
+  --sea:#2e7d9c; --ok:#2e7d32;
+  --shadow:rgba(58,44,27,.42);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:"Segoe UI","Microsoft YaHei",system-ui,Georgia,serif;
+  background:#0a141b;color:var(--ink);overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+canvas#bg{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+.scrim{
+  position:fixed;inset:0;z-index:1;pointer-events:none;transition:opacity .9s ease;
+  background:
+    radial-gradient(120% 92% at 50% 34%,transparent 40%,rgba(4,10,15,.52) 100%),
+    linear-gradient(180deg,rgba(4,10,15,.62) 0%,rgba(4,10,15,.06) 16%,rgba(4,10,15,0) 42%,
+                    rgba(4,10,15,.42) 68%,rgba(4,10,15,.86) 100%);
+}
+
+/* ================= 顶栏 ================= */
+.actbar{
+  position:fixed;top:0;left:0;right:0;z-index:8;
+  display:flex;justify-content:space-between;align-items:flex-start;
+  padding:16px 22px;pointer-events:none;gap:12px;
+}
+.plaque{
+  background:linear-gradient(180deg,rgba(30,21,10,.86),rgba(15,11,6,.9));
+  border:2px solid var(--brass);border-radius:8px;padding:7px 16px;
+  color:#f4e2b6;font-weight:800;letter-spacing:2.4px;font-size:.82rem;
+  box-shadow:0 7px 22px rgba(0,0,0,.55),inset 0 0 18px rgba(184,137,46,.18);
+  text-shadow:0 1px 2px #000;
+}
+.plaque .sub{display:block;font-size:.56rem;letter-spacing:1.4px;color:#c8a86a;font-weight:600;margin-top:3px}
+.actbar-right{display:flex;align-items:center;gap:14px;pointer-events:auto}
+.dots{display:flex;gap:7px;align-items:center;padding-top:6px}
+.dots i{
+  width:9px;height:9px;border-radius:50%;background:rgba(242,223,178,.2);
+  border:1px solid rgba(242,223,178,.45);transition:.3s;
+}
+.dots i.on{background:var(--brass);box-shadow:0 0 11px rgba(184,137,46,.95);transform:scale(1.3)}
+.dots i.done{background:rgba(184,137,46,.55)}
+.btn-skip{
+  font-family:inherit;cursor:pointer;font-size:.74rem;font-weight:700;letter-spacing:1px;
+  color:#f2dfb2;background:linear-gradient(180deg,rgba(120,86,44,.92),rgba(70,49,23,.94));
+  border:1px solid #8a6a34;border-radius:6px;padding:7px 13px;
+  box-shadow:inset 0 1px 0 rgba(255,225,170,.22),0 3px 9px rgba(0,0,0,.4);
+}
+.btn-skip:hover{background:linear-gradient(180deg,rgba(146,106,56,1),rgba(90,63,30,1))}
+
+/* 罗盘水印 */
+.compass{position:fixed;left:20px;bottom:64px;width:104px;height:104px;z-index:3;opacity:.3;pointer-events:none}
+@media (max-width:820px){ .compass{display:none} }
+
+/* ================= 场景标题 ================= */
+#sceneTitle{
+  position:fixed;left:0;right:0;top:20%;z-index:7;text-align:center;pointer-events:none;
+  opacity:0;transition:opacity .7s ease;
+}
+#sceneTitle.show{opacity:1}
+#sceneTitle .ct{
+  display:inline-block;font-size:clamp(1.5rem,4.4vw,2.7rem);font-weight:800;letter-spacing:.34em;
+  color:#f6e8c6;text-shadow:0 3px 18px rgba(0,0,0,.85),0 0 40px rgba(184,137,46,.35);
+  padding-left:.34em;
+}
+#sceneTitle .cs{
+  display:block;margin-top:8px;font-size:.68rem;letter-spacing:.32em;color:#c9a86a;font-weight:700;
+  text-shadow:0 2px 8px rgba(0,0,0,.8);
+}
+#sceneTitle .rule{
+  width:180px;height:1px;margin:12px auto 0;
+  background:linear-gradient(90deg,transparent,rgba(201,168,106,.9),transparent);
+}
+
+/* ================= 底部对话 ================= */
+.dlgwrap{
+  position:fixed;left:0;right:0;bottom:0;z-index:9;padding:0 20px 20px;
+  display:flex;flex-direction:column;align-items:center;gap:9px;
+}
+.logribbon{
+  max-width:920px;width:100%;display:none;align-items:center;gap:9px;
+  font-size:.72rem;letter-spacing:1.6px;color:#d8c8a4;font-weight:700;
+  text-shadow:0 2px 7px rgba(0,0,0,.85);
+}
+.logribbon.show{display:flex;animation:riseIn .5s ease}
+.logribbon .ln{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(216,200,164,.55),transparent)}
+.dlg{
+  position:relative;max-width:920px;width:100%;cursor:pointer;
+  background:
+    linear-gradient(180deg,rgba(255,250,238,.97),rgba(243,231,203,.97)),
+    radial-gradient(rgba(120,90,50,.055) 1px,transparent 1px);
+  background-size:100% 100%,3px 3px;
+  border:3px double var(--rope);border-radius:12px;padding:18px 26px 16px;
+  box-shadow:0 16px 48px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.5);
+  animation:riseIn .5s cubic-bezier(.2,.8,.3,1);
+}
+@keyframes riseIn{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+.dlg::before,.dlg::after{
+  content:"";position:absolute;width:11px;height:11px;border-radius:50%;
+  background:radial-gradient(circle at 34% 30%,#f0d79c,#a97c26 70%);
+  box-shadow:0 1px 3px rgba(0,0,0,.5);
+}
+.dlg::before{left:11px;top:11px}
+.dlg::after{right:11px;top:11px}
+.dlg-head{display:flex;align-items:center;gap:14px;margin-bottom:11px}
+.avatar{
+  width:52px;height:52px;border-radius:50%;flex:0 0 52px;
+  display:flex;align-items:center;justify-content:center;font-size:25px;
+  background:radial-gradient(circle at 38% 32%,#e6cb90,#8a6a34);
+  border:2px solid #fffdf6;box-shadow:0 3px 10px rgba(58,44,27,.35);
+  transition:background .4s;
+}
+.avatar.red{background:radial-gradient(circle at 38% 32%,#e29a86,#8e3623)}
+.avatar.blue{background:radial-gradient(circle at 38% 32%,#9dc4dc,#1f5f8b)}
+.avatar.deep{background:radial-gradient(circle at 38% 32%,#8fa6b6,#153f5e)}
+.dlg-name{font-weight:800;font-size:1.06rem;color:var(--ink)}
+.dlg-role{font-size:.74rem;color:var(--ink3);margin-top:2px}
+.dlg-tag{
+  margin-left:auto;font-size:.68rem;font-weight:800;letter-spacing:1px;color:#fff8e6;
+  background:linear-gradient(180deg,#c1503a,#8e3623);border-radius:6px;padding:4px 10px;
+}
+.dlg-text{color:var(--ink);line-height:1.92;font-size:1rem;min-height:62px}
+.dlg-text b{color:var(--red-d)}
+.dlg-text i{font-style:italic;color:var(--ink2)}
+.dlg-text .hl{
+  color:#1b4f6e;font-weight:800;background:linear-gradient(180deg,transparent 62%,rgba(46,125,156,.22) 62%);
+  padding:0 2px;
+}
+.dlg-text .num{font-family:Georgia,"Times New Roman",serif;font-style:italic;font-weight:700;color:#1b4f6e}
+.dlg.narr{background:linear-gradient(180deg,rgba(250,244,228,.96),rgba(236,224,196,.96))}
+.dlg.narr .dlg-text{font-family:Georgia,"Microsoft YaHei",serif;font-style:italic;color:var(--ink2)}
+.caret{display:inline-block;width:.5em;color:var(--red);animation:blink .75s steps(1) infinite;font-weight:700}
+@keyframes blink{50%{opacity:0}}
+.dlg-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;
+  border-top:1px dashed rgba(122,92,51,.45);padding-top:9px}
+.hint{font-size:.72rem;color:var(--ink3);letter-spacing:.6px}
+.hint b{color:var(--red-d)}
+.next-arrow{animation:nudge 1.15s ease-in-out infinite;color:var(--red);font-weight:800}
+@keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(5px)}}
+body.fx-big .dlg{padding:13px 22px 11px}
+body.fx-big .dlg-text{font-size:.92rem;min-height:46px;line-height:1.8}
+body.fx-big .avatar{width:42px;height:42px;flex:0 0 42px;font-size:21px}
+
+/* ================= 覆盖层（电报 / 图纸 / 推演 / 任务） ================= */
+#overlay{
+  position:fixed;left:0;right:0;top:62px;bottom:238px;z-index:6;
+  display:none;align-items:center;justify-content:center;padding:0 22px;overflow:auto;
+}
+body.fx-big #overlay{bottom:196px}
+#overlay.on{display:flex}
+.ov{animation:riseIn .55s cubic-bezier(.2,.8,.3,1);width:100%;display:flex;justify-content:center}
+
+/* —— 密电 —— */
+.tg{
+  max-width:660px;background:linear-gradient(180deg,#fdf8ea,#efe1c2);
+  border:1px solid #c9b48a;border-radius:4px;padding:0;overflow:hidden;
+  box-shadow:0 18px 50px rgba(0,0,0,.6);
+  font-family:"Consolas","Courier New",monospace;
+  position:relative;
+}
+.tg::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(180deg,rgba(120,90,50,.05) 0 1px,transparent 1px 4px);
+}
+.tg-head{
+  background:linear-gradient(180deg,#c1503a,#8e3623);color:#fff6e8;
+  padding:8px 16px;font-size:.76rem;font-weight:800;letter-spacing:2px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.tg-head .lv{font-size:.66rem;background:rgba(0,0,0,.22);padding:2px 8px;border-radius:3px;letter-spacing:1px}
+.tg-body{padding:18px 22px;font-size:.86rem;line-height:2.1;color:#3a2c1b;letter-spacing:.4px}
+.tg-body b{color:#8e3623}
+.tg-foot{padding:0 22px 16px;font-size:.72rem;color:#8a7458;letter-spacing:1px;text-align:right}
+
+/* —— 蓝图 —— */
+.bp{
+  width:min(1000px,100%);position:relative;border-radius:6px;overflow:hidden;
+  box-shadow:0 22px 60px rgba(0,0,0,.65),0 0 0 1px rgba(120,160,200,.35);
+}
+.bp svg{display:block;width:100%;height:auto;max-height:100%}
+.bp-cap{
+  position:absolute;left:0;right:0;bottom:0;padding:7px 14px;font-size:.7rem;letter-spacing:1.4px;
+  color:#cfe6f8;background:linear-gradient(180deg,transparent,rgba(6,22,38,.9));
+  display:flex;justify-content:space-between;gap:10px;
+}
+.bp-cap b{color:#ffd98a}
+.draw-line{stroke-dasharray:1400;stroke-dashoffset:1400;animation:dash 1.6s .15s ease forwards}
+.draw-line.d2{animation-delay:.45s}
+.draw-line.d3{animation-delay:.75s}
+.draw-line.d4{animation-delay:1.05s}
+@keyframes dash{to{stroke-dashoffset:0}}
+.bp-fade{opacity:0;animation:fadeIn .7s 1.25s ease forwards}
+.bp-fade.f2{animation-delay:1.6s}
+.bp-fade.f3{animation-delay:1.9s}
+@keyframes fadeIn{to{opacity:1}}
+
+/* —— 推演台 —— */
+.dm{
+  width:min(940px,100%);background:linear-gradient(180deg,rgba(255,250,238,.97),rgba(242,231,205,.97));
+  border:3px double var(--rope);border-radius:12px;padding:14px 18px 16px;
+  box-shadow:0 18px 52px rgba(0,0,0,.6);color:var(--ink);
+}
+.dm.shake{animation:shake .42s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+.dm-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px}
+.dm-tag{font-size:.66rem;font-weight:800;letter-spacing:1.4px;color:#fff8e6;
+  background:linear-gradient(180deg,#c1503a,#8e3623);border-radius:6px;padding:3px 9px}
+.dm-title{font-weight:800;font-size:.94rem}
+.dm-hint{margin-left:auto;font-size:.7rem;color:var(--ink3)}
+#cvDemo{display:block;width:100%;height:212px;border:1px solid var(--rope);border-radius:8px;
+  background:linear-gradient(180deg,#eef4f8,#dbe7ee)}
+#cvClass{display:block;width:100%;height:224px;border:1px solid var(--rope);border-radius:8px;
+  background:linear-gradient(180deg,#eef4f8,#dbe7ee)}
+.dm-note{margin-top:10px;padding-top:9px;border-top:1px dashed rgba(122,92,51,.45);
+  font-size:.78rem;line-height:1.9;color:var(--ink2)}
+.dm-note b{color:var(--red-d)}
+.dm-note .fml{font-family:Georgia,"Times New Roman",serif;font-style:italic;font-weight:700;color:#1b4f6e}
+
+/* —— 双船对照 —— */
+#cvCmp{display:block;width:100%;height:272px;border:1px solid var(--rope);border-radius:8px;
+  background:linear-gradient(180deg,#e8eef2,#cfdae2)}
+.dm-ctl{display:grid;grid-template-columns:1fr 1fr;gap:8px 22px;margin-top:10px}
+@media (max-width:760px){ .dm-ctl{grid-template-columns:1fr} }
+.dm-row{display:flex;align-items:center;gap:10px;font-size:.78rem}
+.dm-row label{width:132px;flex:0 0 132px;font-weight:700;color:var(--ink2)}
+.dm-row input[type=range]{flex:1;accent-color:#8e3623;height:18px}
+.dm-row .val{width:74px;flex:0 0 74px;text-align:right;font-weight:800;color:var(--red-d);font-variant-numeric:tabular-nums}
+.dm-meters{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:11px;
+  border-top:1px dashed rgba(122,92,51,.45);padding-top:11px}
+.mtr{background:rgba(255,252,244,.85);border:1px solid rgba(122,92,51,.4);border-radius:8px;padding:8px 11px}
+.mtr .k{font-size:.68rem;color:var(--ink3);letter-spacing:.6px}
+.mtr .v{font-size:1.06rem;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;margin-top:2px}
+.mtr .v small{font-size:.66rem;font-weight:600;color:var(--ink3)}
+.mtr.good .v{color:var(--ok)}
+.mtr.bad .v{color:var(--red-d)}
+.dm-go{margin-top:12px;display:flex;align-items:center;gap:12px}
+.btn-c{
+  font-family:inherit;cursor:pointer;font-size:.84rem;font-weight:800;letter-spacing:1px;
+  color:#f6e4bb;padding:10px 20px;border-radius:8px;border:1px solid #8a6a34;
+  background:linear-gradient(180deg,rgba(146,106,56,1),rgba(78,54,26,1));
+  box-shadow:inset 0 1px 0 rgba(255,225,170,.3),0 5px 16px rgba(0,0,0,.35);
+}
+.btn-c:hover{background:linear-gradient(180deg,rgba(170,126,68,1),rgba(96,68,34,1))}
+.btn-c:disabled{opacity:.45;cursor:not-allowed}
+.dm-state{font-size:.76rem;color:var(--ink3)}
+
+/* —— 任务卡 —— */
+.gl{
+  max-width:780px;background:
+    linear-gradient(180deg,rgba(255,250,238,.98),rgba(243,231,203,.98)),
+    radial-gradient(rgba(120,90,50,.05) 1px,transparent 1px);
+  background-size:100% 100%,3px 3px;
+  border:3px double var(--rope);border-radius:12px;padding:20px 24px;
+  box-shadow:0 20px 56px rgba(0,0,0,.62);
+}
+.gl-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.gl-tag{font-size:.66rem;font-weight:800;letter-spacing:1.4px;color:#fff8e6;
+  background:linear-gradient(180deg,#c1503a,#8e3623);border-radius:6px;padding:3px 9px}
+.gl-title{font-weight:800;font-size:1.02rem}
+.gl-body{margin-top:12px;font-size:.86rem;line-height:1.95;color:var(--ink2)}
+.gl-body b{color:var(--red-d)}
+.gl-obj{margin-top:12px;padding:11px 14px;border-radius:8px;
+  background:rgba(184,137,46,.09);border:1px dashed var(--rope);font-size:.83rem;line-height:1.9}
+.gl-obj b{color:var(--red-d)}
+.gl-know{margin-top:11px;padding-top:10px;border-top:1px dashed rgba(122,92,51,.4);
+  font-size:.74rem;color:var(--ink3);letter-spacing:.4px}
+.gl-act{display:flex;gap:11px;margin-top:16px;flex-wrap:wrap}
+/* —— 探路三选一 —— */
+.gl-choose{margin-top:14px}
+.gc-title{font-size:.84rem;font-weight:800;color:var(--red-d);line-height:1.8}
+.gc-grid{margin-top:10px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:660px){ .gc-grid{grid-template-columns:1fr} }
+.gc-card{
+  display:flex;flex-direction:column;gap:6px;text-decoration:none;
+  padding:13px 13px 12px;border-radius:10px;border:1.5px solid var(--rope);
+  background:rgba(255,252,244,.78);box-shadow:0 4px 14px rgba(0,0,0,.18);
+  transition:transform .12s, box-shadow .12s, background .15s;
+}
+.gc-card:hover{transform:translateY(-3px);box-shadow:0 10px 22px rgba(0,0,0,.3);background:#fffdf6}
+.gc-card.vol{border-top:3px solid #46a5d8}
+.gc-card.len{border-top:3px solid #d98a2b}
+.gc-card.both{border-top:3px solid #4d9e5d}
+.gc-ico{font-size:1.45rem;line-height:1.1}
+.gc-name{font-weight:800;font-size:.9rem;color:var(--ink)}
+.gc-desc{font-size:.72rem;line-height:1.75;color:var(--ink3)}
+.gc-go{margin-top:auto;padding-top:5px;font-size:.72rem;font-weight:800;color:var(--red-d);letter-spacing:.5px}
+.btn-go{
+  flex:1;min-width:210px;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  text-decoration:none;font-weight:800;font-size:.95rem;letter-spacing:2px;color:#f6e4bb;
+  padding:14px;border-radius:9px;border:1px solid #8a6a34;
+  background:linear-gradient(180deg,rgba(146,106,56,1),rgba(78,54,26,1));
+  box-shadow:inset 0 1px 0 rgba(255,225,170,.35),0 6px 18px rgba(0,0,0,.4);
+}
+.btn-go:hover{background:linear-gradient(180deg,rgba(172,128,70,1),rgba(98,70,36,1))}
+.btn-again{
+  cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:700;color:var(--ink2);
+  background:rgba(255,252,244,.7);border:1px solid var(--rope);border-radius:9px;padding:14px 18px;
+}
+
+/* ================= 启封封面 ================= */
+#cover{
+  position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(70% 60% at 50% 45%,rgba(8,16,22,.55),rgba(4,9,13,.93));
+  backdrop-filter:blur(3px);cursor:pointer;transition:opacity .6s ease;
+}
+#cover.hide{opacity:0;pointer-events:none}
+.cover-card{
+  width:min(620px,92vw);text-align:center;padding:34px 34px 30px;position:relative;
+  background:linear-gradient(180deg,rgba(252,246,232,.98),rgba(238,226,198,.98));
+  border:3px double var(--rope);border-radius:8px;
+  box-shadow:0 26px 70px rgba(0,0,0,.7),inset 0 0 0 1px rgba(255,255,255,.6);
+  animation:riseIn .7s cubic-bezier(.2,.8,.3,1);
+}
+.cover-card .lab{font-size:.66rem;letter-spacing:4px;color:var(--brass);font-weight:800}
+.cover-card h1{
+  font-size:clamp(1.5rem,4.6vw,2.2rem);letter-spacing:.12em;margin:10px 0 4px;color:var(--ink);
+}
+.cover-card h2{font-size:.86rem;letter-spacing:.3em;color:var(--ink3);font-weight:700}
+.cover-card .rule{width:220px;height:1px;margin:16px auto;
+  background:linear-gradient(90deg,transparent,rgba(122,92,51,.8),transparent)}
+.cover-card p{font-size:.88rem;line-height:2;color:var(--ink2);text-align:left}
+.cover-card p b{color:var(--red-d)}
+.seal{
+  width:92px;height:92px;border-radius:50%;margin:20px auto 0;position:relative;
+  display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 36% 30%,#d07a5c,#8e3623 60%,#5c2013);
+  box-shadow:0 6px 18px rgba(0,0,0,.45),inset 0 0 12px rgba(0,0,0,.4);
+  color:#ffeada;font-weight:900;font-size:1.5rem;letter-spacing:2px;
+  border:2px solid rgba(255,230,210,.35);
+}
+.seal span{position:absolute;bottom:13px;font-size:.5rem;letter-spacing:1.4px;font-weight:700;opacity:.85}
+.go-tip{margin-top:18px;font-size:.76rem;letter-spacing:2px;color:var(--ink3);animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+
+#toast{
+  position:fixed;left:50%;top:74px;transform:translateX(-50%) translateY(-14px);z-index:30;
+  background:#fffdf5;border:2px solid var(--navy);color:var(--ink);padding:10px 22px;border-radius:8px;
+  font-size:.84rem;opacity:0;pointer-events:none;transition:.3s;box-shadow:0 10px 30px rgba(0,0,0,.4);
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.err{border-color:var(--red);color:var(--red-d)}
+
+/* ============================================================
+   V2 视觉精修层（D2）
+   —— 不动内容与交互，只做质感、层次、动效规范
+   ============================================================ */
+:root{
+  --gold:#d8b25e; --gold-hi:#f3dfae; --gold-lo:#8a6a34;
+  --hair:rgba(122,92,51,.3);
+  --ease:cubic-bezier(.2,.8,.3,1);
+  --lift:0 22px 60px rgba(0,0,0,.6);
+}
+html{ -webkit-text-size-adjust:100% }
+body{ text-rendering:optimizeLegibility; font-feature-settings:"tnum" 1,"kern" 1 }
+
+/* —— 电影颗粒层：给画面加一层极细的胶片噪点 —— */
+.grain{
+  position:fixed;inset:-40px;z-index:2;pointer-events:none;opacity:.045;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+  background-size:160px 160px;
+  animation:grainShift 6s steps(4) infinite;
+}
+@keyframes grainShift{
+  0%{transform:translate3d(0,0,0)}25%{transform:translate3d(-6px,4px,0)}
+  50%{transform:translate3d(5px,-5px,0)}75%{transform:translate3d(-4px,-3px,0)}
+  100%{transform:translate3d(0,0,0)}
+}
+
+/* —— 顶栏铭牌 —— */
+.plaque{
+  border:1px solid rgba(216,178,94,.72);border-radius:10px;padding:8px 18px;
+  background:linear-gradient(180deg,rgba(40,29,14,.92),rgba(15,11,6,.95));
+  box-shadow:0 12px 32px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,226,170,.26),
+             inset 0 0 26px rgba(184,137,46,.14);
+}
+.dots{position:relative}
+.dots::before{
+  content:"";position:absolute;left:2px;right:2px;top:10px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(242,223,178,.42),transparent);
+}
+.dots i{position:relative;z-index:1;width:8px;height:8px;
+  background:rgba(242,223,178,.22);border:1px solid rgba(242,223,178,.5)}
+.dots i.on{background:var(--gold-hi);box-shadow:0 0 14px rgba(216,178,94,1),0 0 3px rgba(255,255,255,.9)}
+.dots i.done{background:rgba(216,178,94,.62)}
+.btn-skip{
+  border-radius:9px;letter-spacing:.08em;
+  transition:transform .12s var(--ease), box-shadow .18s, background .18s;
+  box-shadow:inset 0 1px 0 rgba(255,225,170,.24),0 5px 14px rgba(0,0,0,.45);
+}
+.btn-skip:hover{transform:translateY(-1px)}
+.btn-skip:active{transform:translateY(1px)}
+.btn-skip:focus-visible,.btn-go:focus-visible,.btn-again:focus-visible,.btn-c:focus-visible,.gc-card:focus-visible{
+  outline:2px solid var(--gold);outline-offset:2px;
+}
+
+/* —— 场景标题：失焦淡入 —— */
+#sceneTitle .ct{
+  font-weight:900;letter-spacing:.36em;
+  text-shadow:0 4px 22px rgba(0,0,0,.9),0 0 54px rgba(184,137,46,.42);
+}
+#sceneTitle.show .ct{animation:ctIn .95s var(--ease)}
+@keyframes ctIn{from{opacity:0;filter:blur(12px);transform:translateY(10px)}to{opacity:1;filter:blur(0);transform:none}}
+#sceneTitle .rule{
+  width:230px;height:1px;position:relative;
+  background:linear-gradient(90deg,transparent,rgba(216,178,94,.95),transparent);
+}
+#sceneTitle .rule::after{
+  content:"";position:absolute;left:50%;top:-2.5px;width:6px;height:6px;
+  transform:translateX(-50%) rotate(45deg);background:rgba(216,178,94,.9);
+  box-shadow:0 0 12px rgba(216,178,94,.8);
+}
+
+/* —— 对话卡：器物化 + 阅读进度铜线 —— */
+.dlg{
+  border-radius:14px;padding:22px 28px 16px;border-width:1px;border-color:rgba(122,92,51,.75);
+  box-shadow:var(--lift), inset 0 0 0 1px rgba(255,255,255,.55), inset 0 0 60px rgba(184,137,46,.07);
+}
+.dlg-prog{
+  position:absolute;left:16px;right:16px;top:10px;height:2px;border-radius:2px;
+  background:rgba(122,92,51,.18);overflow:hidden;
+}
+.dlg-prog i{
+  display:block;height:100%;width:0;border-radius:2px;
+  background:linear-gradient(90deg,#b8892e,#e8c877);
+  box-shadow:0 0 10px rgba(232,200,119,.6);
+  transition:width .5s var(--ease);
+}
+.dlg-head{margin-top:8px}
+.avatar{
+  box-shadow:0 4px 12px rgba(58,44,27,.32), inset 0 0 0 1px rgba(255,255,255,.6),
+             0 0 0 2px rgba(255,253,246,.92);
+}
+.dlg-name{letter-spacing:.03em}
+.dlg-role{letter-spacing:.09em;font-size:.7rem}
+.dlg-text{line-height:2.02;letter-spacing:.012em;min-height:68px}
+.dlg-text b{text-shadow:0 1px 0 rgba(255,255,255,.5)}
+.dlg-foot{border-top-color:rgba(122,92,51,.36);margin-top:14px}
+.next-arrow{
+  display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;
+  background:linear-gradient(180deg,rgba(181,70,46,.13),rgba(181,70,46,.05));
+  border:1px solid rgba(181,70,46,.32);
+}
+.hint{letter-spacing:.05em;opacity:.9}
+
+/* —— 翻页导航：回看按钮（羊皮纸器物化，与"继续"同族） —— */
+.dlg-foot{gap:12px}
+.dlg-nav{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.nav-btn{
+  display:inline-flex;align-items:center;gap:4px;cursor:pointer;
+  font:800 .78rem/1 "Microsoft YaHei",system-ui,sans-serif;letter-spacing:.06em;
+  color:#6f5026;padding:6px 13px 6px 11px;border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,253,246,.96),rgba(240,228,201,.92));
+  border:1px solid rgba(122,92,51,.42);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75), 0 2px 6px rgba(58,44,27,.14);
+  transition:transform .12s var(--ease), box-shadow .18s, filter .18s, opacity .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.nav-btn:hover:not(:disabled){
+  transform:translateY(-1px);filter:brightness(1.05);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75), 0 5px 13px rgba(58,44,27,.2);
+}
+.nav-btn:active:not(:disabled){transform:translateY(1px)}
+.nav-btn:focus-visible{outline:2px solid rgba(181,70,46,.55);outline-offset:2px}
+.nav-btn:disabled{opacity:.3;cursor:default;filter:grayscale(.45)}
+.nav-btn.pop{animation:navPop .34s cubic-bezier(.2,.9,.3,1)}
+@keyframes navPop{0%{transform:translateX(-7px);opacity:.35}100%{transform:none;opacity:1}}
+body.fx-big .dlg{padding:16px 24px 13px}
+
+/* —— 覆盖层卡片：统一器物化（图纸角标 + 层次） —— */
+.tg,.bp,.dm,.gl,.cover-card{box-shadow:var(--lift)}
+.dm,.gl,.cover-card{position:relative}
+.dm::before,.dm::after,.gl::before,.gl::after,.cover-card::before,.cover-card::after{
+  content:"";position:absolute;width:15px;height:15px;pointer-events:none;
+  border:1px solid rgba(122,92,51,.45);
+}
+.dm::before,.gl::before,.cover-card::before{left:7px;top:7px;border-right:0;border-bottom:0}
+.dm::after,.gl::after,.cover-card::after{right:7px;bottom:7px;border-left:0;border-top:0}
+.dm{border-width:1px;border-color:rgba(122,92,51,.8);border-radius:14px;padding:16px 20px 17px;
+    background:linear-gradient(180deg,rgba(255,251,242,.98),rgba(240,228,201,.98))}
+.gl{border-width:1px;border-color:rgba(122,92,51,.8);border-radius:14px}
+.tg{border-radius:6px;border-color:rgba(201,180,138,.9)}
+#cvDemo,#cvClass,#cvCmp{
+  border-radius:10px;border-color:rgba(122,92,51,.55);
+  box-shadow:0 10px 26px rgba(0,0,0,.3), inset 0 0 46px rgba(12,34,52,.14);
+}
+.dm-tag,.gl-tag,.dt-tag{letter-spacing:.14em}
+
+/* —— 三选一卡片：更清晰的层级与悬停反馈 —— */
+.gc-card{
+  border-radius:12px;background:linear-gradient(180deg,rgba(255,253,247,.9),rgba(248,240,222,.86));
+  transition:transform .16s var(--ease), box-shadow .16s var(--ease), border-color .16s;
+}
+.gc-card:hover{transform:translateY(-4px);box-shadow:0 16px 32px rgba(58,44,27,.24)}
+.gc-name{letter-spacing:.02em}
+.gc-go{display:flex;align-items:center;gap:5px;transition:gap .16s var(--ease)}
+.gc-card:hover .gc-go{gap:9px}
+.btn-go,.btn-c{
+  border-radius:10px;transition:transform .12s var(--ease), box-shadow .18s, filter .18s;
+  position:relative;overflow:hidden;
+}
+.btn-go::after,.btn-c::after{
+  content:"";position:absolute;top:0;bottom:0;width:44%;
+  left:-60%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,236,190,.28),transparent);
+  transform:skewX(-18deg);transition:left .55s var(--ease);
+}
+.btn-go:hover::after,.btn-c:hover::after{left:120%}
+.btn-go:hover,.btn-c:hover{transform:translateY(-1px);filter:brightness(1.06)}
+.btn-go:active,.btn-c:active{transform:translateY(1px)}
+
+/* —— 封面：印章微动 + 徽记呼吸 —— */
+.cover-card{border-radius:10px;box-shadow:0 30px 80px rgba(0,0,0,.72), inset 0 0 0 1px rgba(255,255,255,.6)}
+.cover-card h1{letter-spacing:.16em}
+.seal{animation:sealIn .9s .25s var(--ease) both}
+@keyframes sealIn{from{opacity:0;transform:scale(.72) rotate(-14deg)}to{opacity:1;transform:none}}
+.go-tip{letter-spacing:.24em}
+
+/* —— 覆盖层滚动条 —— */
+#overlay::-webkit-scrollbar{width:9px}
+#overlay::-webkit-scrollbar-track{background:transparent}
+#overlay::-webkit-scrollbar-thumb{background:rgba(122,92,51,.42);border-radius:9px}
+#overlay::-webkit-scrollbar-thumb:hover{background:rgba(122,92,51,.62)}
+
+/* —— 无障碍：尊重系统"减少动态效果" —— */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
+                       animation-delay:0ms!important;transition-duration:.001ms!important;
+                       transition-delay:0ms!important}
+  .grain{animation:none}
+}
+
+/* ============================================================
+   D3 交互升级层（追加式，不改动上方既有规则）
+   场景点跳转 · 场景过渡脉冲 · 发言人主题色
+   ============================================================ */
+
+/* —— 场景点：可点击 + 悬停显示场景名 —— */
+.dots i{cursor:pointer;transition:transform .18s var(--ease)}
+/* 隐形热区：横向只外扩 3px（相邻点中心距 15px，放大后也不会吞掉邻点），
+   纵向放宽到 6px 方便从上下方向点中 —— 修复"点左边的点却跳到右边场景"的误命中 */
+.dots i::after{content:"";position:absolute;inset:-6px -3px;border-radius:50%}
+.dots i:hover{transform:scale(1.4)}
+.dots i:focus-visible{outline:2px solid var(--gold-hi);outline-offset:3px}
+.dots i u{
+  position:absolute;top:calc(100% + 10px);left:50%;
+  transform:translateX(-50%) translateY(4px);
+  background:linear-gradient(180deg,rgba(26,33,41,.96),rgba(16,21,27,.96));
+  color:#f3e9d2;font-size:.68rem;font-style:normal;font-weight:700;letter-spacing:.08em;
+  padding:4px 10px;border-radius:7px;white-space:nowrap;
+  border:1px solid rgba(216,178,94,.5);box-shadow:0 6px 18px rgba(0,0,0,.45);
+  opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;z-index:5;
+}
+.dots i u::before{
+  content:"";position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
+  border:5px solid transparent;border-bottom-color:rgba(216,178,94,.5);
+}
+.dots i:hover u,.dots i:focus-visible u{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* —— 场景切换过渡脉冲 —— */
+#wipe{
+  position:fixed;inset:0;z-index:5;pointer-events:none;opacity:0;
+  background:radial-gradient(ellipse at 50% 42%, rgba(216,178,94,.16), rgba(8,12,16,.6) 80%);
+}
+#wipe.go{animation:wipePulse .55s ease-out}
+@keyframes wipePulse{0%{opacity:0}16%{opacity:1}100%{opacity:0}}
+
+/* —— 发言人主题色：头像外环 + 姓名 + 阅读进度铜线随角色变色 —— */
+.dlg{--spk:#2e6d9e}
+.dlg .avatar{
+  box-shadow:0 4px 12px rgba(58,44,27,.32), inset 0 0 0 1px rgba(255,255,255,.6),
+             0 0 0 2px rgba(255,253,246,.92), 0 0 0 4.5px var(--spk),
+             0 0 16px -2px var(--spk);
+  transition:background .4s, box-shadow .4s;
+}
+.dlg-name{color:var(--spk);transition:color .3s}
+.dlg-prog i{background:linear-gradient(90deg, var(--spk), #e8c877)}
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+<div class="scrim" id="scrim"></div>
+<div class="grain" aria-hidden="true"></div>
+<div id="wipe" aria-hidden="true"></div>
+
+<!-- 罗盘水印 -->
+<svg class="compass" viewBox="0 0 120 120" aria-hidden="true">
+  <g fill="none" stroke="rgba(226,206,164,.55)" stroke-width="1">
+    <circle cx="60" cy="60" r="46"/><circle cx="60" cy="60" r="34" stroke-dasharray="3 5"/>
+    <circle cx="60" cy="60" r="4"/>
+  </g>
+  <g fill="rgba(226,206,164,.65)">
+    <path d="M60 8 L65 56 L60 50 L55 56 Z"/><path d="M60 112 L65 64 L60 70 L55 64 Z"/>
+    <path d="M8 60 L56 55 L50 60 L56 65 Z"/><path d="M112 60 L64 55 L70 60 L64 65 Z"/>
+  </g>
+  <g stroke="rgba(226,206,164,.4)" stroke-width="1">
+    <line x1="60" y1="14" x2="60" y2="24"/><line x1="60" y1="96" x2="60" y2="106"/>
+    <line x1="14" y1="60" x2="24" y2="60"/><line x1="96" y1="60" x2="106" y2="60"/>
+  </g>
+</svg>
+
+<header class="actbar">
+  <div class="plaque">第五关 · 前情<span class="sub">ACT V · PRELUDE — THE BULBOUS BOW PLAN</span></div>
+  <div class="actbar-right">
+    <div class="dots" id="dots"></div>
+    <button class="btn-skip" id="btnSkip">跳过剧情 ⏭</button>
+  </div>
+</header>
+
+<div id="sceneTitle"><div class="ct" id="ctName"></div><span class="cs" id="ctSub"></span><div class="rule"></div></div>
+
+<div id="overlay"></div>
+
+<footer class="dlgwrap">
+  <div class="logribbon" id="logRibbon"><span class="ln"></span><span id="logText"></span><span class="ln"></span></div>
+  <div class="dlg" id="dlg">
+    <div class="dlg-prog" aria-hidden="true"><i id="dlgProg"></i></div>
+    <div class="dlg-head">
+      <div class="avatar" id="dlgAvatar">🎓</div>
+      <div>
+        <div class="dlg-name" id="dlgName">老陈教授</div>
+        <div class="dlg-role" id="dlgRole">破浪实验室 · 首席工程师</div>
+      </div>
+      <div class="dlg-tag" id="dlgTag">第五关 · 前情</div>
+    </div>
+    <div class="dlg-text" id="dlgText"></div>
+    <div class="dlg-foot">
+      <span class="hint" id="dlgHint">点击 / <b>空格</b> 继续</span>
+      <div class="dlg-nav">
+        <button class="nav-btn" id="btnBack" type="button" disabled
+                title="回看上一句（快捷键 ←）" aria-label="回看上一句">‹ 回看</button>
+        <span class="next-arrow" id="nextArrow">继续 ▸</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- 启封封面 -->
+<div id="cover">
+  <div class="cover-card">
+    <div class="lab">破 浪 实 验 室 ｜ 第 五 关 前 情</div>
+    <h1>风暴海峡的密令</h1>
+    <h2>THE SECRET BLUEPRINT FROM THE DIRECTOR</h2>
+    <div class="rule"></div>
+    <p>穿出峡湾，前方就是风浪最凶的<b>风暴海峡</b>。传统船艏的减阻手段已到尽头，
+       老所长的一封绝密电报与一张图纸，指向同一个名字——<b>球鼻艏计划</b>。
+       深夜锚泊，还有三堂波学课等你上：<b>叠加 · 干涉 · 相消相长</b>——
+       「星海号」的命运，从这一页航海日志重新开始。</p>
+    <div class="seal">密<span>BF-05</span></div>
+    <div class="go-tip">点击任意处 · 启封航海日志</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- 舰桥进度内核：全站解锁状态的唯一真源（见 fleet.js） -->
+<script src="fleet.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   0. 工具
+   ============================================================ */
+var G = 9.8;
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+function lerp(a,b,t){ return a+(b-a)*t; }
+function mixCol(c1,c2,t){ return [lerp(c1[0],c2[0],t)|0, lerp(c1[1],c2[1],t)|0, lerp(c1[2],c2[2],t)|0]; }
+function rgb(c,a){ return a===undefined ? 'rgb('+c[0]+','+c[1]+','+c[2]+')'
+  : 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'; }
+function rng(seed){ var s=seed; return function(){ s=(s*1103515245+12345)&0x7fffffff; return s/0x7fffffff; }; }
+
+/* ============================================================
+   1. 画布与场景渲染
+   ============================================================ */
+var cv = document.getElementById('bg'), ctx = cv.getContext('2d');
+var W=0,H=0,DPR=1;
+
+function resize(){
+  DPR = Math.min(window.devicePixelRatio||1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
+  cv.style.width = W+'px'; cv.style.height = H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  if(started) paint();   /* 改尺寸会清空画布：立刻同步补一帧，别停在空白 */
+}
+
+/* —— 场景氛围表 —— */
+var MOOD = {
+  fjord:     { sky1:[96,136,172], sky2:[252,208,150], sea1:[110,150,164], sea2:[28,56,70],
+               amp:.34, rain:0,   star:0,   sun:[.76,.30,64,[255,220,150],.95], cliffs:1,
+               wake:.34, bulb:0, arrow:0, dock:0, ship:[.58,.20,.34] },
+  strait:    { sky1:[32,42,54],   sky2:[70,80,92],   sea1:[54,72,84],   sea2:[12,24,32],
+               amp:1.55, rain:1,  star:0,   sun:null, cliffs:.5,
+               wake:1,   bulb:0, arrow:1,  dock:0, ship:[.55,.18,.46] },
+  radio:     { sky1:[14,22,34],   sky2:[32,44,60],   sea1:[30,46,60],   sea2:[7,14,22],
+               amp:1.15, rain:.55,star:.55, sun:[.2,.2,30,[186,212,238],.45], cliffs:.34,
+               wake:.92, bulb:0, arrow:.7, dock:0, ship:[.60,.16,.32] },
+  lesson:    { sky1:[10,16,26],   sky2:[36,48,66],   sea1:[28,42,54],   sea2:[6,12,20],
+               amp:.26, rain:0,   star:.9,  sun:[.80,.20,24,[214,228,246],.55], cliffs:.12,
+               wake:.10, bulb:0, arrow:0,  dock:0, ship:[.60,.16,.30] },
+  blueprint: { sky1:[10,18,28],   sky2:[26,36,50],   sea1:[26,40,54],   sea2:[6,12,20],
+               amp:.85, rain:.32, star:.7,  sun:null, cliffs:.2,
+               wake:.8,  bulb:0, arrow:.45,dock:0, ship:[.63,.20,.27] },
+  dock:      { sky1:[22,30,46],   sky2:[74,64,84],   sea1:[36,44,58],   sea2:[9,13,21],
+               amp:.32, rain:.15, star:.35, sun:null, cliffs:0,
+               wake:.18, bulb:1, arrow:0,  dock:1, ship:[.60,.13,.55] },
+  run:       { sky1:[56,80,110],  sky2:[182,184,188],sea1:[66,100,120],  sea2:[14,32,44],
+               amp:1.12, rain:.34,star:0,   sun:[.68,.27,44,[244,236,214],.62], cliffs:.4,
+               wake:.3,  bulb:1, arrow:.22,dock:0, ship:[.55,.16,.42] },
+  goal:      { sky1:[68,110,152], sky2:[248,208,152],sea1:[88,134,158],  sea2:[22,52,70],
+               amp:.4,  rain:0,   star:0,   sun:[.79,.26,58,[255,226,164],.92], cliffs:.3,
+               wake:.42, bulb:1, arrow:0,  dock:0, ship:[.63,.14,.26] }
+};
+
+/* —— 插值中的实时参数 —— */
+var P = {
+  sky1:[20,30,42], sky2:[40,52,66], sea1:[40,56,70], sea2:[10,18,26],
+  amp:.5, rain:0, star:0, cliffs:0, wake:.4, bulb:0, arrow:0, dock:0,
+  sunA:0, sunX:.75, sunY:.3, sunR:50, sunC:[255,220,160],
+  shipX:.58, shipY:.5, shipS:.34,
+  horizon:.56, dark:.3
+};
+var TGT = JSON.parse(JSON.stringify(P));
+var sunOn = 0;
+
+function setMood(name){
+  var m = MOOD[name]; if(!m){ return; }
+  TGT.sky1 = m.sky1.slice(); TGT.sky2 = m.sky2.slice();
+  TGT.sea1 = m.sea1.slice(); TGT.sea2 = m.sea2.slice();
+  TGT.amp = m.amp; TGT.rain = m.rain; TGT.star = m.star; TGT.cliffs = m.cliffs;
+  TGT.wake = m.wake; TGT.bulb = m.bulb; TGT.arrow = m.arrow; TGT.dock = m.dock;
+  TGT.shipX = m.ship[0]; TGT.shipY = m.ship[1]; TGT.shipS = m.ship[2];
+  if(m.sun){ sunOn=1; TGT.sunX=m.sun[0]; TGT.sunY=m.sun[1]; TGT.sunR=m.sun[2];
+             TGT.sunC=m.sun[3].slice(); TGT.sunA=m.sun[4]; }
+  else { sunOn=0; TGT.sunA=0; }
+  TGT.dark = (name==='strait')?.55:(name==='radio'?.6:(name==='blueprint'?.62:(name==='lesson'?.58:(name==='dock'?.5:.18))));
+}
+
+function stepParams(k){
+  P.amp=lerp(P.amp,TGT.amp,k); P.rain=lerp(P.rain,TGT.rain,k);
+  P.star=lerp(P.star,TGT.star,k); P.cliffs=lerp(P.cliffs,TGT.cliffs,k);
+  P.wake=lerp(P.wake,TGT.wake,k); P.bulb=lerp(P.bulb,TGT.bulb,k);
+  P.arrow=lerp(P.arrow,TGT.arrow,k); P.dock=lerp(P.dock,TGT.dock,k);
+  P.sunA=lerp(P.sunA,TGT.sunA,k); P.sunX=lerp(P.sunX,TGT.sunX,k);
+  P.sunY=lerp(P.sunY,TGT.sunY,k); P.sunR=lerp(P.sunR,TGT.sunR,k);
+  P.shipX=lerp(P.shipX,TGT.shipX,k); P.shipY=lerp(P.shipY,TGT.shipY,k);
+  P.shipS=lerp(P.shipS,TGT.shipS,k); P.dark=lerp(P.dark,TGT.dark,k);
+  P.sky1=mixCol(P.sky1,TGT.sky1,k); P.sky2=mixCol(P.sky2,TGT.sky2,k);
+  P.sea1=mixCol(P.sea1,TGT.sea1,k); P.sea2=mixCol(P.sea2,TGT.sea2,k);
+  P.sunC=mixCol(P.sunC,TGT.sunC,k);
+}
+
+/* —— 静态星点 —— */
+var stars=[];
+(function(){ var r=rng(97); for(var i=0;i<160;i++){
+  stars.push({x:r(), y:r()*.62, s:.6+r()*1.5, p:r()*6.28});
+} })();
+
+/* —— 崖壁轮廓 —— */
+var cliffProf=[];
+(function(){ var r=rng(31); var y=.16; for(var i=0;i<11;i++){
+  cliffProf.push({x:i/10, y:y}); y=clamp(y+(r()-.42)*.17,.05,.5);
+} })();
+
+/* —— 粒子（船首飞沫 / 焊花） —— */
+var parts=[];
+function emit(x,y,n,type){
+  for(var i=0;i<n;i++){
+    var a = type==='spark' ? (-Math.PI*.5+(Math.random()-.5)*2.1) : (-Math.PI*.42+(Math.random()-.5)*1.1);
+    var sp = type==='spark' ? 90+Math.random()*260 : 40+Math.random()*150;
+    parts.push({x:x,y:y, vx:Math.cos(a)*sp*(type==='spark'?1:.55)+(type==='spark'?0:70),
+                vy:Math.sin(a)*sp, life:type==='spark'?(.35+Math.random()*.5):(.7+Math.random()*.9),
+                age:0, type:type, r:type==='spark'?(1+Math.random()*1.6):(1.4+Math.random()*3)});
+  }
+}
+function stepParts(dt){
+  for(var i=parts.length-1;i>=0;i--){
+    var p=parts[i]; p.age+=dt;
+    p.vy += (p.type==='spark'? 620:340)*dt;
+    p.x += p.vx*dt; p.y += p.vy*dt;
+    p.vx *= (1-1.5*dt);
+    if(p.age>p.life) parts.splice(i,1);
+  }
+}
+function drawParts(){
+  for(var i=0;i<parts.length;i++){
+    var p=parts[i], k=1-p.age/p.life;
+    if(p.type==='spark'){
+      ctx.globalAlpha=k;
+      ctx.strokeStyle='rgba(255,'+(200+55*k|0)+',150,'+k+')';
+      ctx.lineWidth=p.r*.6; ctx.beginPath();
+      ctx.moveTo(p.x,p.y); ctx.lineTo(p.x-p.vx*.012,p.y-p.vy*.012); ctx.stroke();
+      ctx.fillStyle='rgba(255,246,214,'+k+')';
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r*.55,0,6.29); ctx.fill();
+    } else {
+      ctx.globalAlpha=k*.9;
+      ctx.fillStyle='rgba(236,246,252,'+k+')';
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r*(0.5+k*.8),0,6.29); ctx.fill();
+    }
+  }
+  ctx.globalAlpha=1;
+}
+
+/* —— 天空 —— */
+function drawSky(t){
+  var hz=H*P.horizon;
+  var g=ctx.createLinearGradient(0,0,0,hz+2);
+  g.addColorStop(0, rgb(P.sky1)); g.addColorStop(1, rgb(P.sky2));
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,hz+2);
+  /* 星 */
+  if(P.star>.02){
+    for(var i=0;i<stars.length;i++){
+      var s=stars[i], a=P.star*(.35+.65*Math.abs(Math.sin(t*.9+s.p)));
+      ctx.globalAlpha=a; ctx.fillStyle='#e8f1ff';
+      ctx.beginPath(); ctx.arc(s.x*W, s.y*hz, s.s, 0, 6.29); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+  /* 日月 */
+  if(P.sunA>.02){
+    var sx=P.sunX*W, sy=P.sunY*hz, r=P.sunR;
+    var gg=ctx.createRadialGradient(sx,sy,r*.25,sx,sy,r*9);
+    gg.addColorStop(0, rgb(P.sunC,.85*P.sunA));
+    gg.addColorStop(.25, rgb(P.sunC,.28*P.sunA));
+    gg.addColorStop(1, rgb(P.sunC,0));
+    ctx.fillStyle=gg; ctx.fillRect(sx-r*9,sy-r*9,r*18,r*18);
+    ctx.fillStyle=rgb(P.sunC,.95*P.sunA);
+    ctx.beginPath(); ctx.arc(sx,sy,r*.62,0,6.29); ctx.fill();
+  }
+  /* 云带 */
+  var cr=rng(7);
+  for(var c=0;c<7;c++){
+    var cx=((cr()*1.5-.25)*W + t*(6+c*3))% (W*1.45) - W*.22;
+    var cy=(.06+cr()*.42)*hz, cw=(.16+cr()*.3)*W, ch=(.02+cr()*.045)*hz;
+    var cg=ctx.createRadialGradient(cx,cy,1,cx,cy,cw);
+    var tone = P.dark>.4 ? [40,46,56] : [255,238,214];
+    cg.addColorStop(0, rgb(tone, P.dark>.4?.34:.30));
+    cg.addColorStop(1, rgb(tone,0));
+    ctx.fillStyle=cg;
+    ctx.beginPath(); ctx.ellipse(cx,cy,cw,ch,0,0,6.29); ctx.fill();
+  }
+  /* 海平面雾带 */
+  var hg=ctx.createLinearGradient(0,hz-40,0,hz+26);
+  hg.addColorStop(0, rgb(P.sky2,0)); hg.addColorStop(.55, rgb(P.sky2,.55)); hg.addColorStop(1, rgb(P.sea1,.9));
+  ctx.fillStyle=hg; ctx.fillRect(0,hz-40,W,66);
+}
+
+/* —— 崖壁 / 海峡两壁 —— */
+function drawCliffs(t){
+  if(P.cliffs<.03) return;
+  var hz=H*P.horizon;
+  var k=P.cliffs, wL=W*(.06+.30*k), wR=W*(.07+.32*k);
+  function side(dir,w){
+    ctx.beginPath();
+    ctx.moveTo(dir<0?0:W, hz+10);
+    var x0 = dir<0?0:W;
+    for(var i=0;i<cliffProf.length;i++){
+      var p=cliffProf[i];
+      var x = dir<0 ? (w*p.x) : (W-w*p.x);
+      var y = p.y*hz*1.02 + Math.sin(t*.25+i)*2;
+      ctx.lineTo(x,y);
+    }
+    ctx.lineTo(dir<0?w:W-w, hz+10);
+    ctx.closePath();
+    var g=ctx.createLinearGradient(0,0,0,hz);
+    g.addColorStop(0, rgb(mixCol(P.sea2,[8,12,16],.5),.96));
+    g.addColorStop(.7, rgb(mixCol(P.sea2,[20,28,36],.55),.9));
+    g.addColorStop(1, rgb(mixCol(P.sea1,P.sea2,.6),.85));
+    ctx.fillStyle=g; ctx.fill();
+    /* 顶部描边雾 */
+    ctx.strokeStyle=rgb(P.sky2,.18*k); ctx.lineWidth=1.4; ctx.stroke();
+  }
+  side(-1,wL); side(1,wR);
+}
+
+/* —— 海面 —— */
+function waveY(x, base, amp, k, sp, t, i){
+  return base
+    + Math.sin(x*k + t*sp + i*1.9)*amp
+    + Math.sin(x*k*2.17 - t*sp*1.35 + i*1.4)*amp*.20
+    + Math.sin(x*k*.53 + t*sp*.62 + i*2.3)*amp*.30;
+}
+function drawSeaBand(i, t, last){
+  var hz=H*P.horizon, seaH=H-hz;
+  var p=i/(last-1);
+  var base=hz+seaH*Math.pow(p,1.42);
+  var amp=(6+p*p*95)*P.amp;
+  var k=2*Math.PI/(300-p*130), sp=(.55+p*1.15);
+  ctx.beginPath();
+  ctx.moveTo(-20,H+40);
+  for(var x=-20;x<=W+20;x+=7) ctx.lineTo(x, waveY(x,base,amp,k,sp,t,i));
+  ctx.lineTo(W+20,H+40); ctx.closePath();
+  var col=mixCol(P.sea1,P.sea2,Math.pow(p,.85));
+  ctx.fillStyle=rgb(col,1); ctx.fill();
+  /* 波峰泡沫 */
+  var chop=P.amp;
+  if(chop>.45){
+    ctx.globalAlpha=clamp((chop-.45)*1.5,0,1)*.55;
+    ctx.fillStyle='#e8f4f8';
+    for(var x2=-20;x2<=W+20;x2+=30){
+      var y=waveY(x2,base,amp,k,sp,t,i);
+      if(y < base-amp*.5){
+        ctx.beginPath();
+        ctx.ellipse(x2, y, 7+p*11, 1.1+p*1.2, 0, 0, 6.29);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha=1;
+  } else {
+    /* 平静海面高光 */
+    ctx.globalAlpha=.30;
+    ctx.strokeStyle=rgb(mixCol(P.sky2,[255,255,255],.4),.5);
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    for(var x3=-20;x3<=W+20;x3+=9) ctx.lineTo(x3, waveY(x3,base,amp,k,sp,t,i));
+    ctx.stroke(); ctx.globalAlpha=1;
+  }
+}
+
+/* —— 船 —— */
+function hullPath(){
+  var q=new Path2D();
+  q.moveTo(-.500,-.052);
+  q.lineTo(-.300,-.056);
+  q.lineTo( .170,-.061);
+  q.quadraticCurveTo(.360,-.068, .468,-.090);
+  q.quadraticCurveTo(.524,-.082, .556,-.028);
+  q.lineTo(.550, .016);
+  q.lineTo(.540, .050);
+  q.lineTo(-.430,.050);
+  q.quadraticCurveTo(-.500,.048,-.500,.014);
+  q.closePath();
+  return q;
+}
+var containerCols=['#5d7f8c','#8c5f4a','#6f7f5a','#3f5566','#a3743f','#6b5a7a','#4f6f74'];
+var shipSeed=rng(2025);
+var containers=[];
+(function(){
+  var x=-.325, col=0;
+  while(x<.318){
+    var n=2+((shipSeed()*2)|0);
+    for(var r=0;r<n;r++){
+      containers.push({x:x, r:r, c:containerCols[(shipSeed()*containerCols.length)|0], d:shipSeed()});
+    }
+    x+=.0235;
+  }
+})();
+
+function drawShip(t, now){
+  var s=P.shipS*W;
+  var hz=H*P.horizon, seaH=H-hz;
+  var cx=P.shipX*W;
+  var cy=hz + seaH*P.shipY + Math.sin(t*.86+1.1)*9*P.amp*1.2;
+  var rot=Math.sin(t*.72)*.024*(P.amp+.35);
+  ctx.save();
+  ctx.translate(cx,cy); ctx.rotate(rot); ctx.scale(s,s);
+
+  var hull=hullPath();
+
+  /* 水线下（防污漆深红）+ 水线上（船体深墨） */
+  ctx.save(); ctx.clip(hull);
+  ctx.fillStyle='#8e3a2a'; ctx.fillRect(-.7,0,1.7,.4);
+  ctx.fillStyle='#24333d'; ctx.fillRect(-.7,-.4,1.7,.4);
+  ctx.fillStyle='#5e2b20'; ctx.fillRect(-.7,-.0035,1.7,.009);   /* 水线漆带 */
+  /* 甲板纵梁高光 */
+  ctx.fillStyle='rgba(255,242,214,.16)'; ctx.fillRect(-.7,-.404,1.7,.016);
+  ctx.restore();
+
+  /* 球鼻艏 */
+  if(P.bulb>.5){
+    var bl=new Path2D();
+    bl.moveTo(.532,.004);
+    bl.bezierCurveTo(.600,-.002,.646,.020,.642,.035);
+    bl.bezierCurveTo(.638,.052,.594,.058,.548,.058);
+    bl.lineTo(.505,.058);
+    bl.closePath();
+    ctx.fillStyle='#93412f'; ctx.fill(bl);
+    ctx.strokeStyle='#3d1a12'; ctx.lineWidth=.0026; ctx.stroke(bl);
+    var bg=ctx.createLinearGradient(.53,-.01,.65,.06);
+    bg.addColorStop(0,'rgba(255,226,196,.5)'); bg.addColorStop(.6,'rgba(255,226,196,0)');
+    ctx.save(); ctx.clip(bl); ctx.fillStyle=bg; ctx.fillRect(.5,-.02,.16,.1); ctx.restore();
+  }
+
+  /* 集装箱 */
+  for(var i=0;i<containers.length;i++){
+    var c=containers[i];
+    ctx.fillStyle=c.c;
+    ctx.fillRect(c.x, -.0605-.0098*(c.r+1), .0215, .0088);
+    ctx.fillStyle='rgba(255,255,255,'+(c.d>.6?.16:.07)+')';
+    ctx.fillRect(c.x, -.0605-.0098*(c.r+1), .0215, .0022);
+  }
+
+  /* 艉楼 + 驾驶室 + 烟囱 */
+  ctx.fillStyle='#e9e4d6';
+  ctx.beginPath();
+  ctx.moveTo(-.498,-.056); ctx.lineTo(-.386,-.056);
+  ctx.lineTo(-.386,-.088); ctx.lineTo(-.430,-.098);
+  ctx.lineTo(-.498,-.096); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(30,42,50,.5)'; ctx.lineWidth=.0016; ctx.stroke();
+  ctx.fillStyle='#1d2b34';
+  for(var w=0;w<5;w++) ctx.fillRect(-.488+w*.021,-.0945,.0135,.0062);
+  /* 烟囱 */
+  ctx.fillStyle='#2b3944'; ctx.fillRect(-.470,-.122,.036,.026);
+  ctx.fillStyle='#b5462e'; ctx.fillRect(-.470,-.112,.036,.011);
+  ctx.fillStyle='rgba(60,70,80,.85)'; ctx.fillRect(-.470,-.126,.036,.005);
+  /* 桅杆 */
+  ctx.strokeStyle='#2b3944'; ctx.lineWidth=.0022;
+  ctx.beginPath(); ctx.moveTo(-.478,-.126); ctx.lineTo(-.478,-.166); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(.330,-.062); ctx.lineTo(.330,-.092); ctx.stroke();
+
+  /* 船体轮廓 */
+  ctx.strokeStyle='#12202a'; ctx.lineWidth=.0028; ctx.stroke(hull);
+
+  /* 水线浪花带（把船“坐”进水里） */
+  ctx.fillStyle='rgba(228,246,253,'+(.13+.14*P.wake)+')';
+  ctx.beginPath();
+  ctx.moveTo(-.455,.014);
+  for(var wx=-.455;wx<=.525;wx+=.02){
+    ctx.lineTo(wx, Math.sin(wx*46+t*2.1)*.0045+.0045);
+  }
+  ctx.lineTo(.525,.020);
+  ctx.lineTo(-.455,.026);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+
+  /* —— 船首浪：浪花弧 + 前倾浪峰 + 飞沫 —— */
+  var bowX = cx + (.548*s)*Math.cos(rot) - (-.004*s)*Math.sin(rot);
+  var bowY = cy + (.548*s)*Math.sin(rot) + (-.004*s)*Math.cos(rot);
+  if(P.wake>.06){
+    /* 三道扩散的浪花弧 */
+    for(var r=1;r<=3;r++){
+      var rr=r*s*.040*(.55+P.wake*.75);
+      ctx.strokeStyle='rgba(232,248,254,'+(.26*P.wake/r)+')';
+      ctx.lineWidth=2.4-r*.4;
+      ctx.beginPath();
+      ctx.arc(bowX, bowY-2, rr, -1.05, .45);
+      ctx.stroke();
+    }
+    /* 贴艏浪花带 */
+    ctx.fillStyle='rgba(238,250,255,'+(.16+.30*P.wake)+')';
+    ctx.beginPath();
+    ctx.ellipse(bowX+.010*s, bowY+.004*s, .052*s*(.5+.6*P.wake), .013*s, -.12, 0, 6.29);
+    ctx.fill();
+    /* 高航速时的前倾浪峰 */
+    if(P.wake>.45){
+      var k2=(P.wake-.45)/.55, hw=.085*s*(.6+.8*k2), hh=.075*s*(.35+.85*k2);
+      var g2=ctx.createLinearGradient(bowX, bowY-hh, bowX+hw, bowY+.03*s);
+      g2.addColorStop(0,'rgba(244,252,255,'+(.55+.3*k2)+')');
+      g2.addColorStop(.6,'rgba(198,232,244,'+(.30+.25*k2)+')');
+      g2.addColorStop(1,'rgba(140,190,210,.05)');
+      ctx.beginPath();
+      ctx.moveTo(bowX-.030*s, bowY+.030*s);
+      ctx.quadraticCurveTo(bowX-.004*s, bowY-hh, bowX+hw*.78, bowY-hh*.30);
+      ctx.quadraticCurveTo(bowX+hw, bowY-hh*.06, bowX+hw*.72, bowY+.030*s);
+      ctx.closePath();
+      ctx.fillStyle=g2; ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,'+(.35*k2+.1)+')'; ctx.lineWidth=1.5; ctx.stroke();
+    }
+    /* 尾流 */
+    ctx.strokeStyle='rgba(226,244,250,'+(.14+.18*P.wake)+')'; ctx.lineWidth=2.2;
+    ctx.beginPath();
+    ctx.moveTo(cx-.49*s, cy+s*.02);
+    ctx.bezierCurveTo(cx-.72*s, cy+s*.05, cx-.92*s, cy+s*.035, cx-1.1*s, cy+s*.06);
+    ctx.stroke();
+  }
+  /* 飞沫粒子 */
+  if(P.wake>.3 && Math.random()<.85){
+    emit(bowX+Math.random()*12-6, bowY-s*.02, 1+((Math.random()*2)|0), 'spray');
+  }
+  return {x:bowX, y:bowY, s:s};
+}
+
+/* —— 拖曳阻力箭头 —— */
+function drawArrow(bow, t){
+  if(P.arrow<.05) return;
+  var len=(60+120*P.arrow) * (0.55+0.45*P.wake);
+  var x=bow.x+18, y=bow.y-bow.s*.055;
+  var a=.35+.6*P.arrow;
+  ctx.save();
+  ctx.globalAlpha=a;
+  ctx.strokeStyle='#e2603f'; ctx.fillStyle='#e2603f'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-len,y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-len,y); ctx.lineTo(x-len+16,y-9); ctx.lineTo(x-len+16,y+9); ctx.closePath(); ctx.fill();
+  ctx.font='700 13px "Microsoft YaHei",sans-serif';
+  ctx.fillStyle='#ffd9c8'; ctx.textAlign='center';
+  ctx.fillText('兴波阻力 R', x-len/2, y-13);
+  ctx.restore();
+}
+
+/* —— 船坞（第五幕） —— */
+function drawDock(bow, t){
+  if(P.dock<.04) return;
+  var k=P.dock, base=H*.82;
+  ctx.save(); ctx.globalAlpha=k;
+  /* 码头与坞壁 */
+  ctx.fillStyle='#161d26'; ctx.fillRect(0,base,W,H-base);
+  ctx.fillStyle='#1e2733'; ctx.fillRect(0,base-16,W*.44,18);
+  ctx.strokeStyle='rgba(180,200,220,.16)'; ctx.lineWidth=1;
+  for(var i=0;i<26;i++){
+    ctx.beginPath(); ctx.moveTo(i*(W*.44)/26,base-16); ctx.lineTo(i*(W*.44)/26,base+60*(i%2?.4:.9)); ctx.stroke();
+  }
+  /* 龙门吊（剪影） */
+  var gx1=W*.07, gx2=W*.31, gy=H*.22;
+  ctx.strokeStyle='rgba(22,30,40,.92)'; ctx.lineWidth=13;
+  ctx.beginPath();
+  ctx.moveTo(gx1,base+6); ctx.lineTo(gx1,gy);
+  ctx.moveTo(gx2,base+6); ctx.lineTo(gx2,gy);
+  ctx.stroke();
+  ctx.lineWidth=17;
+  ctx.beginPath(); ctx.moveTo(gx1-14,gy); ctx.lineTo(gx2+14,gy); ctx.stroke();
+  ctx.lineWidth=5;
+  ctx.beginPath(); ctx.moveTo(gx1-8,gy+22); ctx.lineTo(gx2+8,gy+22); ctx.stroke();
+  /* 斜撑 */
+  ctx.lineWidth=4;
+  for(var b=0;b<3;b++){
+    var bx1=gx1+(gx2-gx1)*b/3, bx2=gx1+(gx2-gx1)*(b+1)/3;
+    ctx.beginPath(); ctx.moveTo(bx1,gy+2); ctx.lineTo(bx2,gy+20); ctx.stroke();
+  }
+  /* 小车与吊缆 */
+  var hx=(gx1+gx2)/2+W*.05;
+  ctx.fillStyle='rgba(30,40,52,.95)'; ctx.fillRect(hx-13,gy+2,26,20);
+  ctx.fillStyle='rgba(255,120,90,.95)'; ctx.beginPath(); ctx.arc(gx1,gy-11,3.4,0,6.29); ctx.fill();
+  ctx.strokeStyle='rgba(226,232,240,.4)'; ctx.lineWidth=1.8;
+  ctx.beginPath(); ctx.moveTo(hx,gy+22); ctx.lineTo(hx, bow.y-46); ctx.lineTo(bow.x-16, bow.y-46); ctx.stroke();
+  ctx.strokeStyle='rgba(226,232,240,.6)'; ctx.lineWidth=2.6;
+  ctx.beginPath(); ctx.moveTo(bow.x-16,bow.y-46); ctx.lineTo(bow.x-16,bow.y-10); ctx.stroke();
+  ctx.strokeStyle='rgba(226,232,240,.7)'; ctx.lineWidth=3.4;
+  ctx.beginPath(); ctx.moveTo(bow.x-24,bow.y-10); ctx.lineTo(bow.x-8,bow.y-10); ctx.stroke();
+  /* 脚手架 */
+  ctx.strokeStyle='rgba(210,180,120,.40)'; ctx.lineWidth=2;
+  for(var j=0;j<4;j++){
+    var sx=bow.x-bow.s*(.22-j*.07);
+    ctx.beginPath(); ctx.moveTo(sx, bow.y+30); ctx.lineTo(sx, bow.y-bow.s*.07-30); ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.moveTo(bow.x-bow.s*.30, bow.y-bow.s*.05-16); ctx.lineTo(bow.x+bow.s*.02, bow.y-bow.s*.05-16); ctx.stroke();
+  ctx.restore();
+  /* 焊花 */
+  if(Math.random()<.7) emit(bow.x-bow.s*.02+Math.random()*10-5, bow.y-6, 1, 'spark');
+}
+
+/* —— 雨 —— */
+var rainDrops=[];
+(function(){ var r=rng(555); for(var i=0;i<340;i++){
+  rainDrops.push({x:r(), y:r(), l:.5+r()*1.4, s:.55+r()*.85});
+} })();
+function drawRain(t){
+  if(P.rain<.03) return;
+  ctx.save();
+  ctx.strokeStyle='rgba(198,224,240,'+(.10+.42*P.rain)+')';
+  ctx.lineWidth=1.15;
+  ctx.beginPath();
+  var wind=62;
+  for(var i=0;i<rainDrops.length;i++){
+    var d=rainDrops[i];
+    var y=((d.y*1.6 + t*d.s*.55)%1.35-.12)*H;
+    var x=(d.x*W + t*0 + ((y/H)*wind)) % (W+120) - 60;
+    ctx.moveTo(x,y); ctx.lineTo(x-6*d.l, y+22*d.l);
+  }
+  ctx.stroke(); ctx.restore();
+}
+
+/* —— 闪电 —— */
+var boltAt=-99, flashA=0, nextBolt=5;
+function drawLightning(t){
+  if(P.rain>.5 && t>nextBolt){ nextBolt=t+4.5+Math.random()*8; boltAt=t; flashA=1; }
+  flashA*=0.87;
+  if(t-boltAt<.3){
+    var k=1-(t-boltAt)/.3, r=rng(((boltAt*1000)|0)+7);
+    ctx.save();
+    ctx.globalAlpha=k*.85;
+    ctx.strokeStyle='rgba(214,236,255,.9)'; ctx.lineWidth=2.4;
+    ctx.beginPath();
+    var x=W*(.2+.6*r()), y=0;
+    ctx.moveTo(x,y);
+    for(var i=0;i<9;i++){ x+=(r()-.5)*70; y+=H*.56/9; ctx.lineTo(x,y); }
+    ctx.stroke();
+    ctx.globalAlpha=k*.5; ctx.lineWidth=6;
+    ctx.strokeStyle='rgba(150,200,255,.45)'; ctx.stroke();
+    ctx.restore();
+  }
+  if(flashA>.01){
+    ctx.fillStyle='rgba(206,228,255,'+(flashA*.42)+')';
+    ctx.fillRect(0,0,W,H);
+  }
+}
+
+/* ============================================================
+   2. 主循环
+   ============================================================ */
+var clock=0, last=0, lastNow=0, bow={x:0,y:0,s:100}, rafAlive=0, lastBail=0;
+
+/* 单帧绘制（rAF 与兜底重绘共用同一套绘制序列） */
+function renderFrame(t, now){
+  ctx.clearRect(0,0,W,H);
+  drawSky(t);
+  drawCliffs(t);
+  drawLightning(t);
+  for(var i=0;i<3;i++) drawSeaBand(i,t,5);
+  bow=drawShip(t, now);
+  for(var j=3;j<5;j++) drawSeaBand(j,t,5);
+  drawDock(bow, t);
+  drawArrow(bow, t);
+  drawParts();
+  drawRain(t);
+  drawDemoFrame(t);
+  drawClassFrame(t);
+  drawCmpFrame(t);
+}
+/* 推进一帧：算时间步 + 绘制。cap 用于兜底重绘时加快场景氛围收敛 */
+function tick(now, cap){
+  var dt=Math.min(cap||.05,(now-last)/1000||.016); last=now;
+  clock=now/1000; lastNow=now;
+  stepParams(1-Math.pow(.001,dt));
+  stepParts(dt);
+  renderFrame(clock, now);
+}
+/* 立即同步补画一帧（不推进时间）：用于画布被清空后救场 */
+function paint(){ if(!ctx||!W||!H) return; renderFrame(clock, lastNow); }
+
+function frame(now){
+  rafAlive = now;
+  tick(now);
+  requestAnimationFrame(frame);
+}
+
+/* 兜底重绘：预览面板 / 后台标签页会暂停或节流 rAF，
+   此时画布会停在空白或旧帧上（表现为"背景没了"）。定时器发现 rAF 掉线就自己补画。 */
+setInterval(function(){
+  if(document.hidden || !started) return;
+  var t = (window.performance && performance.now) ? performance.now() : Date.now();
+  if(t - rafAlive < 900) return;          /* rAF 还活着，交给它画 */
+  if(t - lastBail < 900) return;
+  lastBail = t;
+  tick(t, .3);                            /* 步长放大，让场景氛围几帧内就位 */
+}, 700);
+window.addEventListener('visibilitychange', function(){
+  if(document.hidden) return;
+  resize();                                /* 回到前台：重新量尺寸并补画 */
+  paint();
+});
+window.addEventListener('focus', function(){ if(started) paint(); });
+
+/* ============================================================
+   3. 剧情引擎
+   ============================================================ */
+var CAST={
+  narr:   {name:'航海日志', role:'破浪实验室 · 实验记录', avatar:'📖', cls:'deep'},
+  mentor: {name:'老陈教授', role:'破浪实验室 · 首席工程师', avatar:'🎓', cls:'blue'},
+  captain:{name:'钱船长',   role:'“星海号” 330TEU 集装箱船 · 船长', avatar:'⚓', cls:'red'},
+  director:{name:'老所长',  role:'远洋船舶工程研究所 · 所长', avatar:'📜', cls:'red'},
+  fox:    {name:'小狸',     role:'破浪实验室 · 见习工程师', avatar:'🦊', cls:''}
+};
+
+var SCENE_META={
+  fjord:    ['峡湾出口', 'THE FJORD MOUTH · DAWN'],
+  strait:   ['风暴海峡', 'THE STORM STRAIT'],
+  radio:    ['当夜 · 密电', 'NIGHT WATCH · THE CIPHER'],
+  lesson:   ['深夜补课 · 三堂波学课', 'NIGHT CLASS · SUPERPOSITION / INTERFERENCE'],
+  blueprint:['绝密图纸', 'CLASSIFIED BLUEPRINT BF-05'],
+  dock:     ['船坞 · 加装', 'DRY DOCK · FITTING THE BULB'],
+  run:      ['破浪提速', 'WAVE-BREAKING RUN'],
+  goal:     ['图纸归你', 'THE BLUEPRINT IS YOURS']
+};
+var SCENE_ORDER=['fjord','strait','radio','lesson','blueprint','dock','run','goal'];
+
+var STEPS=[
+ {scene:'fjord', nar:'航海日志 · 第五日 · 06:40 · 峡湾出口', who:'narr',
+  text:'星海号穿出了最后一道峡湾。前方二十海里，是船员们称作“铁喉咙”的地方——<b>风暴海峡</b>。' },
+
+ {scene:'fjord', who:'captain',
+  text:'教授！峡湾出来了……可您往正前方看。浪高四米，横风九级，海图上那一片全是暗礁。往哪儿躲？' },
+
+ {scene:'fjord', who:'mentor',
+  text:'躲不掉了，船长。这半年我们把“星海号”的艏型改到了极限：艏柱放样修圆、前倾加大、水下型线一路削顺……能耗是降了一点，可也只降了那一点。' },
+
+ {scene:'fjord', who:'mentor',
+  text:'传统船艏的减阻手段，到峡湾口这儿，<span class="hl">已经走到尽头</span>了。再削，也削不出新的航速。' },
+
+ {scene:'strait', nar:'航海日志 · 第五日 · 11:20 · 风暴海峡 · 风浪内部', who:'captain',
+  text:'主机推到八成！……航速六节、五节……教授，那堵“水墙”又立在船头了！浪峰死死顶住船艏，马力全被它吃掉！' },
+
+ {scene:'strait', who:'fox',
+  text:'（耳朵贴在水听器上）教授，我听得见——船艏推出去的波，一列一列地撞回来，像有人在船底拽着一条看不见的尾巴。' },
+
+ {scene:'strait', who:'mentor',
+  text:'这就是<span class="hl">兴波阻力</span>。船越接近高速，艏波越高、波幅越大，阻力涨得越凶。浪高四米的时候，它已经兜不住了。' },
+
+ {scene:'radio', nar:'航海日志 · 当夜 · 22:15 · 加急密电抵达', who:'director', fx:'telegram',
+  text:'老陈：常规艏型已到极限，不必再同型线较劲。把“以波治波”从实验台搬到海上——<b>启动球鼻艏计划</b>。图纸随电附上，图号 BF-05。' },
+
+ {scene:'radio', who:'mentor', fx:'telegram',
+  text:'……老所长。他早就把答案，压在这张图纸里了。' },
+
+/* —— 深夜补课：玛丽皇后二号（QM2）真实案例 + 三堂波学课 —— */
+ {scene:'lesson', nar:'航海日志 · 当夜 · 23:00 · 抛锚夜泊 · 实验台的灯还亮着', who:'mentor',
+  text:'图纸先不急着摊开。老所长在电报末尾写"照图施工，别问我为什么"——可工程师不能揣着答案不懂原理。今晚泊在锚地，加一节夜课。开课之前，先讲条真船。' },
+
+ {scene:'lesson', who:'mentor',
+  text:'2004 年正式亮相的"<b>玛丽皇后二号</b>"——卡纳德公司的跨大西洋旗舰，345 米长、15 万吨，是当时世界最大的客船。合同要求它<b>六天横渡大西洋</b>，对应航速约 <b>30 节</b>。可 2003 年 9 月第一轮海试，航速和振动都没达标，法国大西洋船厂只好把船开回干船坞。' },
+
+ {scene:'lesson', who:'mentor',
+  text:'他们没换主机，也没多加一马力——只是把球鼻艏<b>向前加长了一段</b>。就这一段，让球鼻艏的波在设计航速下正好顶进艏波的波谷。11 月第二轮海试：在 10 英里测速线上三次稳定<b>超过 30 节</b>，振动测试全部通过。12 月如期交付，2004 年 1 月，英国女王伊丽莎白二世亲自为它命名。' },
+
+ {scene:'lesson', who:'fox',
+  text:'就改一个长度？那凭什么是"这一段"，不是"那一段"？总不能拿船当骰子扔吧！' },
+
+ {scene:'lesson', who:'mentor',
+  text:'问得好——凭的不是运气，是三条波学原理。第一课：<b>波的叠加</b>。' },
+
+ {scene:'lesson', who:'mentor', fx:'super',
+  text:'几列波在水面上相遇，谁也吞不掉谁：每列波都保持自己的<b>波长、频率和波速</b>，互相穿过、各走各的。相遇处水面的真实起伏，等于各列波引起位移的<b>代数和</b>——这就是<span class="hl">叠加原理</span>：<span class="num">y(x,t) = y₁(x,t) + y₂(x,t)</span>。' },
+
+ {scene:'lesson', who:'mentor', fx:'super',
+  text:'注意：叠加本身不分"好坏"。峰遇谷，可以互相抵矮；峰遇峰，也可以叠得更高。水面最后是高是平，取决于两列波在每个点的<b>步调</b>是否咬合——描述这件事的，就是"干涉"。' },
+
+ {scene:'lesson', who:'mentor', fx:'cond',
+  text:'第二课：<b>波的干涉</b>。两列波叠加后，若水面上有的地方<b>始终</b>加强、有的地方<b>始终</b>减弱，形成稳定的图样，就叫干涉。但它有门槛——必须<b>同时</b>满足三个相干条件：' },
+
+ {scene:'lesson', who:'mentor', fx:'cond',
+  text:'<b>① 频率相同；② 相位差恒定</b>（不随时间乱变）；<b>③ 振动方向相同</b>。看屏幕：左边同频、相位差锁定，加强/减弱的位置钉死不动，图样稳定；右边频率不同，你追我赶，图样每秒都在漂，谈不上干涉。' },
+
+ {scene:'lesson', who:'fox',
+  text:'那球鼻艏的波和艏波——同一条船、同一个航速造出来的，频率肯定一样，相位差也只由位置决定。条件全中！' },
+
+ {scene:'lesson', who:'mentor',
+  text:'正是。它们是<b>天生的一对相干波</b>，剩下的唯一变量，就是两列波之间的相位差。第三课，讲相位差如何决定生死。' },
+
+ {scene:'lesson', who:'mentor', fx:'phase',
+  text:'<b>相长与相消</b>。两列波叠加，合成振幅由相位差 Δφ 决定：<span class="num">A<sub>合</sub>² = A₁² + A₂² + 2A₁A₂·cos Δφ</span>；振幅相同时就是 <span class="num">A<sub>合</sub> = 2A·|cos(Δφ/2)|</span>。拖动滑杆，亲眼看看两个极端——' },
+
+ {scene:'lesson', who:'mentor', fx:'phase',
+  text:'Δφ = 0°：峰对峰、谷对谷，<span class="hl">相长干涉</span>，振幅翻倍，浪更凶；Δφ = 180°：峰对谷、谷对峰，<span class="hl">相消干涉</span>，两列波互相抵平，水面重归安静。<b>球鼻艏要干的，就是后者。</b>' },
+
+ {scene:'lesson', who:'mentor',
+  text:'三课讲完，答案已经浮出水面：要让球鼻艏的波顶进艏波的波谷，就得让 Δφ = 180°。而 Δφ 从哪来？来自两列波出发点之间的<span class="hl">空间波程差</span>。现在——打开图纸。'},
+
+ {scene:'blueprint', nar:'绝密图纸 · 图号 BF-05 · 球鼻艏计划', who:'mentor', fx:'blueprint',
+  text:'看图。球鼻艏不是装饰件——它本身也会造波。关键在于：它造的，是一列<b>反相</b>的浪。' },
+
+ {scene:'blueprint', who:'mentor', fx:'blueprint',
+  text:'装上它，船艏就有了两位“造浪者”：一位是船体艏柱，一位是艏柱下方那个球状突起。两列波落在同一个水面上，彼此叠加。' },
+
+ {scene:'blueprint', who:'fox', fx:'blueprint',
+  text:'可它凭什么正好反相？' },
+
+ {scene:'blueprint', who:'mentor', fx:'blueprint',
+  text:'凭<span class="hl">空间波程差</span>。球鼻艏在艏柱前方凸出 <span class="num">L<sub>b</sub></span> 那么远，两列波的出发点前后错开了一段路；走完这段路，相位就差开 <span class="num">Δφ = 2πL<sub>b</sub>/λ</span>。凑到 180°，两列波就正好顶上牛。' },
+
+ {scene:'blueprint', who:'mentor', fx:'blueprint',
+  text:'而波长 λ 又由航速决定：<span class="num">λ = 2πV²/g</span>。所以——<b>设计巡航速度只有一个</b>。同一个球鼻艏，换一个速度档，最优解就全变了。' },
+
+ {scene:'blueprint', nar:'实验台 · 相消干涉推演', who:'mentor', fx:'demo',
+  text:'来来，动手比听讲快。拖动滑杆，让球鼻艏与船艏的两列波顶上牛——把 Δφ 凑到 180°，你会看见合成波被削平。' },
+
+ {scene:'blueprint', who:'mentor', fx:'demo',
+  text:'看，合成激波振幅塌下去了。你刚刚做的，就是球鼻艏在海上替你做的事。' },
+
+ {scene:'dock', who:'fox',
+  text:'焊好了！球状突起装在艏柱下方，前伸 <span class="num">L<sub>b</sub></span>，外径按图纸配……教授，这东西会不会反而更费油啊？' },
+
+ {scene:'dock', who:'mentor',
+  text:'会。它多出一块湿表面积，摩擦阻力一定上涨。所以这是一笔账：<b>用最小的摩擦代价，换最大的消波收益</b>。装得对，净收益是正的；装得不对，越装越慢。' },
+
+ {scene:'run', who:'captain',
+  text:'设计巡航速度锁定——十二米每秒！……教授，您猜怎么着？船头那堵墙，塌了半边！' },
+
+ {scene:'run', who:'mentor',
+  text:'相消干涉把激波振幅削掉大半，艏波被“顶”了回去，兴波阻力跟着掉。省下来的马力，全变成速度还给你。' },
+
+ {scene:'run', who:'captain',
+  text:'好家伙——同一台主机，同一个油位。我这条船，现在能<b>破浪提速</b>了！' },
+
+ {scene:'run', nar:'航海日志 · 第五日 · 15:40 · 风暴海峡出口 · 双船对照', who:'mentor', fx:'compare',
+  text:'眼见为实。同一片海域、同一航速、同一台主机，两条一模一样的“星海号”并排跑——<b>上面一条没装球鼻艏，下面一条装了</b>。盯住船艏那列浪：' },
+
+ {scene:'run', who:'captain', fx:'compare',
+  text:'看！上面那条，艏波还是一堵墙，兴波阻力箭头拖得老长；下面那条，球鼻艏的波正好顶进艏波的波谷——<b>浪头塌了</b>，箭头短得几乎看不见。省下来的马力，全是我们的！'},
+
+ {scene:'run', who:'mentor', fx:'compare',
+  text:'这个画面，现实里真有翻版。2021 年，印度第一艘国产航母<b>“维克兰特”号</b>出海试航——四万吨的巨舰，竟在<b>风平浪静</b>的海面上“磕头”：舰艏高高扬起，再重重砸下，在海面犁出一条<b>锯齿状尾迹</b>。像不像上面那条没装球鼻艏的船？'},
+
+ {scene:'run', who:'captain', fx:'compare',
+  text:'而 2024 年，咱们八万余吨的<b>“福建舰”</b>首航，同样海况下稳得像一块平地，连印度网友都在视频下面留言：“开得太稳了。”舰艏水线下，正是那颗<b>球鼻艏</b>——和我们“星海号”身上这颗，是同一个原理。'},
+
+ {scene:'run', who:'mentor', fx:'compare',
+  text:'别小看这几米的起伏。航母甲板每颠簸一寸，高速着舰的舰载机就多一分<b>重落地</b>的风险，弄不好就是机毁人亡。印度工程师复盘“磕头”时也承认：滑跃艏段超重、艉部配重没装齐都是原因——但舰艏少了一颗能<b>“以波治波”</b>的球鼻艏，艏浪无人克制，同样是绕不开的一条。<b>一颗球，稳住的是整艘航母的战力。</b>'},
+
+ {scene:'goal', who:'mentor', fx:'goal',
+  text:'现在，轮到你了。图纸归你，参数归你，风暴海峡的浪也归你——把“星海号”的球鼻艏，调到最优。' }
+];
+
+var idx=-1, cur=null, typing=false, typeTimer=null, typeFull='', typeN=0, typeTokens=null;
+var dlg=document.getElementById('dlg'), dlgText=document.getElementById('dlgText');
+var dlgName=document.getElementById('dlgName'), dlgRole=document.getElementById('dlgRole');
+var dlgAvatar=document.getElementById('dlgAvatar'), dlgTag=document.getElementById('dlgTag');
+var overlay=document.getElementById('overlay'), dotsBox=document.getElementById('dots');
+var logRibbon=document.getElementById('logRibbon'), logText=document.getElementById('logText');
+var sceneTitle=document.getElementById('sceneTitle'), ctName=document.getElementById('ctName'), ctSub=document.getElementById('ctSub');
+var nextArrow=document.getElementById('nextArrow'), scrim=document.getElementById('scrim');
+var btnBack=document.getElementById('btnBack'), dlgHint=document.getElementById('dlgHint');
+var dlgProg=document.getElementById('dlgProg');
+var started=false, demoSolved=false, lastScene='';
+/* 发言人主题色（D3）：叙事=深灰蓝、教授=海蓝、船长=砖红、所长=暗红、小狸=橙 */
+var SPK={narr:'#46637c', mentor:'#2e6d9e', captain:'#a8432c', director:'#8e3623', fox:'#c07a28'};
+/* 场景切换过渡脉冲 */
+function wipeFx(){
+  var w=document.getElementById('wipe');
+  if(!w) return;
+  w.classList.remove('go'); void w.offsetWidth; w.classList.add('go');
+}
+
+/* 每个场景的首步索引：供场景点点击跳转 */
+var SCENE_FIRST={};
+STEPS.forEach(function(s,i){ if(s.scene && SCENE_FIRST[s.scene]===undefined) SCENE_FIRST[s.scene]=i; });
+
+SCENE_ORDER.forEach(function(sc){
+  var d=document.createElement('i');
+  d.setAttribute('data-scene', sc);
+  var nm=(SCENE_META[sc]||[sc])[0];
+  var u=document.createElement('u'); u.textContent=nm; d.appendChild(u);   /* 悬停场景名 */
+  d.setAttribute('role','button');
+  d.setAttribute('tabindex','0');
+  d.setAttribute('aria-label','跳到场景：'+nm);
+  function jump(e){
+    if(e) e.stopPropagation();
+    if(!started) begin();
+    var t=SCENE_FIRST[sc];
+    if(t===undefined) return;
+    if(typing) finishType();
+    if(t!==idx) goto(t);
+  }
+  d.addEventListener('click', jump);
+  d.addEventListener('keydown', function(e){
+    if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); jump(e); }
+  });
+  dotsBox.appendChild(d);
+});
+
+function paintDots(scene){
+  var cur=SCENE_ORDER.indexOf(scene);
+  var kids=dotsBox.children;
+  for(var i=0;i<kids.length;i++){
+    kids[i].className = i===cur ? 'on' : (i<cur ? 'done' : '');
+  }
+}
+
+function showSceneTitle(name){
+  var m=SCENE_META[name]; if(!m) return;
+  ctName.textContent=m[0]; ctSub.textContent=m[1];
+  sceneTitle.classList.add('show');
+  setTimeout(function(){ sceneTitle.classList.remove('show'); }, 2400);
+}
+
+function buildOverlay(type){
+  var lessonType=(type==='super'||type==='cond'||type==='phase');
+  var cmpType=(type==='compare');
+  overlay.className = type ? 'on' : '';
+  document.body.className = (type==='blueprint'||type==='demo'||lessonType||cmpType) ? 'fx-big' : '';
+  if(type!=='demo'){ demoCv=null; demoCtx=null; }
+  if(!lessonType){ classMode=null; classCv=null; classCtx=null; }
+  if(!cmpType){ cmpCv=null; cmpCtx=null; }
+  if(!type){ overlay.innerHTML=''; return; }
+  if(type==='telegram'){
+    overlay.innerHTML =
+      '<div class="ov"><div class="tg">'+
+        '<div class="tg-head"><span>加急密电 · 三号浮标台转</span><span class="lv">密级：绝密</span></div>'+
+        '<div class="tg-body">'+
+          '老陈：<br>常规艏型已到极限，不必再同型线较劲。把“<b>以波治波</b>”从实验台搬到海上——'+
+          '<b>启动球鼻艏计划</b>。<br>图纸随电附上，图号 <b>BF-05</b>。设计水线、伸出长度 L<sub>b</sub> 与设计航速，'+
+          '一并标注。照图施工，别问我为什么。'+
+        '</div>'+
+        '<div class="tg-foot">签发：老所长 ｜ 远洋船舶工程研究所 ｜ 破浪实验室 收</div>'+
+      '</div></div>';
+  }
+  else if(type==='blueprint'){ overlay.innerHTML = bpHTML(); }
+  else if(type==='demo'){ overlay.innerHTML = demoHTML(); bindDemo(); }
+  else if(lessonType){ classMode=type; overlay.innerHTML = classHTML(type); bindClass(type); }
+  else if(cmpType){ overlay.innerHTML = cmpHTML(); }
+  else if(type==='goal'){ overlay.innerHTML = goalHTML(); bindGoal(); }
+}
+
+function bpHTML(){
+  return '<div class="ov"><div class="bp">'+
+'<svg viewBox="0 0 1000 566" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="球鼻艏计划图纸 BF-05">'+
+  '<defs>'+
+    '<pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">'+
+      '<path d="M20 0 L0 0 0 20" fill="none" stroke="rgba(150,200,240,.10)" stroke-width="1"/>'+
+    '</pattern>'+
+    '<pattern id="grid2" width="100" height="100" patternUnits="userSpaceOnUse">'+
+      '<path d="M100 0 L0 0 0 100" fill="none" stroke="rgba(150,200,240,.18)" stroke-width="1"/>'+
+    '</pattern>'+
+    '<linearGradient id="hullG" x1="0" y1="0" x2="0" y2="1">'+
+      '<stop offset="0" stop-color="#1b4a6f"/><stop offset="1" stop-color="#0d2a44"/>'+
+    '</linearGradient>'+
+    '<linearGradient id="seaG" x1="0" y1="0" x2="0" y2="1">'+
+      '<stop offset="0" stop-color="rgba(90,170,220,.22)"/><stop offset="1" stop-color="rgba(20,60,100,0)"/>'+
+    '</linearGradient>'+
+  '</defs>'+
+  '<rect width="1000" height="566" fill="#0c2a44"/>'+
+  '<rect width="1000" height="566" fill="url(#grid)"/>'+
+  '<rect width="1000" height="566" fill="url(#grid2)"/>'+
+  '<rect x="14" y="14" width="972" height="538" fill="none" stroke="rgba(160,210,245,.55)" stroke-width="2"/>'+
+  '<rect x="22" y="22" width="956" height="522" fill="none" stroke="rgba(160,210,245,.28)" stroke-width="1"/>'+
+
+  /* 标题 */
+  '<g class="bp-fade">'+
+    '<text x="42" y="60" fill="#dff0ff" font-size="25" font-weight="700" letter-spacing="6" font-family="Microsoft YaHei,sans-serif">球 鼻 艏 计 划</text>'+
+    '<text x="44" y="82" fill="rgba(160,210,245,.85)" font-size="11" letter-spacing="3" font-family="Consolas,monospace">BULBOUS BOW PLAN ｜ DWG No. BF-05 ｜ SCALE 1:100</text>'+
+    '<line x1="42" y1="94" x2="958" y2="94" stroke="rgba(160,210,245,.35)" stroke-width="1"/>'+
+  '</g>'+
+
+  /* 绝密章 */
+  '<g class="bp-fade f3" transform="translate(878,58) rotate(-11)">'+
+    '<rect x="-42" y="-24" width="84" height="48" fill="none" stroke="rgba(232,64,52,.9)" stroke-width="4"/>'+
+    '<text x="0" y="10" text-anchor="middle" fill="rgba(240,86,70,.95)" font-size="27" font-weight="800" letter-spacing="4" font-family="Microsoft YaHei,sans-serif">绝密</text>'+
+  '</g>'+
+
+  /* 海面背景 */
+  '<rect x="42" y="330" width="916" height="150" fill="url(#seaG)"/>'+
+
+  /* 设计水线 */
+  '<line x1="42" y1="330" x2="958" y2="330" stroke="rgba(170,220,255,.75)" stroke-width="1.6" stroke-dasharray="12 7"/>'+
+  '<text x="48" y="322" fill="rgba(190,230,255,.9)" font-size="12" font-family="Microsoft YaHei,sans-serif">设计水线 WL</text>'+
+
+  /* 船体艏部剖面（艏柱前倾 + 水下收拢） */
+  '<path class="draw-line d1" d="M140 190 L505 190 Q540 188 562 176 C 585 235 600 290 604 330 C 600 360 590 380 570 386 L140 386 Z" '+
+        'fill="url(#hullG)" stroke="rgba(200,235,255,.85)" stroke-width="2"/>'+
+  '<line x1="140" y1="196" x2="560" y2="196" stroke="rgba(200,235,255,.35)" stroke-width="1" stroke-dasharray="5 5"/>'+
+  '<text x="152" y="186" fill="rgba(190,230,255,.72)" font-size="11" font-family="Microsoft YaHei,sans-serif">主甲板</text>'+
+  '<g class="bp-fade f2" stroke="rgba(160,210,245,.22)" stroke-width="1">'+
+    '<line x1="225" y1="190" x2="225" y2="386"/>'+
+    '<line x1="330" y1="190" x2="330" y2="386"/>'+
+    '<line x1="435" y1="190" x2="435" y2="386"/>'+
+    '<line x1="515" y1="190" x2="515" y2="386"/>'+
+    '<line x1="140" y1="262" x2="566" y2="262" stroke-dasharray="4 4"/>'+
+    '<line x1="140" y1="330" x2="604" y2="330" stroke-dasharray="2 6"/>'+
+  '</g>'+
+
+  /* 球鼻艏（水线下、向前凸出） */
+  '<path class="draw-line d2" d="M600 334 C 656 322 694 346 690 364 C 686 382 630 390 596 388 C 582 387 578 380 578 370 L578 344 Z" '+
+        'fill="#8e3a2a" stroke="#ffd7c8" stroke-width="2.2"/>'+
+
+  /* 波程差标注 */
+  '<g class="bp-fade f2">'+
+    '<line x1="604" y1="400" x2="604" y2="432" stroke="rgba(255,190,120,.9)" stroke-width="1"/>'+
+    '<line x1="690" y1="386" x2="690" y2="432" stroke="rgba(120,214,255,.9)" stroke-width="1"/>'+
+    '<line x1="596" y1="424" x2="698" y2="424" stroke="rgba(255,235,190,.9)" stroke-width="1.4"/>'+
+    '<path d="M604 424 l12 -5 v10 z" fill="rgba(255,235,190,.95)"/>'+
+    '<path d="M690 424 l-12 -5 v10 z" fill="rgba(255,235,190,.95)"/>'+
+    '<text x="647" y="418" text-anchor="middle" fill="#ffe9b8" font-size="15" font-weight="700" font-family="Georgia,serif">L<tspan font-size="10">b</tspan></text>'+
+    '<text x="647" y="448" text-anchor="middle" fill="rgba(255,225,170,.85)" font-size="11" font-family="Microsoft YaHei,sans-serif">空间波程差</text>'+
+  '</g>'+
+
+  /* 引线标注 */
+  '<g class="bp-fade f2">'+
+    '<circle cx="656" cy="352" r="3" fill="#ffd7c8"/>'+
+    '<line x1="658" y1="350" x2="716" y2="256" stroke="rgba(255,215,200,.55)" stroke-width="1"/>'+
+    '<text x="722" y="252" fill="#ffd9c8" font-size="13" font-weight="700" font-family="Microsoft YaHei,sans-serif">球鼻艏（球状突起）</text>'+
+    '<text x="722" y="270" fill="rgba(255,215,200,.72)" font-size="11" font-family="Microsoft YaHei,sans-serif">水下防污漆涂装 · 与船体水线下同色</text>'+
+    '<circle cx="588" cy="240" r="3" fill="#bfe4ff"/>'+
+    '<line x1="586" y1="238" x2="716" y2="200" stroke="rgba(190,225,255,.5)" stroke-width="1"/>'+
+    '<text x="722" y="196" fill="#cfe9ff" font-size="13" font-weight="700" font-family="Microsoft YaHei,sans-serif">艏柱 · 船体艏波发生点</text>'+
+  '</g>'+
+
+  /* 两列波 */
+  '<g class="draw-line d3" fill="none">'+
+    '<path d="M40 480 q 26 -30 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0" '+
+          'stroke="#c4741d" stroke-width="2.6"/>'+
+  '</g>'+
+  '<g class="draw-line d4" fill="none">'+
+    '<path d="M66 480 q 26 30 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0 t 52 0" '+
+          'stroke="#2b93b5" stroke-width="2.6"/>'+
+  '</g>'+
+  '<g class="bp-fade f3">'+
+    '<text x="46" y="506" fill="#e8b073" font-size="12" font-weight="700" font-family="Microsoft YaHei,sans-serif">船体艏波（波峰）</text>'+
+    '<text x="46" y="524" fill="#7fd3ff" font-size="12" font-weight="700" font-family="Microsoft YaHei,sans-serif">球鼻艏兴波（反相 · 波谷对准波峰）</text>'+
+    '<text x="330" y="500" fill="#ffe9b8" font-size="12.5" font-weight="700" font-family="Microsoft YaHei,sans-serif">Δφ = 2πL<tspan font-size="9">b</tspan> / λ = 180°　→　相消干涉，激波振幅被削平</text>'+
+    '<text x="330" y="520" fill="rgba(255,225,170,.75)" font-size="11" font-family="Microsoft YaHei,sans-serif">波长 λ = 2πV²/g（由设计巡航速度决定，设计航速只有一个）</text>'+
+  '</g>'+
+
+  /* 图签 */
+  '<g class="bp-fade f3">'+
+    '<rect x="700" y="452" width="258" height="92" fill="rgba(8,26,44,.6)" stroke="rgba(160,210,245,.6)" stroke-width="1.6"/>'+
+    '<line x1="700" y1="482" x2="958" y2="482" stroke="rgba(160,210,245,.4)"/>'+
+    '<line x1="700" y1="512" x2="958" y2="512" stroke="rgba(160,210,245,.4)"/>'+
+    '<line x1="830" y1="482" x2="830" y2="544" stroke="rgba(160,210,245,.4)"/>'+
+    '<text x="710" y="472" fill="#dff0ff" font-size="11.5" font-family="Microsoft YaHei,sans-serif">图号 BF-05　球鼻艏计划</text>'+
+    '<text x="710" y="502" fill="rgba(210,235,255,.85)" font-size="11" font-family="Microsoft YaHei,sans-serif">设计巡航速度 V</text>'+
+    '<text x="840" y="502" fill="#ffd98a" font-size="11.5" font-weight="700" font-family="Georgia,serif">12.0 m/s</text>'+
+    '<text x="710" y="532" fill="rgba(210,235,255,.85)" font-size="11" font-family="Microsoft YaHei,sans-serif">签发</text>'+
+    '<text x="840" y="532" fill="#ffd98a" font-size="11.5" font-weight="700" font-family="Microsoft YaHei,sans-serif">老所长</text>'+
+  '</g>'+
+'</svg>'+
+'<div class="bp-cap"><span>图号 <b>BF-05</b> · 球鼻艏计划 · 施工图</span><span>伸出长度 L<sub>b</sub> → 空间波程差 → 相位差 Δφ = 2πL<sub>b</sub>/λ</span></div>'+
+'</div></div>';
+}
+
+/* —— 推演台 —— */
+var demoState={ Lb:14, V:12, ok:false };
+function lam(V){ return 2*Math.PI*V*V/G; }
+function dphi(Lb,V){ return 2*Math.PI*Lb/lam(V); }
+function ampRatio(dp){                 /* |1 + e^{iΔφ}| / 2 → 0..1 */
+  var re=1+Math.cos(dp), im=Math.sin(dp);
+  return Math.sqrt(re*re+im*im)/2;
+}
+function cancelPct(Lb,V){ return (1-ampRatio(dphi(Lb,V)))*100; }
+function demoHTML(){
+  return '<div class="ov"><div class="dm" id="dmBox">'+
+    '<div class="dm-head">'+
+      '<span class="dm-tag">实验台 · 应用</span>'+
+      '<span class="dm-title">相消干涉推演 · 把 Δφ 凑到 180°</span>'+
+      '<span class="dm-hint">提示：λ = 2πV²/g ≈ 92 m（V = 12 m/s）；把 L<sub>b</sub> 调到约 λ/2，相位差即 180°</span>'+
+    '</div>'+
+    '<canvas id="cvDemo"></canvas>'+
+    '<div class="dm-ctl">'+
+      '<div class="dm-row"><label>① 球鼻艏伸出长度 L<sub>b</sub></label>'+
+        '<input type="range" id="sLb" min="0" max="110" step="0.5" value="'+demoState.Lb+'">'+
+        '<span class="val" id="vLb">--</span></div>'+
+      '<div class="dm-row"><label>③ 设计航速 V</label>'+
+        '<input type="range" id="sV" min="8" max="17" step="0.1" value="'+demoState.V+'">'+
+        '<span class="val" id="vV">--</span></div>'+
+    '</div>'+
+    '<div class="dm-meters">'+
+      '<div class="mtr" id="mPhiBox"><div class="k">相位差 Δφ</div><div class="v" id="mPhi">--</div></div>'+
+      '<div class="mtr" id="mCanBox"><div class="k">艏波消波率</div><div class="v" id="mCan">--</div></div>'+
+      '<div class="mtr"><div class="k">波长 λ</div><div class="v" id="mLam">--</div></div>'+
+    '</div>'+
+    '<div class="dm-go">'+
+      '<button class="btn-c" id="btnDemoGo" disabled>继续剧情 ▸</button>'+
+      '<span class="dm-state" id="dmState">把消波率调到 60% 以上，才能继续。</span>'+
+    '</div>'+
+  '</div></div>';
+}
+function bindDemo(){
+  var sLb=document.getElementById('sLb'), sV=document.getElementById('sV');
+  var btn=document.getElementById('btnDemoGo');
+  function upd(){
+    demoState.Lb=parseFloat(sLb.value); demoState.V=parseFloat(sV.value);
+    var L=lam(demoState.V), dp=dphi(demoState.Lb,demoState.V);
+    var can=cancelPct(demoState.Lb,demoState.V);
+    var dpDeg=((dp*180/Math.PI)%360+540)%360-180;
+    document.getElementById('vLb').textContent=demoState.Lb.toFixed(1)+' m';
+    document.getElementById('vV').textContent=demoState.V.toFixed(1)+' m/s';
+    document.getElementById('mPhi').innerHTML=dpDeg.toFixed(0)+'°';
+    document.getElementById('mCan').innerHTML=can.toFixed(0)+'%';
+    document.getElementById('mLam').innerHTML=L.toFixed(1)+' m';
+    var phiBox=document.getElementById('mPhiBox'), canBox=document.getElementById('mCanBox');
+    phiBox.className='mtr'+(Math.abs(Math.abs(dpDeg)-180)<16?' good':'');
+    canBox.className='mtr'+(can>=60?' good':'');
+    demoState.ok = can>=60;
+    btn.disabled = !demoState.ok;
+    document.getElementById('dmState').textContent = demoState.ok
+      ? '✔ 相位凑上了：两列波波峰撞波谷，合成激波振幅塌下去了。'
+      : '把消波率调到 60% 以上，才能继续。（当前 '+can.toFixed(0)+'%）';
+    var box=document.getElementById('dmBox');
+    box.classList.toggle('good',demoState.ok);
+  }
+  sLb.addEventListener('input',upd); sV.addEventListener('input',upd);
+  btn.addEventListener('click',function(){ if(demoState.ok) advance(true); });
+  upd();
+}
+/* 推演台曲线 */
+var demoCv=null, demoCtx=null, demoDpr=1;
+function sizeDemo(){
+  demoCv=document.getElementById('cvDemo');
+  if(!demoCv){ demoCtx=null; return; }
+  demoCtx=demoCv.getContext('2d');
+  demoDpr=Math.min(window.devicePixelRatio||1,2);
+  var r=demoCv.getBoundingClientRect();
+  demoCv.width=Math.max(320,Math.round(r.width*demoDpr));
+  demoCv.height=Math.max(120,Math.round(r.height*demoDpr));
+}
+function drawDemoFrame(t){
+  if(!demoCtx) return;
+  var g=demoCtx, w=demoCv.width/demoDpr, h=demoCv.height/demoDpr;
+  g.setTransform(demoDpr,0,0,demoDpr,0,0);
+  g.clearRect(0,0,w,h);
+  var mid=h*.55, A=h*.17;
+  /* 背景刻度 */
+  g.strokeStyle='rgba(31,95,139,.16)'; g.lineWidth=1;
+  for(var i=1;i<6;i++){ var y=mid-A*1.3*i/3; g.beginPath(); g.moveTo(0,y); g.lineTo(w,y); g.stroke(); }
+  /* 静水面 */
+  g.strokeStyle='rgba(31,95,139,.5)'; g.setLineDash([6,5]); g.lineWidth=1.2;
+  g.beginPath(); g.moveTo(0,mid); g.lineTo(w,mid); g.stroke(); g.setLineDash([]);
+  g.fillStyle='rgba(31,95,139,.7)'; g.font='600 11px "Microsoft YaHei",sans-serif';
+  g.fillText('静水面', 6, mid-6);
+
+  var Lb=demoState.Lb, V=demoState.V, dp=dphi(Lb,V);
+  var cycles=3.4, k=2*Math.PI*cycles/w;
+  var sp=t*2.0;
+  function curve(phase, amp, color, lw, dash){
+    g.beginPath();
+    for(var x=0;x<=w;x+=2){
+      var y=mid - amp*Math.sin(k*x - sp + phase);
+      if(x===0) g.moveTo(x,y); else g.lineTo(x,y);
+    }
+    g.strokeStyle=color; g.lineWidth=lw; if(dash) g.setLineDash(dash); else g.setLineDash([]);
+    g.stroke(); g.setLineDash([]);
+  }
+  /* 船体艏波（橙） */
+  curve(0, A, 'rgba(196,116,29,.92)', 2.4);
+  /* 球鼻艏兴波（蓝，相位差 Δφ） */
+  curve(dp, A, 'rgba(43,147,181,.95)', 2.4, [7,5]);
+  /* 合成波（亮） */
+  var z=ampRatio(dp);                     /* 0..1 */
+  var sumAmp=A*z;
+  g.save();
+  g.shadowColor='rgba(240,230,200,.95)'; g.shadowBlur=9;
+  curve(0, sumAmp, 'rgba(255,250,236,.98)', 3.4);
+  g.restore();
+
+  /* 图例 */
+  g.font='700 12px "Microsoft YaHei",sans-serif';
+  g.fillStyle='rgba(196,116,29,.95)'; g.fillText('■ 船体艏波', 12, 18);
+  g.fillStyle='rgba(43,147,181,.98)'; g.fillText('■ 球鼻艏兴波（反相）', 116, 18);
+  g.fillStyle='rgba(90,74,50,.95)';  g.fillText('■ 叠加后的真实水面', 268, 18);
+  /* 振幅标尺 */
+  g.strokeStyle='rgba(142,54,35,.8)'; g.lineWidth=1.6; g.beginPath();
+  g.moveTo(w-132,mid); g.lineTo(w-132,mid-sumAmp); g.stroke();
+  g.beginPath(); g.moveTo(w-138,mid-sumAmp); g.lineTo(w-126,mid-sumAmp); g.stroke();
+  g.fillStyle='#8e3623'; g.fillText('A合 '+(1.20*z).toFixed(2)+' m', w-132+8, mid-sumAmp-6);
+  if(z<.2){
+    g.fillStyle='rgba(46,125,50,.95)'; g.font='800 13px "Microsoft YaHei",sans-serif';
+    g.fillText('相消干涉：波峰撞波谷，水面被削平', 12, h-12);
+  } else if(z>.9){
+    g.fillStyle='rgba(142,54,35,.95)'; g.font='800 13px "Microsoft YaHei",sans-serif';
+    g.fillText('两列波同相叠加：激波更高，阻力更大', 12, h-12);
+  } else {
+    g.fillStyle='rgba(90,74,50,.9)'; g.font='700 13px "Microsoft YaHei",sans-serif';
+    g.fillText('相位还没对上一半，继续调 L 或 V', 12, h-12);
+  }
+}
+
+/* —— 夜课演示（叠加 / 干涉条件 / 相长相消） —— */
+var classMode=null, classCv=null, classCtx=null, classDpr=1;
+var classState={ dp:0 };                     /* 第三课滑杆：Δφ（度） */
+
+function sizeClass(){
+  classCv=document.getElementById('cvClass');
+  if(!classCv){ classCtx=null; return; }
+  classCtx=classCv.getContext('2d');
+  classDpr=Math.min(window.devicePixelRatio||1,2);
+  var r=classCv.getBoundingClientRect();
+  classCv.width=Math.max(320,Math.round(r.width*classDpr));
+  classCv.height=Math.max(140,Math.round(r.height*classDpr));
+}
+
+function classHTML(type){
+  var inner='';
+  if(type==='super'){
+    inner =
+      '<div class="dm-head">'+
+        '<span class="dm-tag">夜课 · 第一课</span>'+
+        '<span class="dm-title">波的叠加 · 两列波相遇会怎样？</span>'+
+        '<span class="dm-hint">各走各的，互不干扰；相遇处逐点相加</span>'+
+      '</div>'+
+      '<canvas id="cvClass"></canvas>'+
+      '<div class="dm-note">叠加原理：<span class="fml">y(x,t) = y₁(x,t) + y₂(x,t)</span> —— '+
+      '每列波都保持自己的<b>波长、频率与波速</b>，互不干扰地穿过彼此；水面的真实起伏，是所有波引起位移的<b>代数和</b>。</div>';
+  }
+  else if(type==='cond'){
+    inner =
+      '<div class="dm-head">'+
+        '<span class="dm-tag">夜课 · 第二课</span>'+
+        '<span class="dm-title">波的干涉 · 图样稳定才算数</span>'+
+        '<span class="dm-hint">左：满足条件 → 干涉　｜　右：不满足 → 图样漂移</span>'+
+      '</div>'+
+      '<canvas id="cvClass"></canvas>'+
+      '<div class="dm-note">相干条件（须<b>同时</b>满足）：<b>① 频率相同　② 相位差恒定　③ 振动方向相同</b>。'+
+      '左图两列波同频、相位差锁定，加强/减弱的位置固定不动；右图频率不同，相对步调随时间变化，图样漂移，无法形成稳定干涉。</div>';
+  }
+  else {
+    inner =
+      '<div class="dm-head">'+
+        '<span class="dm-tag">夜课 · 第三课</span>'+
+        '<span class="dm-title">相长与相消 · Δφ 决定生死</span>'+
+        '<span class="dm-hint">拖动滑杆改变相位差 Δφ，观察合成振幅</span>'+
+      '</div>'+
+      '<canvas id="cvClass"></canvas>'+
+      '<div class="dm-ctl" style="grid-template-columns:1fr">'+
+        '<div class="dm-row"><label>相位差 Δφ</label>'+
+          '<input type="range" id="sDphi" min="0" max="360" step="1" value="'+classState.dp+'">'+
+          '<span class="val" id="vDphi">0°</span></div>'+
+      '</div>'+
+      '<div class="dm-meters" style="grid-template-columns:repeat(2,1fr)">'+
+        '<div class="mtr"><div class="k">合成振幅 A<sub>合</sub> = 2A·|cos(Δφ/2)|</div><div class="v" id="vAmp">--</div></div>'+
+        '<div class="mtr" id="clTag"><div class="k">干涉类型</div><div class="v" id="vKind">--</div></div>'+
+      '</div>';
+  }
+  return '<div class="ov"><div class="dm" id="clBox">'+inner+'</div></div>';
+}
+
+function bindClass(type){
+  if(type!=='phase') return;
+  var s=document.getElementById('sDphi');
+  s.addEventListener('input',function(){
+    classState.dp=parseInt(s.value,10)||0;
+    updPhaseMeters();
+  });
+  updPhaseMeters();
+}
+function updPhaseMeters(){
+  var deg=((classState.dp%360)+360)%360;
+  var r=Math.abs(Math.cos(deg*Math.PI/360));        /* A合 / (2A) */
+  document.getElementById('vDphi').textContent=classState.dp+'°';
+  document.getElementById('vAmp').innerHTML='2A × '+r.toFixed(2);
+  var kind, cls='mtr';
+  if(deg<40||deg>320){ kind='相长干涉 · 峰对峰，浪更凶'; cls='mtr bad'; }
+  else if(Math.abs(deg-180)<30){ kind='相消干涉 · 峰对谷，被抵平'; cls='mtr good'; }
+  else { kind='部分加强 / 部分减弱'; }
+  document.getElementById('vKind').textContent=kind;
+  document.getElementById('clTag').className=cls;
+}
+
+function waveLine(g, fn, x0, x1, color, lw, dash){
+  g.beginPath();
+  for(var x=x0;x<=x1;x+=2){
+    var y=fn(x);
+    if(x===x0) g.moveTo(x,y); else g.lineTo(x,y);
+  }
+  g.strokeStyle=color; g.lineWidth=lw;
+  if(dash) g.setLineDash(dash); else g.setLineDash([]);
+  g.stroke(); g.setLineDash([]);
+}
+function classWaterline(g,w,mid){
+  g.strokeStyle='rgba(31,95,139,.5)'; g.setLineDash([6,5]); g.lineWidth=1.2;
+  g.beginPath(); g.moveTo(0,mid); g.lineTo(w,mid); g.stroke(); g.setLineDash([]);
+  g.fillStyle='rgba(31,95,139,.7)'; g.font='600 11px "Microsoft YaHei",sans-serif';
+  g.fillText('静水面', 6, mid-6);
+}
+
+function drawSuper(g,w,h,t){
+  var mid=h*.52, A1=h*.17, A2=h*.105;
+  var k=2*Math.PI*2.6/w, sp=t*1.7, ph0=1.15;
+  classWaterline(g,w,mid);
+  var f1=function(x){ return mid - A1*Math.sin(k*x - sp); };
+  var f2=function(x){ return mid - A2*Math.sin(k*x - sp + ph0); };
+  waveLine(g, f1, 0, w, 'rgba(196,116,29,.85)', 2.2);
+  waveLine(g, f2, 0, w, 'rgba(43,147,181,.9)', 2.2, [7,5]);
+  g.save(); g.shadowColor='rgba(240,230,200,.95)'; g.shadowBlur=8;
+  waveLine(g, function(x){ return mid - ((mid-f1(x)) + (mid-f2(x))); }, 0, w, 'rgba(255,250,236,.98)', 3.2);
+  g.restore();
+  g.font='700 12px "Microsoft YaHei",sans-serif';
+  g.fillStyle='rgba(196,116,29,.95)'; g.fillText('■ 波 1（振幅 A₁）', 12, 18);
+  g.fillStyle='rgba(43,147,181,.98)'; g.fillText('■ 波 2（振幅 A₂）', 128, 18);
+  g.fillStyle='rgba(90,74,50,.95)';   g.fillText('■ 合成波 y = y₁ + y₂', 244, 18);
+  g.fillStyle='rgba(90,74,50,.85)'; g.font='600 12px "Microsoft YaHei",sans-serif';
+  g.fillText('两列波相遇：彼此穿过、各走各的 —— 合起伏 = 逐点相加', 12, h-12);
+}
+
+function drawCond(g,w,h,t){
+  var pw=(w-26)/2, ph=h-44, py=30;
+  function panel(x0, same){
+    var mid=py+ph*.55, A=h*.085;
+    var k=2*Math.PI*2.6/pw, sp=t*1.7;
+    var ph0=.85, k2=same?k:k*1.32;
+    var rel=function(){ return same?ph0:sp*.55+ph0; };
+    waveLine(g, function(x){ return mid - A*Math.sin(k*(x-x0) - sp); }, x0, x0+pw, 'rgba(196,116,29,.8)', 1.8);
+    waveLine(g, function(x){ return mid - A*Math.sin(k2*(x-x0) - sp + rel()); },
+             x0, x0+pw, 'rgba(43,147,181,.85)', 1.8, [6,4]);
+    waveLine(g, function(x){
+      return mid - (A*Math.sin(k*(x-x0)-sp) + A*Math.sin(k2*(x-x0)-sp+rel()));
+    }, x0, x0+pw, same?'rgba(46,125,50,.95)':'rgba(142,54,35,.95)', 2.6);
+    g.font='700 12px "Microsoft YaHei",sans-serif';
+    g.fillStyle=same?'rgba(46,125,50,.95)':'rgba(142,54,35,.95)';
+    g.fillText(same?'同频 · 相位差恒定 ✔ 稳定图样':'频率不同 ✘ 图样随时间漂移', x0+4, py-8);
+  }
+  panel(0,true); panel(pw+26,false);
+  g.strokeStyle='rgba(122,92,51,.3)'; g.lineWidth=1;
+  g.beginPath(); g.moveTo(pw+13,py-6); g.lineTo(pw+13,py+ph+4); g.stroke();
+  g.fillStyle='rgba(90,74,50,.85)'; g.font='600 12px "Microsoft YaHei",sans-serif';
+  g.fillText('橙/蓝：两列波　粗线：合成波 —— 只有左图能形成"始终加强、始终减弱"的稳定干涉', 12, h-12);
+}
+
+function drawPhase(g,w,h,t){
+  var mid=h*.55, A=h*.16;
+  var k=2*Math.PI*2.6/w, sp=t*1.7;
+  var dp=classState.dp*Math.PI/180;
+  classWaterline(g,w,mid);
+  waveLine(g, function(x){ return mid - A*Math.sin(k*x - sp); }, 0, w, 'rgba(196,116,29,.85)', 2.2);
+  waveLine(g, function(x){ return mid - A*Math.sin(k*x - sp + dp); }, 0, w, 'rgba(43,147,181,.9)', 2.2, [7,5]);
+  var z=Math.abs(Math.cos(dp/2));
+  g.save(); g.shadowColor='rgba(240,230,200,.95)'; g.shadowBlur=8;
+  waveLine(g, function(x){ return mid - 2*A*z*Math.sin(k*x - sp + dp/2); }, 0, w, 'rgba(255,250,236,.98)', 3.2);
+  g.restore();
+  g.font='700 12px "Microsoft YaHei",sans-serif';
+  g.fillStyle='rgba(196,116,29,.95)'; g.fillText('■ 波 1', 12, 18);
+  g.fillStyle='rgba(43,147,181,.98)'; g.fillText('■ 波 2（相差 Δφ）', 66, 18);
+  g.fillStyle='rgba(90,74,50,.95)';   g.fillText('■ 合成波', 198, 18);
+  g.strokeStyle='rgba(142,54,35,.8)'; g.lineWidth=1.6;
+  g.beginPath(); g.moveTo(w-120,mid); g.lineTo(w-120,mid-2*A*z); g.stroke();
+  g.beginPath(); g.moveTo(w-126,mid-2*A*z); g.lineTo(w-114,mid-2*A*z); g.stroke();
+  g.fillStyle='#8e3623'; g.font='700 12px Georgia,serif';
+  g.fillText('A合', w-114, mid-2*A*z-7);
+  g.font='800 13px "Microsoft YaHei",sans-serif';
+  if(z>.92){ g.fillStyle='rgba(142,54,35,.95)'; g.fillText('相长干涉：峰对峰，振幅翻倍，浪更凶', 12, h-12); }
+  else if(z<.18){ g.fillStyle='rgba(46,125,50,.95)'; g.fillText('相消干涉：峰对谷，两列波互相抵平', 12, h-12); }
+  else { g.fillStyle='rgba(90,74,50,.9)'; g.font='700 13px "Microsoft YaHei",sans-serif';
+         g.fillText('介于两者之间：部分加强 / 部分减弱', 12, h-12); }
+}
+
+function drawClassFrame(t){
+  if(!classCtx||!classMode) return;
+  var g=classCtx, w=classCv.width/classDpr, h=classCv.height/classDpr;
+  g.setTransform(classDpr,0,0,classDpr,0,0);
+  g.clearRect(0,0,w,h);
+  if(classMode==='super') drawSuper(g,w,h,t);
+  else if(classMode==='cond') drawCond(g,w,h,t);
+  else drawPhase(g,w,h,t);
+}
+
+/* —— 双船对照（装 vs 不装） —— */
+var cmpCv=null, cmpCtx=null, cmpDpr=1;
+function sizeCmp(){
+  cmpCv=document.getElementById('cvCmp');
+  if(!cmpCv){ cmpCtx=null; return; }
+  cmpCtx=cmpCv.getContext('2d');
+  cmpDpr=Math.min(window.devicePixelRatio||1,2);
+  var r=cmpCv.getBoundingClientRect();
+  cmpCv.width=Math.max(320,Math.round(r.width*cmpDpr));
+  cmpCv.height=Math.max(160,Math.round(r.height*cmpDpr));
+}
+function cmpHTML(){
+  return '<div class="ov"><div class="dm" style="max-width:1000px">'+
+    '<div class="dm-head">'+
+      '<span class="dm-tag">实地验证</span>'+
+      '<span class="dm-title">双船对照 · 装与不装，一目了然</span>'+
+      '<span class="dm-hint">同一海域 · 同一航速 · 同一台主机</span>'+
+    '</div>'+
+    '<canvas id="cvCmp"></canvas>'+
+    '<div class="dm-note">上：未装球鼻艏——艏波独行，A<sub>合</sub> = A₀ = 1.20 m，兴波阻力 100%；'+
+    '下：装球鼻艏——球鼻艏兴波顶进艏波波谷，<b>相消干涉</b>把合成波削平（A<sub>合</sub> ≈ 0.12 m），兴波阻力骤降，省下的马力全变成速度。</div>'+
+    '<div class="dm-note" style="margin-top:7px">🚢 <b>现实对照</b>：上面这条的锯齿状尾迹，像极了印度“维克兰特”号海试“磕头”的名场面（舰艏无球鼻艏）；下面这条的平稳航态，则是中国“福建”舰的日常（舰艏有球鼻艏）。</div>'+
+  '</div></div>';
+}
+function cmpShip(g, bx, wy, sc, withBulb, t){
+  /* 侧视船体：艏在右。sc = 缩放（px per m 的视觉尺度） */
+  var L=110*sc, H0=13*sc, draft=8*sc;
+  g.save();
+  g.translate(bx, wy);
+  /* 船体 */
+  g.beginPath();
+  g.moveTo(-L*.5, -H0);
+  g.lineTo(L*.30, -H0);
+  g.quadraticCurveTo(L*.46, -H0*1.1, L*.5, -H0*1.6);
+  g.lineTo(L*.5, draft);
+  g.quadraticCurveTo(L*.30, draft*1.25, 0, draft*1.25);
+  g.lineTo(-L*.5, draft);
+  g.closePath();
+  var hg=g.createLinearGradient(0,-H0,0,draft);
+  hg.addColorStop(0,'#39485a'); hg.addColorStop(.62,'#24333d'); hg.addColorStop(1,'#1a252e');
+  g.fillStyle=hg; g.fill();
+  g.strokeStyle='rgba(10,18,24,.9)'; g.lineWidth=1.2; g.stroke();
+  /* 水线下防污漆 */
+  g.save();
+  g.beginPath(); g.rect(-L*.6,0,L*1.2,draft*2); g.clip();
+  g.fillStyle='#8e3a2a';
+  g.beginPath();
+  g.moveTo(-L*.5,0); g.lineTo(L*.5,0); g.lineTo(L*.5,draft);
+  g.quadraticCurveTo(L*.30,draft*1.25,0,draft*1.25);
+  g.lineTo(-L*.5,draft); g.closePath(); g.fill();
+  g.restore();
+  /* 球鼻艏 */
+  if(withBulb){
+    g.beginPath();
+    g.moveTo(L*.47, -1*sc);
+    g.bezierCurveTo(L*.55, -3.4*sc, L*.62, -2.6*sc, L*.635, 0);
+    g.bezierCurveTo(L*.62, 2.8*sc, L*.55, 4.4*sc, L*.47, 4.6*sc);
+    g.closePath();
+    g.fillStyle='#a8472f'; g.fill();
+    g.strokeStyle='#3d1a12'; g.lineWidth=1; g.stroke();
+  }
+  /* 上层建筑 + 集装箱 */
+  g.fillStyle='#e9e4d6';
+  g.fillRect(-L*.5, -H0-9*sc, L*.13, 9*sc);
+  g.fillStyle='#1d2b34';
+  g.fillRect(-L*.495, -H0-7.4*sc, L*.11, 3*sc);
+  var cols=['#5d7f8c','#8c5f4a','#6f7f5a','#3f5566','#a3743f'];
+  for(var i=0;i<8;i++){
+    g.fillStyle=cols[i%cols.length];
+    g.fillRect(-L*.34+i*L*.088, -H0-3.2*sc, L*.078, 3.2*sc);
+  }
+  g.restore();
+}
+function cmpPanel(g, y0, w, ph, t, withBulb){
+  var wy = y0 + ph*.60;
+  var A  = withBulb ? .16 : 1.05;          /* 合成首波振幅（m，视觉） */
+  var sc = ph/95;
+  var bx = w*.60;                          /* 船艏位置 */
+  var bob= Math.sin(t*1.15 + (withBulb?2.1:0))*1.6;
+  var lamPx = w*.14, k=2*Math.PI/lamPx, sp=t*2.1;
+
+  /* 天空 */
+  var sky=g.createLinearGradient(0,y0,0,wy);
+  sky.addColorStop(0,'#b9c6cd'); sky.addColorStop(1,'#e3e7e2');
+  g.fillStyle=sky; g.fillRect(0,y0,w,wy-y0);
+  /* 水体（沿波面） */
+  function waveY(x){
+    if(x>=bx) return wy - A*sc*.55*Math.exp(-(x-bx)/(w*.05))*Math.cos(k*(x-bx)-sp);
+    var env=Math.exp(-(bx-x)/(w*.42));
+    return wy - A*sc*env*Math.cos(k*(bx-x)-sp);
+  }
+  g.beginPath();
+  g.moveTo(0,y0+ph);
+  for(var x=0;x<=w;x+=4) g.lineTo(x, waveY(x));
+  g.lineTo(w,y0+ph); g.closePath();
+  var wg=g.createLinearGradient(0,wy,0,y0+ph);
+  wg.addColorStop(0, withBulb?'#2d7089':'#20586c');
+  wg.addColorStop(1,'#08202d');
+  g.fillStyle=wg; g.fill();
+  /* 波峰泡沫 */
+  if(A>.5){
+    g.fillStyle='rgba(240,250,255,.75)';
+    for(var x2=8;x2<w;x2+=6){
+      var yy=waveY(x2);
+      if(yy < wy - A*sc*.5) { g.beginPath(); g.ellipse(x2, yy, 3.4, 1.3, 0, 0, 6.29); g.fill(); }
+    }
+  }
+  /* 船（含水线泡沫）：cmpShip 的锚点是船体中心，艏在 +L/2，故中心 = bx - L/2 */
+  cmpShip(g, bx - 110*sc*.5, wy+bob, sc, withBulb, t);
+  g.strokeStyle='rgba(238,250,255,'+(withBulb?.35:.7)+')';
+  g.lineWidth=2; g.lineCap='round';
+  var fw=withBulb?7:15;
+  g.beginPath(); g.arc(bx, wy+2, fw, -1.5, .9); g.stroke();
+  if(!withBulb){
+    g.beginPath(); g.arc(bx, wy+2, fw*1.9, -1.3, .7); g.stroke();
+    g.strokeStyle='rgba(238,250,255,.4)';
+    g.beginPath(); g.arc(bx, wy+2, fw*2.8, -1.1, .5); g.stroke();
+  }
+  /* 尾流 */
+  g.strokeStyle='rgba(226,244,250,.3)'; g.lineWidth=1.6;
+  g.beginPath();
+  g.moveTo(bx-110*sc*.5, wy+4);
+  g.quadraticCurveTo(bx-190*sc, wy+10, bx-260*sc, wy+8);
+  g.stroke();
+
+  /* 兴波阻力箭头（船向右航行 → 阻力指向船尾，即向左） */
+  var al = withBulb ? 14 : w*.085;
+  var ay = wy - 26*sc;
+  var ax0 = bx + 14 + al, ax1 = bx + 14;
+  g.strokeStyle=withBulb?'rgba(70,150,80,.9)':'#e2603f';
+  g.fillStyle=g.strokeStyle; g.lineWidth=3.4;
+  g.beginPath(); g.moveTo(ax0, ay); g.lineTo(ax1, ay); g.stroke();
+  g.beginPath(); g.moveTo(ax1, ay); g.lineTo(ax1+9, ay-5.5); g.lineTo(ax1+9, ay+5.5); g.closePath(); g.fill();
+  g.font='700 11px "Microsoft YaHei",sans-serif'; g.textAlign='left';
+  g.fillStyle=withBulb?'rgba(40,110,50,.95)':'#ffd9c8';
+  g.fillText(withBulb?'阻力 ≈ 2% R₀':'兴波阻力 R = 100% R₀', ax0+4, ay-8);
+
+  /* 面板标签 */
+  g.font='800 13px "Microsoft YaHei",sans-serif';
+  g.textAlign='left';
+  g.fillStyle=withBulb?'#1d5220':'#7d2c1a';
+  g.fillText(withBulb?'✓ 已装球鼻艏 · 相消干涉':'✗ 未装球鼻艏 · 传统船艏', 12, y0+20);
+  g.font='700 11.5px "Microsoft YaHei",sans-serif';
+  g.fillStyle='rgba(58,44,27,.85)';
+  g.fillText(withBulb?'A合 = 0.12 m（两列波互相抵平）':'A合 = A₀ = 1.20 m（艏波独行）', 12, y0+37);
+}
+function drawCmpFrame(t){
+  if(!cmpCtx) return;
+  var g=cmpCtx, w=cmpCv.width/cmpDpr, h=cmpCv.height/cmpDpr;
+  g.setTransform(cmpDpr,0,0,cmpDpr,0,0);
+  g.clearRect(0,0,w,h);
+  var gap=26, ph=(h-gap)/2;
+  cmpPanel(g, 0, w, ph, t, false);
+  cmpPanel(g, ph+gap, w, ph, t, true);
+  g.fillStyle='rgba(90,74,50,.9)';
+  g.font='700 12px "Microsoft YaHei",sans-serif';
+  g.textAlign='center';
+  g.fillText('—— 同一海域 · 同一航速 V = 12 m/s · 同一台主机 ——', w/2, ph+gap/2+4);
+}
+
+/* —— 任务卡 —— */
+function goalHTML(){
+  return '<div class="ov"><div class="gl">'+
+    '<div class="gl-top"><span class="gl-tag">第五关</span><span class="gl-title">终极抵消 —— 打造球鼻艏</span></div>'+
+    '<div class="gl-body">'+
+      '穿出峡湾后，传统船艏的减阻极限已无法应对<b>风暴海峡</b>。老所长的绝密图纸已经摊在实验台上：'+
+      '给“星海号”的艏柱下方加装球状突起，用<b>特定的设计巡航速度</b>制造<b>空间波程差</b>，'+
+      '让球鼻艏兴波与船体艏波发生<b>相消干涉</b>，大幅削弱激波振幅，实现破浪提速。'+
+    '</div>'+
+    '<div class="gl-obj">'+
+      '<b>🎯 本次任务</b><br>'+
+      '调节 <b>① 球鼻艏伸出长度 L<sub>b</sub></b>、<b>② 球鼻艏体积</b>、<b>③ 设计航速 V</b>，'+
+      '使船体艏波峰被抵消 <b>60% 以上</b>，并让总节能落在 <b>12% ~ 18%</b> 的甜蜜区间。'+
+    '</div>'+
+    '<div class="gl-know">核心知识点：波的叠加原理 y = y₁+y₂ · 干涉相干条件（同频 · 相位差恒定 · 振动方向相同）· 相长/相消干涉（Δφ = 0° / 180°）· 空间波程差 Δφ = 2πL<sub>b</sub>/λ · λ = 2πV²/g</div>'+
+    '<div class="gl-choose">'+
+      '<div class="gc-title">🧭 上阵之前，老所长让你先做个<b>探路实验</b>：球鼻艏到底是靠<b>长度</b>起作用、靠<b>体积</b>起作用，还是两个一起才管用？自己动手试过才知道。</div>'+
+      '<div class="gc-grid">'+
+        '<a class="gc-card vol" href="lab5.html?only=vol">'+
+          '<span class="gc-ico">🧊</span><span class="gc-name">只调体积</span>'+
+          '<span class="gc-desc">长度锁死，只给你体积旋钮。试试光靠体积，能不能把艏波压下去。</span>'+
+          '<span class="gc-go">🧪 进探路实验 →</span></a>'+
+        '<a class="gc-card len" href="lab5.html?only=len">'+
+          '<span class="gc-ico">📏</span><span class="gc-name">只调长度</span>'+
+          '<span class="gc-desc">体积锁死，只给你长度旋钮。试试光靠长度，能不能把艏波压下去。</span>'+
+          '<span class="gc-go">🧪 进探路实验 →</span></a>'+
+        '<a class="gc-card both" href="lab5.html">'+
+          '<span class="gc-ico">⚓</span><span class="gc-name">一起调 · 正式实验室</span>'+
+          '<span class="gc-desc">两个旋钮全开，外加航速档位。目标：消波率 ≥ 90%，攻克五个航速档。</span>'+
+          '<span class="gc-go">🚢 进入第五关 →</span></a>'+
+      '</div>'+
+    '</div>'+
+    '<div class="gl-act">'+
+      '<button class="btn-again" id="btnAgain">↺ 回顾剧情</button>'+
+    '</div>'+
+  '</div></div>';
+}
+function bindGoal(){
+  var b=document.getElementById('btnAgain');
+  if(b) b.addEventListener('click',function(e){ e.stopPropagation(); restart(); });
+}
+
+/* —— 打字机 —— */
+function tokenStart(html){
+  typeFull=html; typeN=0; typing=true;
+  dlgText.innerHTML='<span class="caret">▌</span>';
+  clearInterval(typeTimer);
+  typeTimer=setInterval(function(){
+    typeN += 1;
+    if(typeN>=typeFull.length){ finishType(); return; }
+    var cut=safeSlice(typeFull,typeN);
+    var tail=typeFull.slice(cut.length);
+    dlgText.innerHTML=cut+'<span class="caret">▌</span>';
+  },17);
+}
+function safeSlice(html,n){
+  if(n>=html.length) return html;
+  var lt=html.lastIndexOf('<',n), gt=html.lastIndexOf('>',n);
+  if(lt>gt){ var ne=html.indexOf('>',lt); return html.slice(0, ne<0?html.length:ne+1); }
+  return html.slice(0,n);
+}
+function finishType(){
+  clearInterval(typeTimer); typing=false; typeN=typeFull.length;
+  dlgText.innerHTML=typeFull;
+}
+
+/* —— 翻页导航：同步"回看"可用状态与提示文案 —— */
+function syncNav(){
+  var atStart = idx<=0, atEnd = idx>=STEPS.length-1;
+  if(btnBack){
+    btnBack.disabled = atStart;
+    btnBack.title = atStart ? '已经是第一句了' : '回看上一句（快捷键 ←）';
+  }
+  nextArrow.innerHTML = atEnd ? '查看任务 ▸' : '继续 ▸';
+  if(dlgHint){
+    dlgHint.innerHTML = atStart
+      ? '点击 / <b>空格</b> 继续'
+      : '点击 / <b>空格</b> 继续　·　<b>←</b> 回看';
+  }
+}
+
+/* —— 推进 —— */
+function goto(i){
+  if(i<0) i=0;
+  if(i>=STEPS.length){ i=STEPS.length-1; }
+  idx=i; cur=STEPS[i];
+  var c=CAST[cur.who]||CAST.mentor;
+  dlg.className = 'dlg'+(cur.who==='narr'?' narr':'');
+  dlgName.textContent=c.name; dlgRole.textContent=c.role;
+  dlgAvatar.textContent=c.avatar;
+  dlgAvatar.className='avatar '+(c.cls||'');
+  dlgTag.textContent = cur.who==='director' ? '加急密电 · 绝密' : '第五关 · 前情';
+  /* 发言人主题色：头像外环与姓名随角色变色 */
+  dlg.style.setProperty('--spk', SPK[cur.who]||SPK.mentor);
+
+  if(cur.nar){ logText.textContent=cur.nar; logRibbon.classList.add('show'); }
+  else { logRibbon.classList.remove('show'); }
+
+  if(cur.scene && cur.scene!==lastScene){
+    setMood(cur.scene); paintDots(cur.scene); showSceneTitle(cur.scene); wipeFx();
+    scrim.style.opacity = (cur.scene==='strait'||cur.scene==='radio'||cur.scene==='lesson'||cur.scene==='blueprint') ? '.7'
+                        : (cur.scene==='fjord'||cur.scene==='goal') ? '.16' : '.35';
+    lastScene=cur.scene;
+  }
+  buildOverlay(cur.fx||null);
+  if(cur.fx==='demo'){ setTimeout(sizeDemo,30); setTimeout(sizeDemo,260); }
+  else if(cur.fx==='super'||cur.fx==='cond'||cur.fx==='phase'){ setTimeout(sizeClass,30); setTimeout(sizeClass,260); }
+  else if(cur.fx==='compare'){ setTimeout(sizeCmp,30); setTimeout(sizeCmp,260); }
+  nextArrow.innerHTML = (i===STEPS.length-1) ? '查看任务 ▸' : '继续 ▸';
+  syncNav();
+  if(dlgProg) dlgProg.style.width = Math.round((i+1)/STEPS.length*100) + '%';   /* 阅读进度铜线 */
+  tokenStart(cur.text);
+}
+
+function advance(force){
+  if(!started) return;
+  if(cur && cur.fx==='demo' && !demoState.ok && !force){
+    var box=document.getElementById('dmBox');
+    if(box){ box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); }
+    toast('先把相位差凑到 180°、消波率 60% 以上再继续。', true);
+    return;
+  }
+  if(typing){ finishType(); return; }
+  if(idx>=STEPS.length-1) return;
+  goto(idx+1);
+}
+function back(){
+  if(!started) return;
+  if(typing){ finishType(); return; }          /* 正在逐字显示：先补全，再按一次才回退 */
+  if(idx<=0){ toast('已经翻到最前面了。'); return; }
+  goto(idx-1);
+  replayDlg();
+}
+/* 回退时重放对话卡的入场动效，强化"往回翻"的观感 */
+function replayDlg(){
+  if(!dlg) return;
+  dlg.style.animation='none'; void dlg.offsetWidth; dlg.style.animation='';
+  if(btnBack){ btnBack.classList.remove('pop'); void btnBack.offsetWidth; btnBack.classList.add('pop'); }
+}
+
+function restart(){ buildOverlay(null); setMood('fjord'); paintDots('fjord'); lastScene=''; idx=-1; goto(0); }
+
+/* —— toast —— */
+var toastEl=document.getElementById('toast'), toastTimer=null;
+function toast(msg, err){
+  toastEl.textContent=msg;
+  toastEl.className='show'+(err?' err':'');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){ toastEl.className=''; },2600);
+}
+
+/* ============================================================
+   4. 交互绑定
+   ============================================================ */
+var cover=document.getElementById('cover');
+function begin(){
+  if(started) return;
+  started=true; cover.classList.add('hide');
+  setTimeout(function(){ cover.style.display='none'; },700);
+  goto(0);
+}
+cover.addEventListener('click',begin);
+document.addEventListener('keydown',function(e){
+  var k=e.key;
+  if(!started){ if(k===' '||k==='Enter'){ e.preventDefault(); begin(); } return; }
+  if(k===' '||k==='Enter'||k==='ArrowRight'){ e.preventDefault(); advance(); }
+  else if(k==='ArrowLeft'){ e.preventDefault(); back(); }
+  else if(k==='Escape'){ /* 预留 */ }
+});
+dlg.addEventListener('click',function(e){
+  if(e.target.closest('#overlay')) return;
+  advance();
+});
+overlay.addEventListener('click',function(e){
+  if(e.target.closest('button,a,input')) return;
+  advance();
+});
+/* 「回看」按钮：stopPropagation 防止冒泡到对话卡被当成"继续" */
+if(btnBack){
+  btnBack.addEventListener('click',function(e){ e.stopPropagation(); back(); });
+}
+document.getElementById('btnSkip').addEventListener('click',function(e){
+  e.stopPropagation();
+  if(!started) begin();
+  demoState.ok=true;
+  goto(STEPS.length-1);
+});
+window.addEventListener('resize',function(){ resize(); sizeDemo(); sizeClass(); sizeCmp(); });
+window.addEventListener('load',function(){ sizeDemo(); sizeClass(); sizeCmp(); });
+
+/* ============================================================
+   5. 启动
+   ============================================================ */
+resize(); setMood('fjord'); paintDots('fjord'); lastScene='';
+/* 支持 #s<序号> 直达某段剧情（如 lab5-story.html#s9 → 绝密图纸） */
+var hashStep=location.hash.match(/^#s(\d+)$/);
+if(hashStep){
+  started=true; cover.style.display='none';
+  goto(clamp(parseInt(hashStep[1],10)||0, 0, STEPS.length-1));
+}
+/* ?static=1：关闭入场动画（截图 / 低性能环境） */
+if(/static/.test(location.search+location.hash)){
+  var st=document.createElement('style');
+  st.textContent='.draw-line{stroke-dasharray:none!important;stroke-dashoffset:0!important}'+
+                 '.bp-fade{opacity:1!important;animation:none!important}'+
+                 '.ov,.dlg,.logribbon.show,.cover-card{animation:none!important}';
+  document.head.appendChild(st);
+}
+requestAnimationFrame(function(ts){ last=ts; requestAnimationFrame(frame); });
+})();
+</script>
+
+<!-- 舰桥导航坞：回舰桥 / 看标定卡进度（嵌进顶部仪式条，不遮挡对白） -->
+<script>try{ window.Fleet && window.Fleet.mountDock({label:'第五关 · 前情', host:'.actbar', hostGap:'0 0 0 10px'}); }catch(e){}</script>
+</body>
+</html>

@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>破浪实验室 · 第四关：暗礁迷阵（波的衍射）</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{font-family:"Segoe UI","Microsoft YaHei",sans-serif;background:#060f13;color:#dcf2ef;overflow:hidden;}
+
+  /* ============ 背景：双层交叉淡入 ============ */
+  #stage{position:fixed;inset:0;overflow:hidden;}
+  .bgl{position:absolute;inset:0;background-color:#07151a;background-repeat:no-repeat;background-position:50% 50%;background-size:cover;
+       opacity:0;transition:opacity 1.15s ease,filter .8s ease;will-change:opacity,transform;}
+  .bgl.on{opacity:1;animation:slowzoom 22s linear forwards;}
+  @keyframes slowzoom{from{transform:scale(1.02);}to{transform:scale(1.11);}}
+  #stage .scrim{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(15,11,6,0.90) 0%,rgba(15,11,6,0.66) 30%,rgba(13,10,6,0.20) 62%,rgba(13,9,5,0.03) 100%),radial-gradient(140% 110% at 62% 50%,transparent 56%,rgba(20,14,7,0.30) 100%);}
+  #stage .scan{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,0.017) 0 1px,transparent 1px 3px);}
+  #stage .tint{position:absolute;inset:0;pointer-events:none;background:transparent;transition:background .8s ease;}
+  .sonarfx{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .7s ease;overflow:hidden;mix-blend-mode:screen}
+  .sonarfx::before{content:'';position:absolute;left:50%;bottom:-22%;width:92vh;height:92vh;border-radius:50%;background:conic-gradient(from 255deg,transparent 0 22deg,rgba(120,225,190,.24) 28deg,transparent 36deg 360deg);animation:sonarsweep 4.5s linear infinite}
+  .sonarfx::after{content:'';position:absolute;left:50%;bottom:-16%;width:72vh;height:72vh;transform:translateX(-50%);border-radius:50%;border:1px solid rgba(185,225,145,.22);box-shadow:0 0 0 80px rgba(185,225,145,.03),0 0 0 160px rgba(185,225,145,.025)}
+  .sonarfx.active{opacity:.58}.sonarfx.strong{opacity:.86}
+  @keyframes sonarsweep{from{transform:translateX(-50%) rotate(0)}to{transform:translateX(-50%) rotate(360deg)}}
+
+  /* ============ 顶栏 ============ */
+  .topbar{position:absolute;top:16px;left:26px;right:26px;display:flex;align-items:center;justify-content:space-between;gap:16px;z-index:6;}
+  .hud-title{font-size:17px;color:#c9e88f;letter-spacing:1px;font-weight:600;}
+  .hud-title span{display:block;font-size:11px;color:#6ea8a2;letter-spacing:3px;font-weight:400;margin-top:3px;}
+  .hud-progress{font-size:12px;color:#7fb8b0;letter-spacing:1px;background:linear-gradient(180deg,rgba(7,19,23,0.88),rgba(5,14,18,0.82));border:1px solid rgba(158,200,118,0.22);border-left:2px solid rgba(170,210,130,0.7);border-radius:3px;padding:9px 16px;backdrop-filter:blur(8px);}
+  .hud-progress b{color:#bfe093;font-size:14px;}
+  .mission-stat{margin-top:5px;font-size:10px;color:#9b9a72}.mission-stat b{transition:.25s;color:#e8d693}
+  .music-toggle{padding:8px 12px;font-size:11px;letter-spacing:1px;white-space:nowrap;background:rgba(20,17,9,.82)}
+  .bar{width:150px;height:3px;background:rgba(255,255,255,0.1);margin-top:6px;overflow:hidden;}
+  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7bb04f,#d3ea97);transition:width .4s;}
+
+  /* ============ 主卡片：贴底、高度随内容 ============ */
+  .card{position:absolute;left:4vw;bottom:30px;width:min(640px,48vw);max-height:calc(100vh - 150px);z-index:5;
+    background:linear-gradient(180deg,rgba(7,19,23,0.91),rgba(5,14,18,0.85));
+    backdrop-filter:blur(14px) saturate(1.15);
+    border:1px solid rgba(158,200,118,0.26);border-left:2px solid rgba(170,210,130,0.8);border-radius:3px;
+    box-shadow:0 26px 70px rgba(0,0,0,0.66),inset 0 1px 0 rgba(180,255,250,0.07);
+    padding:20px 24px 18px;display:flex;flex-direction:column;overflow:hidden;}
+  .card::before,.card::after{content:'';position:absolute;width:16px;height:16px;pointer-events:none;}
+  .card::before{top:-1px;right:-1px;border-top:1px solid rgba(200,238,150,0.7);border-right:1px solid rgba(200,238,150,0.7);}
+  .card::after{bottom:-1px;left:-1px;border-bottom:1px solid rgba(200,238,150,0.45);border-left:1px solid rgba(200,238,150,0.45);}
+  .card-head{display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid rgba(158,200,118,0.18);margin-bottom:13px;flex:none;}
+  .dot{width:9px;height:9px;border-radius:50%;background:#9ad474;box-shadow:0 0 12px rgba(150,208,125,0.85);flex:none;animation:blip 2.2s infinite;}
+  @keyframes blip{0%,100%{opacity:1}50%{opacity:.32}}
+  .step-title{font-size:14px;color:#c9e88f;letter-spacing:1px;font-weight:600;}
+  .step-no{margin-left:auto;font-size:10px;color:#bfe093;border:1px solid rgba(158,200,118,0.35);border-radius:2px;padding:3px 10px;letter-spacing:2px;font-family:Consolas,monospace;white-space:nowrap;}
+  .step-no.choose{color:#ffd08a;border-color:rgba(255,190,90,0.5);}
+  .scroll{overflow-y:auto;padding-right:8px;flex:0 1 auto;min-height:0;}
+  .scroll::-webkit-scrollbar{width:7px;}
+  .scroll::-webkit-scrollbar-thumb{background:rgba(170,210,130,0.3);border-radius:4px;}
+  .scene{font-size:13.8px;line-height:1.92;color:#cfe6e2;}
+  .scene p{margin-bottom:9px;}
+  .scene b{color:#bfe093;font-weight:600;}
+  .scene em{color:#ffd08a;font-style:normal;font-weight:700;}
+  .scene .big{display:block;font-size:15.5px;color:#ff9a7a;font-weight:700;letter-spacing:1px;margin:12px 0;padding:10px 15px;background:rgba(200,60,40,0.13);border-left:2px solid #ff8a6a;}
+  .scene .say{border-left:2px solid rgba(170,210,130,0.6);padding-left:14px;color:#a8d5cf;margin:10px 0;}
+  .formula{background:rgba(9,26,30,0.55);border-left:2px solid rgba(170,210,130,0.62);padding:9px 14px;margin:10px 0;font-family:Consolas,"Courier New",monospace;font-size:13px;color:#d6f4f0;line-height:1.75;}
+  .question{font-size:14.5px;line-height:1.9;color:#eafffb;font-weight:600;padding:11px 15px;background:rgba(170,210,130,0.07);border:1px solid rgba(158,200,118,0.22);border-left:2px solid #bfe093;margin-bottom:13px;}
+  .qr{font-size:11px;color:#ffd08a;letter-spacing:2px;display:block;margin-bottom:6px;font-family:Consolas,monospace;}
+  .options{display:flex;flex-direction:column;gap:8px;}
+  .opt{text-align:left;font-family:inherit;font-size:13.5px;line-height:1.78;padding:12px 16px;border-radius:3px;cursor:pointer;transition:.15s;
+    border:1px solid rgba(158,200,118,0.28);background:rgba(20,52,56,0.45);color:#dcf2ef;}
+  .opt:hover{background:rgba(48,140,136,0.45);border-color:rgba(160,255,245,0.7);transform:translateX(3px);}
+  .opt .k{display:inline-block;width:22px;color:#bfe093;font-weight:700;font-family:Consolas,monospace;}
+  .clue-gain{margin-top:13px;padding:11px 15px;background:rgba(80,230,200,0.09);border:1px solid rgba(80,230,200,0.35);border-left:2px solid #9ad474;font-size:13px;line-height:1.88;color:#c9f5ee;}
+  .card-foot{margin-top:13px;padding-top:12px;border-top:1px solid rgba(158,200,118,0.18);display:flex;align-items:center;gap:14px;flex:none;}
+  button{font-family:inherit;font-size:14px;letter-spacing:2px;padding:10px 26px;border-radius:3px;border:1px solid rgba(170,210,130,0.5);background:rgba(28,104,100,0.45);color:#dff9f5;cursor:pointer;transition:.15s;}
+  button:hover{background:rgba(48,152,144,0.6);border-color:rgba(160,255,245,0.85);}
+
+  /* ============ 右栏 ============ */
+  .rightcol{position:absolute;right:26px;top:98px;bottom:30px;width:min(320px,24vw);display:flex;flex-direction:column;gap:13px;z-index:5;}
+  .clueboard{flex:1;min-height:0;display:flex;flex-direction:column;
+    background:linear-gradient(180deg,rgba(7,19,23,0.88),rgba(5,14,18,0.82));backdrop-filter:blur(10px);
+    border:1px solid rgba(158,200,118,0.22);border-left:2px solid rgba(170,210,130,0.6);border-radius:3px;padding:15px 17px;
+    box-shadow:0 16px 40px rgba(0,0,0,0.5);}
+  .clueboard h3{font-size:12px;color:#bfe093;letter-spacing:3px;margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid rgba(158,200,118,0.18);font-weight:600;flex:none;}
+  .clueboard h3 span{float:right;color:#6ea8a2;letter-spacing:1px;}
+  #clueList{overflow-y:auto;min-height:0;}
+  #clueList::-webkit-scrollbar{width:6px;}
+  #clueList::-webkit-scrollbar-thumb{background:rgba(170,210,130,0.28);border-radius:4px;}
+  .clue{font-size:12.5px;line-height:1.85;color:#a8d5cf;padding:9px 11px;margin-bottom:8px;background:rgba(30,70,72,0.35);border-left:2px solid rgba(170,210,130,0.5);border-radius:0 2px 2px 0;animation:fadein .5s ease;}
+  .clue b{color:#bfe093;}
+  .empty{font-size:12px;color:#5f8f8a;line-height:1.9;}
+  @keyframes fadein{from{opacity:0;transform:translateX(10px);}to{opacity:1;transform:none;}}
+
+  .comm{flex:none;position:relative;border:1px solid rgba(158,200,118,0.3);border-left:2px solid rgba(170,210,130,0.85);border-radius:3px;overflow:hidden;
+    box-shadow:0 16px 40px rgba(0,0,0,0.6);opacity:0;transform:translateY(14px);transition:.6s ease;pointer-events:none;background:#08181c;}
+  .comm.on{opacity:1;transform:none;}
+  .comm img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;filter:saturate(1.05) contrast(1.05);}
+  .comm .frm{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,0.16) 0 1px,transparent 1px 3px),linear-gradient(180deg,transparent 55%,rgba(4,12,16,0.72) 100%);}
+  .comm .lbl{position:absolute;left:11px;bottom:9px;font-size:11px;color:#c9e88f;letter-spacing:2px;text-shadow:0 2px 8px rgba(0,0,0,0.9);}
+  .comm .lbl i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#9ad474;box-shadow:0 0 9px #9ad474;margin-right:7px;animation:blip 1.6s infinite;}
+  .comm .corner{position:absolute;top:8px;right:9px;font-size:10px;color:#bfe093;letter-spacing:1px;font-family:Consolas,monospace;opacity:.85;}
+
+  /* ============ 纸条 ============ */
+  #noteLayer{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:rgba(3,8,10,0.84);backdrop-filter:blur(7px);padding:26px;}
+  #noteLayer.on{display:flex;}
+  .note{position:relative;max-width:660px;width:100%;max-height:86vh;overflow-y:auto;
+    background:linear-gradient(170deg,#f4ead4 0%,#eadfc4 55%,#e2d5b6 100%);color:#2c2317;padding:30px 34px 26px;border-radius:2px;
+    box-shadow:0 30px 80px rgba(0,0,0,0.7),inset 0 0 60px rgba(150,120,70,0.16);
+    font-family:"Kaiti SC","KaiTi","STKaiti","Microsoft YaHei",serif;transform:rotate(-1.1deg);animation:notein .32s ease;}
+  @keyframes notein{from{opacity:0;transform:rotate(-1.1deg) translateY(26px) scale(.97);}to{opacity:1;transform:rotate(-1.1deg) translateY(0) scale(1);}}
+  .note::before{content:'';position:absolute;top:-13px;left:50%;margin-left:-52px;width:104px;height:27px;
+    background:rgba(214,208,180,0.6);border-left:1px dashed rgba(90,80,60,0.25);border-right:1px dashed rgba(90,80,60,0.25);
+    box-shadow:0 3px 8px rgba(0,0,0,0.32);transform:rotate(-2.4deg);}
+  .note-head{font-size:15px;font-weight:700;letter-spacing:3px;color:#8c2f1c;padding-bottom:12px;margin-bottom:16px;border-bottom:2px dashed rgba(140,47,28,0.32);}
+  .note-body{font-size:15px;line-height:2.05;color:#33291c;}
+  .note-body p{margin-bottom:10px;}
+  .note-body b{color:#8c2f1c;font-weight:700;}
+  .note-body em{font-style:normal;background:rgba(200,170,90,0.34);padding:1px 5px;border-radius:2px;}
+  .note-body .fml{background:rgba(120,100,64,0.13);border-left:3px solid rgba(140,47,28,0.5);padding:8px 13px;margin:11px 0;font-family:Consolas,"Courier New",monospace;font-size:13.5px;line-height:1.75;}
+  .note-body .sig{display:block;margin-top:16px;text-align:right;font-size:13px;color:#6b5a3e;letter-spacing:1px;}
+  .note-foot{margin-top:20px;padding-top:16px;border-top:2px dashed rgba(140,47,28,0.32);text-align:right;}
+  .note-foot button{border:1px solid #8c2f1c;background:rgba(140,47,28,0.1);color:#8c2f1c;font-family:"Microsoft YaHei",sans-serif;}
+  .note-foot button:hover{background:#8c2f1c;color:#f4ead4;}
+  .note-body .miss{font-size:14px;color:#7a4a2a;margin-bottom:9px;line-height:1.8;}
+  .note-body .miss b{color:#8c2f1c;}
+  .note-body .ans-line{display:block;margin:6px 0;padding:11px 14px;background:rgba(44,107,74,0.12);border-left:3px solid #2c6b4a;color:#2c4828;font-size:14px;line-height:1.85;font-weight:600;}
+  .note-body .ans-line .lab{display:block;font-size:12px;letter-spacing:2px;color:#2c6b4a;font-weight:700;margin-bottom:3px;}
+  .note-body .cstep{display:block;margin:9px 0 4px;font-size:13px;color:#5a6b2a;letter-spacing:1px;}
+
+  /* 危机等级徽标 */
+  .crisis{display:inline-block;font-size:11px;font-weight:700;letter-spacing:1px;padding:2px 9px;border-radius:2px;margin-left:4px;vertical-align:1px;}
+  .crisis.c6{background:rgba(255,107,94,0.24);color:#ff8a7a;border:1px solid rgba(255,107,94,0.5);}
+  .crisis.c5{background:rgba(255,150,80,0.22);color:#ffb27a;border:1px solid rgba(255,150,80,0.45);}
+  .crisis.c4{background:rgba(255,205,90,0.2);color:#ffd68a;border:1px solid rgba(255,205,90,0.42);}
+  .crisis.c3{background:rgba(220,224,110,0.18);color:#e6e69a;border:1px solid rgba(220,224,110,0.4);}
+  .crisis.c2{background:rgba(160,236,140,0.18);color:#bcf2a4;border:1px solid rgba(160,236,140,0.42);}
+  .crisis.c1{background:rgba(111,232,190,0.2);color:#8ff0d0;border:1px solid rgba(111,232,190,0.5);}
+  .crisis.c0{background:rgba(111,232,216,0.24);color:#6fe8d8;border:1px solid rgba(111,232,216,0.6);}
+  .clue-gain .cstep{display:block;margin:2px 0 5px;font-size:12.5px;color:#c9e88f;letter-spacing:1px;}
+
+  /* ============ 通关 ============ */
+  #win{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(3,8,10,0.9);backdrop-filter:blur(8px);padding:26px;}
+  #win.on{display:flex;}
+  .winbox{max-width:600px;text-align:center;background:linear-gradient(180deg,rgba(8,22,26,0.97),rgba(5,14,18,0.97));
+    border:1px solid rgba(158,200,118,0.28);border-left:2px solid rgba(170,210,130,0.85);border-radius:3px;padding:38px;box-shadow:0 30px 80px rgba(0,0,0,0.7);}
+  .winbox h2{color:#c9e88f;letter-spacing:4px;margin:14px 0 8px;font-size:23px;}
+  .winbox .code{color:#bfe093;font-family:Consolas,monospace;font-size:12px;letter-spacing:3px;margin-bottom:20px;}
+  .winbox p{color:#a8c9c4;font-size:14.5px;line-height:2.0;}
+  .winbox .recap{margin:20px 0;text-align:left;font-size:13px;line-height:1.95;color:#9fd8d0;background:rgba(30,70,72,0.3);border-left:2px solid rgba(170,210,130,0.5);padding:14px 18px;}
+
+  /* ============ 三维实操 ============ */
+  #sim3d{position:fixed;inset:0;z-index:400;display:none;background:#0b1511;}
+  #sim3d.on{display:block;}
+  #simCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  .sim-hud{position:absolute;z-index:5;font-family:"Segoe UI","Microsoft YaHei",sans-serif;}
+  .sim-top{top:16px;left:24px;right:24px;display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none;}
+  .s-title{font-size:16px;color:#c9e88f;letter-spacing:1px;font-weight:600;background:linear-gradient(180deg,rgba(20,16,8,0.85),rgba(15,12,6,0.78));border:1px solid rgba(200,190,120,0.25);border-left:2px solid rgba(210,200,130,0.75);border-radius:3px;padding:12px 18px;backdrop-filter:blur(8px);}
+  .s-title span{display:block;font-size:11px;color:#b0a878;letter-spacing:2px;font-weight:400;margin-top:3px;}
+  .s-live{font-size:13px;color:#bfe093;letter-spacing:1px;background:linear-gradient(180deg,rgba(20,16,8,0.85),rgba(15,12,6,0.78));border:1px solid rgba(200,190,120,0.25);border-radius:3px;padding:10px 16px;backdrop-filter:blur(8px);}
+  .s-live.warn{color:#ffcf6a;}
+  .s-live.danger{color:#ff8a7a;animation:blip 0.7s infinite;}
+  .sim-ctrl{left:24px;bottom:24px;width:min(370px,92vw);background:linear-gradient(180deg,rgba(20,16,8,0.90),rgba(15,12,6,0.85));backdrop-filter:blur(12px);border:1px solid rgba(200,190,120,0.26);border-left:2px solid rgba(210,200,130,0.8);border-radius:3px;padding:16px 18px;box-shadow:0 20px 50px rgba(0,0,0,0.55);}
+  .s-row{margin-bottom:13px;}
+  .s-row label{display:flex;justify-content:space-between;font-size:13px;color:#c8bda0;margin-bottom:7px;letter-spacing:1px;}
+  .s-row label b{color:#c9e88f;font-size:14px;font-family:Consolas,monospace;}
+  .s-row input[type=range]{width:100%;accent-color:#7bb04f;cursor:pointer;}
+  .s-hint{font-size:11px;color:#b0a878;font-family:Consolas,monospace;margin-top:6px;letter-spacing:1px;}
+  .s-calls{display:flex;gap:7px;margin:4px 0 12px;flex-wrap:wrap;}
+  .s-fb{flex:1;min-width:64px;padding:8px 0!important;font-size:12px!important;letter-spacing:1px!important;}
+  .s-fb.active{background:rgba(200,170,80,0.55)!important;border-color:#e8d693!important;color:#fff8e0!important;}
+  .s-bars{margin:10px 0;}
+  .s-bar{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px;color:#b0a878;}
+  .s-bar span{width:38px;flex:none;}
+  .s-bar .bt{flex:1;height:10px;background:#151206;border:1px solid rgba(200,190,120,0.25);border-radius:2px;overflow:hidden;}
+  .s-bar .bt i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ffd08a,#ff9a6a,#ff6b5e);transition:width .2s;}
+  .s-params{font-size:11.5px;color:#b0a878;font-family:Consolas,monospace;letter-spacing:1px;margin-bottom:12px;line-height:1.7;}
+  .s-btn{width:100%;font-family:inherit;font-size:13px;letter-spacing:2px;padding:9px 0;border-radius:3px;border:1px solid rgba(210,200,130,0.5);background:rgba(130,100,40,0.45);color:#f3ecd0;cursor:pointer;}
+  .s-btn:hover{background:rgba(160,125,55,0.6);}
+  #simOver{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;background:rgba(10,8,4,0.9);backdrop-filter:blur(8px);padding:26px;}
+  #simOver.on{display:flex;}
+  #synthesis{position:fixed;inset:0;z-index:320;display:none;align-items:center;justify-content:center;background:rgba(10,8,4,.93);backdrop-filter:blur(9px);padding:24px}
+  #synthesis.on{display:flex}.synbox{width:min(760px,94vw);background:rgba(20,17,9,.97);border:1px solid rgba(210,200,130,.3);border-left:2px solid #d9cf82;padding:28px;box-shadow:0 30px 80px rgba(0,0,0,.72)}
+  .synbox h2{color:#e8d693;letter-spacing:3px;margin-bottom:8px}.synbox>p{color:#c4bd91;line-height:1.8;margin-bottom:16px}.syn-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.syn-card{padding:12px 14px;text-align:left;letter-spacing:0;line-height:1.55}.syn-card.done{opacity:.35;pointer-events:none}.syn-chain{min-height:70px;margin:16px 0;padding:12px;background:rgba(95,78,35,.24);border:1px dashed rgba(220,205,125,.35);color:#eee3ad;line-height:1.8}.syn-status{color:#ffd08a;font-size:13px;min-height:22px;margin-top:10px}.syn-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:12px}.shake{animation:shake .25s linear}@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+  #knowledgeGraph{position:fixed;inset:0;z-index:470;display:none;background:radial-gradient(circle at 50% 45%,#26311b 0,#15150b 52%,#080704 100%);overflow:hidden;color:#f3ecd0}
+  #knowledgeGraph.on{display:block;animation:kgFade 1.2s ease both}.kg-head{position:absolute;top:5%;left:50%;transform:translateX(-50%);text-align:center;z-index:3}.kg-head h2{color:#e8d693;letter-spacing:4px;font-size:22px}.kg-head p{color:#aaa276;margin-top:7px;font-size:13px}.kg-canvas{position:absolute;left:6%;right:6%;top:17%;bottom:17%;border:1px solid rgba(220,205,125,.15);background-image:linear-gradient(rgba(220,205,125,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(220,205,125,.035) 1px,transparent 1px);background-size:34px 34px}.kg-lines{position:absolute;inset:0;width:100%;height:100%}.kg-edge{stroke:#c9d781;stroke-width:.65;stroke-dasharray:120;stroke-dashoffset:120;filter:drop-shadow(0 0 5px rgba(201,215,129,.7))}.on .kg-edge{animation:kgDraw 1s ease forwards}.kg-node{position:absolute;width:150px;min-height:58px;padding:10px 12px;transform:translate(-50%,-50%) scale(.72);opacity:0;background:rgba(31,29,14,.94);border:1px solid rgba(220,205,125,.42);border-left:2px solid #d9cf82;box-shadow:0 10px 28px rgba(0,0,0,.55);font-size:12px;line-height:1.55;text-align:center}.kg-node b{display:block;color:#e8d693;font-size:13px;margin-bottom:2px}.on .kg-node{animation:kgNode .75s ease forwards}.kg-vessel{position:absolute;left:4%;bottom:4%;font-size:32px;opacity:0}.on .kg-vessel{animation:kgSail 5.2s ease forwards}.kg-finish{position:absolute;bottom:5%;left:50%;transform:translateX(-50%);opacity:0;pointer-events:none}.kg-finish.ready{opacity:1;pointer-events:auto;transition:opacity .8s}.kg-note{position:absolute;bottom:10%;left:50%;transform:translateX(-50%);color:#c8c58e;font-size:12px;letter-spacing:2px}.on .kg-note{animation:kgPulse 2s ease-in-out infinite}@keyframes kgFade{from{opacity:0}to{opacity:1}}@keyframes kgDraw{to{stroke-dashoffset:0}}@keyframes kgNode{to{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes kgSail{0%{opacity:0;transform:translateX(0)}15%{opacity:1}100%{opacity:1;transform:translateX(72vw)}}@keyframes kgPulse{50%{opacity:.45}}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div class="bgl" id="bgA"></div>
+  <div class="bgl" id="bgB"></div>
+  <div class="scrim"></div>
+  <div class="scan"></div>
+  <div class="tint" id="tint"></div>
+  <div class="sonarfx" id="sceneFx"></div>
+
+  <div class="topbar">
+    <div class="hud-title">◎ 第四关 · 暗礁迷阵<span>波的衍射 · 惠更斯原理</span></div>
+    <button class="music-toggle" id="musicToggle" onclick="toggleMusic()">♪ 配乐 · 待启动</button>
+    <div class="hud-progress">已解析航段 <b id="progText">0 / 6</b><span class="crisis c6" id="crisisTag">Ⅰ级·危急</span><div class="bar"><i id="progBar"></i></div><div class="mission-stat">航道置信度 <b id="missionStat">88%</b></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="dot"></span>
+      <span class="step-title" id="stepTitle"></span>
+      <span class="step-no" id="stepNo"></span>
+    </div>
+    <div class="scroll">
+      <div class="scene" id="sceneText"></div>
+      <div class="question" id="questionText" style="display:none"></div>
+      <div class="options" id="options"></div>
+      <div class="clue-gain" id="clueGain" style="display:none"></div>
+    </div>
+    <div class="card-foot" id="cardFoot">
+      <button id="btnNext">继续 ▸</button>
+      <span style="font-size:12px;color:#6ea8a2" id="footHint"></span>
+    </div>
+  </div>
+
+  <div class="rightcol">
+    <div class="clueboard">
+      <h3>航道解析 <span id="clueCount">0</span></h3>
+      <div id="clueList"><div class="empty">尚未解析出任何航段。<br>每一次正确的判断，都会在这里留下一块拼图。</div></div>
+    </div>
+    <div class="comm" id="comm">
+      <img src="assets/img/alo.jpg" alt="阿洛 · 随船机械师">
+      <div class="frm"></div>
+      <div class="lbl"><i></i>通讯 · 阿洛 / 随船机械师</div>
+      <div class="corner">◉ LIVE</div>
+    </div>
+  </div>
+</div>
+
+<div id="noteLayer">
+  <div class="note">
+    <div class="note-head">⚓ 领航长训话 · 揭晓</div>
+    <div class="note-body" id="noteBody"></div>
+    <div class="note-foot"><button id="btnRetry">明白了，继续 ▸</button></div>
+  </div>
+</div>
+
+<div id="synthesis">
+  <div class="synbox">
+    <h2>把拼图接成测绘流程</h2>
+    <p>按探测与决策顺序点击五张卡片。完整流程将生成穿越方案。</p>
+    <div class="syn-cards" id="synCards"></div>
+    <div class="syn-chain" id="synChain">等待第一块拼图……</div>
+    <div class="syn-status" id="synStatus"></div>
+    <div class="syn-actions"><button onclick="resetSynthesis()">↺ 重排</button><button id="synGo" style="display:none" onclick="startSim()">执行航线 · 进入实操 ▸</button></div>
+  </div>
+</div>
+
+<div id="knowledgeGraph">
+  <div class="kg-head"><h2>航行知识图谱 · 波的衍射</h2><p>探测数据正在收束为安全航线</p></div>
+  <div class="kg-canvas">
+    <svg class="kg-lines" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <line class="kg-edge" style="animation-delay:.5s" x1="12" y1="50" x2="29" y2="27"/><line class="kg-edge" style="animation-delay:1.1s" x1="29" y1="27" x2="47" y2="50"/><line class="kg-edge" style="animation-delay:1.7s" x1="47" y1="50" x2="66" y2="27"/><line class="kg-edge" style="animation-delay:2.3s" x1="66" y1="27" x2="87" y2="50"/><line class="kg-edge" style="animation-delay:2.9s" x1="87" y1="50" x2="47" y2="78"/><line class="kg-edge" style="animation-delay:3.5s" x1="47" y1="78" x2="77" y2="78"/>
+    </svg>
+    <div class="kg-node" style="left:12%;top:50%;animation-delay:.2s"><b>声呐频率 f</b>控制发射波长</div>
+    <div class="kg-node" style="left:29%;top:27%;animation-delay:.8s"><b>波长 λ=c/f</b>提供不同测量尺度</div>
+    <div class="kg-node" style="left:47%;top:50%;animation-delay:1.4s"><b>尺度比 λ/d</b>决定衍射展开程度</div>
+    <div class="kg-node" style="left:66%;top:27%;animation-delay:2s"><b>衍射图样</b>编码缺口位置与宽度</div>
+    <div class="kg-node" style="left:87%;top:50%;animation-delay:2.6s"><b>多频反演</b>收紧礁石真实边界</div>
+    <div class="kg-node" style="left:47%;top:78%;animation-delay:3.2s"><b>安全中线</b>由真实缺口几何确定</div>
+    <div class="kg-node" style="left:77%;top:78%;animation-delay:3.8s"><b>持续验证</b>实时回波修正航向</div>
+    <div class="kg-vessel">🧭</div>
+  </div>
+  <div class="kg-note">知识节点正在逐步锁定</div>
+  <button class="kg-finish" id="kgFinish" onclick="finishKnowledgeGraph()">收束本关 · 查看胜利 ▸</button>
+</div>
+
+<div id="win">
+  <div class="winbox">
+    <div style="font-size:44px">🧭</div>
+    <h2>衍射 · 航道解析完成</h2>
+    <div class="code">DIFFRACTION MAPPING · COMPLETE</div>
+    <p>多波长衍射图样交叉反解出了暗礁的水下轮廓，一条真实可行的航道从「空白海图」里被算了出来。<br>远望号贴着中线，慢速穿过了那道缝。</p>
+    <div class="recap" id="recap"></div>
+    <p style="color:#7fb8b0;font-size:13px">第四关 · 暗礁迷阵 · 波的衍射 —— 破解完成 ✅</p>
+    <div style="margin-top:22px">
+      <button onclick="startSim()" style="background:rgba(150,120,40,0.5);border-color:rgba(230,210,130,0.7)">▶ 再次实操</button>
+      <button onclick="location.href='lab5.html'" style="margin-left:8px">下一关 ▸ 终极抵消</button>
+      <button onclick="location.reload()" style="margin-left:8px">↺ 重玩本关</button>
+      <button onclick="location.href='lab3.html'" style="margin-left:8px">◂ 返回第三关</button>
+      <button onclick="location.href='index.html'" style="margin-left:8px">⇱ 返回舰桥</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 三维实操 ============ -->
+<div id="sim3d">
+  <canvas id="simCanvas"></canvas>
+  <div class="sim-hud sim-top">
+    <div class="s-title">◎ 三维实验舱 · 用衍射知识穿缝<span>目标：用声呐看清缺口，把船开过去</span></div>
+    <div class="s-live" id="sGap">缺口读数 —</div>
+  </div>
+
+  <div class="sim-hud sim-ctrl">
+    <div class="s-row">
+      <label>声呐频率 <b id="sFval">30 Hz</b></label>
+      <input type="range" id="sFreq" min="10" max="200" step="1" value="30">
+      <div class="s-hint" id="sLda">λ/d = —</div>
+    </div>
+    <div class="s-row">
+      <label>航向 <b id="sSteerVal">0</b></label>
+      <input type="range" id="sSteer" min="-1" max="1" step="0.01" value="0">
+    </div>
+    <div class="s-calls" id="sCalls">
+      <button class="s-btn s-fb" data-f="10">低频 10 Hz</button>
+      <button class="s-btn s-fb" data-f="45">45 Hz</button>
+      <button class="s-btn s-fb" data-f="120">120 Hz</button>
+      <button class="s-btn s-fb" data-f="200">高频 200 Hz</button>
+    </div>
+    <div class="s-bars">
+      <div class="s-bar"><span>接近</span><div class="bt"><i id="sDistBar" style="background:linear-gradient(90deg,#ffd08a,#ff9a6a,#ff6b5e)"></i></div></div>
+    </div>
+    <button class="s-btn" id="sRestart">↺ 重新出航</button>
+    <div class="s-params" id="sParams" style="margin-top:9px;margin-bottom:0">波长 λ = —　缝宽估计 = —</div>
+  </div>
+</div>
+
+<div id="simOver">
+  <div class="winbox">
+    <div style="font-size:44px" id="simOverIcon">🧭</div>
+    <h2 id="simOverH">穿越成功</h2>
+    <div class="code" id="simOverCode">GAP RESOLVED</div>
+    <p id="simOverText"></p>
+    <div style="margin-top:22px">
+      <button id="simPrimary" onclick="restartSim()">↺ 再试一次</button>
+      <button onclick="location.href='lab5.html'" style="margin-left:8px">下一关 ▸ 终极抵消</button>
+      <button onclick="location.href='lab3.html'" style="margin-left:8px">◂ 返回第三关</button>
+    </div>
+  </div>
+</div>
+
+<!-- 舰桥进度内核：全站解锁状态的唯一真源（见 fleet.js） -->
+<script src="fleet.js"></script>
+<script>
+/* ============================================================
+   背景镜头表（四个剧情阶段分别使用独立场景图）
+   ============================================================ */
+var SHOT_SRC = {
+  wide : "assets/img/level4-wide.jpg",
+  cliff: "assets/img/level4-cliff-gap.jpg",
+  sonar: "assets/img/level4-sonar-reef.jpg",
+  gap  : "assets/img/level4-safe-gap.jpg"
+};
+var SHOT = {
+  wide  : {src:'wide',  pos:'50% 50%', size:'cover'},
+  cliff : {src:'cliff', pos:'50% 50%', size:'cover'},
+  sonar : {src:'sonar', pos:'50% 50%', size:'cover'},
+  gap   : {src:'gap',   pos:'50% 50%', size:'cover'},
+  tight : {src:'gap',   pos:'54% 52%', size:'135%'},
+  scan  : {src:'sonar', pos:'55% 54%', size:'135%'}
+};
+var GRADE = [
+  {f:'saturate(1) brightness(1)',                          t:'rgba(4,12,16,0)'},
+  {f:'saturate(1.1) brightness(1.05)',                     t:'rgba(12,66,78,0.14)'},
+  {f:'saturate(1.2) brightness(0.97)',                     t:'rgba(20,80,96,0.17)'},
+  {f:'saturate(1.3) hue-rotate(-18deg) brightness(0.9)',   t:'rgba(155,48,34,0.22)'},
+  {f:'saturate(0.66) brightness(0.78)',                    t:'rgba(3,8,15,0.34)'},
+  {f:'saturate(0.86) hue-rotate(-14deg) brightness(1.03)', t:'rgba(66,96,122,0.18)'}
+];
+
+/* ============================================================
+   节拍表
+   ============================================================ */
+var BEATS = [
+
+/* ---------- 第一幕：死路 ---------- */
+{type:'story', shot:'wide', grade:0, title:'序幕 · 峡湾的入口',
+ html:'<p>主洋流区的尽头，是一道被两侧绝壁夹出来的窄口。</p>'+
+      '<p>「远望号」减速，缓缓滑了进去。水色从开阔洋面的墨蓝，变成一种不透光的、沉甸甸的深青。</p>'+
+      '<p class="say">领航员抬头看了一眼两侧直上直下的岩壁：「进去就出不来了。峡湾里没有第二个出口。」</p>'},
+
+{type:'story', shot:'cliff', grade:1, title:'绝壁 · 唯一的出路',
+ html:'<p>两侧的岩壁高得看不到顶。风被挡在外面，水面平得像一块玻璃——安静得让人不安。</p>'+
+      '<p>航海图上，这条水道在前方约两公里处分叉，然后再次合拢。</p>'+
+      '<p>也就是说：<b>只要前方那条路是通的，你们就能出去。</b></p>'},
+
+{type:'story', shot:'sonar', grade:2, title:'扫描 · 前方有东西',
+ html:'<p>声呐开机。一道扇形光锥贴着水面扫出去。</p>'+
+      '<span class="big">前方 1800 米：大片连续暗礁，拦腰阻断</span>'+
+      '<p>一整道礁脊横在前方，从左侧岩壁一直延伸到右侧岩壁，中间没有明显的缺口。</p>'+
+      '<p class="say">声呐员把增益推到顶：「再远就全是雪花。这一带……海图上是空的。」</p>'},
+
+{type:'story', shot:'gap', grade:3, title:'狭缝 · 12 米',
+ html:'<p>你把光标一点点往回拉，终于在那道礁脊上找到了一处回波最弱的点。</p>'+
+      '<div class="formula">疑似缺口宽度：约 12 米<br>本船最大宽度：25 米</div>'+
+      '<p>舰桥里没人说话。</p>'+
+      '<p class="say">船长盯着屏幕：「海图上这一带从来没人测过。12 米——这个数是算出来的，还是看出来的？」</p>'+
+      '<p>你答不上来。屏幕上那团轮廓，糊得连边界都看不清。</p>'},
+
+{type:'choice', shot:'scan', grade:2, title:'抉择 · 为什么加大功率没用', step:'航段之一：锁定「波长决定分辨率」',
+ html:'<p>你的第一反应是：信号不够。于是把声呐发射功率推到最大档。</p>'+
+      '<p>回波确实变亮了——但那团轮廓<em>依然是模糊的一团</em>，只是「更亮的模糊」。</p>',
+ q:'为什么加大功率解决不了「看不清狭缝」这件事？',
+ options:[
+  {t:'提高功率只增加回波强度，不改变分辨能力；能否分辨狭缝，取决于声波波长与缝宽的比值——波长比缝宽大得多时，波会绕过缝口扩散，回波本身就不携带清晰的缝形信息', ok:true,
+   clue:'功率决定「能不能收到」，波长决定「回波里有没有细节」。'},
+  {t:'功率还是不够大，再往上加就能看清了', ok:false,
+   note:'<p><b>功率与分辨率是两件独立的事。</b></p>'+
+        '<p>功率决定「能不能收到回波」，<em>波长</em>决定「回波里带不带细节」。</p>'+
+        '<p>把功率调到最大，回波只会从「模糊」变成「更亮的模糊」。分辨率的天花板由 λ/d 这个比值卡住，与发射了多少能量无关。</p>'+
+        '<p>你在升级手电筒的亮度，而真正的问题是：你手里握的是一支太粗的笔。</p>'},
+  {t:'应该改用水下光学摄像机，直接看', ok:false,
+   note:'<p><b>峡湾水体浑浊，悬浮物极多。</b></p>'+
+        '<p>水下光学可视距离在这种水里通常只有几米，而你要看的目标在一千八百米外。摄像机连礁石的影子都够不着。</p>'+
+        '<p>更关键的是：即便水是清的，光学成像依赖的是<em>光</em>——而这里唯一可用的武器，恰恰是<em>声波</em>的波长特性。换光学设备等于把刀扔了。</p>'},
+  {t:'礁石表面太光滑，对声波的反射太弱', ok:false,
+   note:'<p><b>反射强度主要取决于声阻抗差。</b></p>'+
+        '<p>礁石（固体）与海水（液体）的声阻抗差别极大，回波非常强——实际上强到常常让接收端过载。</p>'+
+        '<p>屏幕上的模糊来自分辨率不足：信号很强，细节仍被长波抹平。</p>'+
+        '<p>把「细节缺失」误判成「强度不足」，会让你一路往错误的方向加功率。</p>'}
+ ]},
+
+/* ---------- 第二幕：惠更斯 ---------- */
+{type:'story', shot:'cliff', grade:4, comm:true, title:'沉默 · 阿洛开口了',
+ html:'<p>舰桥陷入沉默。有人提议原路返回，但峡湾里没有第二个出口。</p>'+
+      '<p class="say">阿洛在通讯窗口里忽然说：「等一下。船长——你们一直在想怎么<em>看</em>清楚那道缝。」</p>'+
+      '<p class="say">「声呐发出的是<em>波</em>。波遇到缝会穿过开口，并向几何阴影区扩散。」</p>'+
+      '<p>老所长从椅子上直起身，抽出一张纸。</p>'},
+
+{type:'story', shot:'wide', grade:1, title:'原理 · 波前上的每一点',
+ html:'<p>老所长在纸上画了一条弧线，代表某一时刻的波前。</p>'+
+      '<p>然后他在弧线上密密麻麻点了一排小点，每个点向外画一个小半圆。</p>'+
+      '<div class="formula">波前上每一点，都可以看作一个新的子波源<br>这些子波在下一时刻的<b>包络面</b>，就是新的波前</div>'+
+      '<p class="say">「这叫惠更斯原理。」他把笔放下，「它描述波前怎样<em>长出下一层</em>。」</p>'},
+
+{type:'choice', shot:'gap', grade:1, title:'抉择 · 这句话的边界在哪', step:'航段之二：理解「只有包络面是新波前」',
+ html:'<p>「波前上每一点都是新波源」——这句话很好记，但也很容易理解偏。</p>',
+ q:'如果理解偏了半步，会推出下面哪个荒谬结论？',
+ options:[
+  {t:'若每个子波源都真的向四面八方「独立发声」，波就会同时向侧后方传播、波前会散成一团；实际上只有子波的包络面才是新波前', ok:true,
+   clue:'波前上各点产生子波，子波的包络面形成新的波前。'},
+  {t:'会推出波的频率随着传播距离而改变', ok:false,
+   note:'<p><b>惠更斯原理讨论的是波前的几何推进，它不碰频率。</b></p>'+
+        '<p>频率由<em>波源</em>决定。子波源是介质中被迫振动的那一部分，它们跟着原波以同一频率振动——没有谁给它们新的频率。</p>'+
+        '<p>把子波想象成「自己会唱歌的小喇叭」，才会推出频率乱掉的结论。子波来自同一波源驱动下的介质振动，因此保持原频率。</p>'},
+  {t:'会推出波速会随传播距离无限增大', ok:false,
+   note:'<p><b>波速由介质决定，不是由波前推进的几何方式决定。</b></p>'+
+        '<p>子波在<em>同一个介质</em>里传播，子波波速与原波速相同。包络面随之推进的速度，自然也就是原波速。</p>'+
+        '<p>若子波速度真的变大，包络面就会跑得比原波快——这在任何实测里都没有出现过。</p>'},
+  {t:'会推出波长在传播过程中逐渐变短', ok:false,
+   note:'<p><b>波长 = 波速 ÷ 频率，而这两者在均匀介质中都不变。</b></p>'+
+        '<p>既然惠更斯原理不改变频率，也不改变波速，波长自然也不变。</p>'+
+        '<p>真正会变的是<em>振幅</em>（因为能量在扩散），而振幅变化与波长变化是两件事，别混在一起。</p>'}
+ ]},
+
+{type:'story', shot:'sonar', grade:2, title:'绕射 · 波钻进了影子',
+ html:'<p>你把声呐频率调低了一档——波长变长了。</p>'+
+      '<p>屏幕上的画面变了。</p>'+
+      '<p>原本礁脊后方应该是一片干净的<em>声影区</em>，但现在，那里出现了微弱的、有规律的明暗条纹。</p>'+
+      '<p class="say">声呐员愣住了：「波……绕进去了？」</p>'+
+      '<p>「不是绕。」老所长说，「是那道缝，变成了一个新的波源。」</p>'},
+
+{type:'choice', shot:'gap', grade:3, title:'抉择 · 波能绕，船也能过吗', step:'航段之三：分清「波绕」≠「船过」',
+ html:'<p>有人立刻兴奋起来：</p>'+
+      '<p class="say">「波能衍射，说明缝再小也传得过去——那我们也过得去！」</p>'+
+      '<p>只有 12 米。船宽 25 米。</p>',
+ q:'这个推论错在哪里？',
+ options:[
+  {t:'衍射让波绕到缝后的影区，但缝宽远小于波长时，透过去的能量按（缝宽/波长）² 急剧衰减；「波能绕过去」与「能量足够穿过」是两回事，更不等于船体能通过', ok:true,
+   clue:'衍射描述的是波的传播，不是物质的通过。缝对波和对船，是两把不同的尺子。'},
+  {t:'衍射与缝宽无关，所以任何缝都能通过', ok:false,
+   note:'<p><b>衍射的显著程度与缝宽强烈相关。</b></p>'+
+        '<p>缝宽远大于波长时，波几乎沿直线穿过，衍射可以忽略；只有当缝宽与波长<em>可比拟或更小</em>时，波才会明显地散开绕射。</p>'+
+        '<p>说「与缝宽无关」，等于抹掉了衍射现象最关键的那个参数。</p>'},
+  {t:'只要把波长选得足够长，就一定能把船也送过去', ok:false,
+   note:'<p><b>这一条把「波的传播」和「物质的通过」彻底搞混了。</b></p>'+
+        '<p>波长越长，<em>声波</em>的衍射确实越显著。但船是船——它不靠衍射前进，它靠浮力和螺旋桨。</p>'+
+        '<p>而且方向反了：缝宽远小于波长时，透过缝的能量按 <em>(缝宽/波长)²</em> 急剧衰减。波长再长下去，能穿过去的能量只会更少，不是更多。</p>'+
+        '<p>用波的绕射能力去推断船体的通过能力，是本题的根本错误。</p>'},
+  {t:'衍射只发生在障碍物的边缘，与狭缝本身无关', ok:false,
+   note:'<p><b>狭缝的边缘，恰恰就是最典型的子波源。</b></p>'+
+        '<p>按惠更斯原理，缝口上每一点都成为新波源，它们发出的子波在缝后叠加，才形成了那片扩散的图样。缝是衍射的主角，不是配角。</p>'+
+        '<p>如果衍射真的只跟边缘有关、与缝无关，那么缝宽就不该影响图样——但实测中缝宽是决定图样形状的第一参数。</p>'}
+ ]},
+
+/* ---------- 第三幕：反解 ---------- */
+{type:'story', shot:'cliff', grade:1, title:'阵列 · 一排耳朵',
+ html:'<p>方案定了：不靠「看」，靠「算」。</p>'+
+      '<p>你们把船上所有能当水听器的东西都放了下去，在缝后拉开一道横排阵列。船缓慢地横向移动，让阵列扫过整个衍射场。</p>'+
+      '<p class="say">阿洛在通讯窗口里报数：「阵列就位。要发几个频率？」</p>'+
+      '<p>你说：<em>从最低一直扫到最高。</em></p>'},
+
+{type:'choice', shot:'scan', grade:2, title:'抉择 · 图样告诉了你什么', step:'航段之四：锁定「散开度读缝宽」',
+ html:'<p>第一组数据回来了。缝后的图样是这样的：</p>'+
+      '<div class="formula">中央亮区很宽，能量向两侧散得很开<br>左右大致对称，条纹间距随频率变化</div>',
+ q:'「散得很开」这个特征，说明了什么？',
+ options:[
+  {t:'它反映的是缝宽与波长的比值：散得越开，说明缝宽相对波长越小；若几乎不散，说明缝宽远大于波长', ok:true,
+   clue:'衍射图样的「散开程度」是缝宽与波长之比的直接读数。'},
+  {t:'它只反映声呐发射功率的大小', ok:false,
+   note:'<p><b>功率只改变图样的整体亮度，不改变它的形状。</b></p>'+
+        '<p>把功率加倍，中央亮区会更亮、边缘也会更亮——但明暗条纹的<em>位置和间距</em>不会移动一分。</p>'+
+        '<p>而你关心的恰恰是形状：条纹间距、中央区宽度。这些量由几何（缝宽、波长、距离）决定，与发射能量无关。</p>'},
+  {t:'它说明礁石的材质比较松软，对波吸收得多', ok:false,
+   note:'<p><b>材质影响的是回波强度与吸收损耗，不是图样的几何形状。</b></p>'+
+        '<p>就算把礁石换成钢板，只要缝宽、波长、阵列距离不变，衍射条纹的位置依然一模一样。</p>'+
+        '<p>你手上这张图样的全部信息，都藏在「几何」里——材质是另一个维度的问题。</p>'},
+  {t:'它只与声波频率的绝对值有关，与缝宽无关', ok:false,
+   note:'<p><b>漏掉了那个最关键的「比值」。</b></p>'+
+        '<p>同一个缝，换不同波长的声波，图样会完全不同——这一点你刚刚亲手验证过（调低频率后，声影区里才冒出条纹）。</p>'+
+        '<p>反过来，两个不同宽度的缝，只要缝宽与波长的<em>比值</em>相同，就会给出相似的图样。</p>'+
+        '<p>决定衍射图样的是 λ 与 d 的比，不是其中任何一个单独的绝对值。</p>'}
+ ]},
+
+{type:'story', shot:'sonar', grade:4, title:'异常 · 对不上的那一组',
+ html:'<p>频率一组一组扫过去，数据渐渐拼出一条曲线。</p>'+
+      '<p>但有两个频率给出的图样，<em>怎么也对不上同一个缝宽</em>。</p>'+
+      '<p class="say">声呐员皱眉：「是不是有一组测错了？要不……我们只挑最干净的那个频率，重测一次就够了吧。」</p>'},
+
+{type:'choice', shot:'scan', grade:4, title:'抉择 · 为什么非要换几个频率', step:'航段之五：锁定「必须多把尺子交叉」',
+ html:'<p>所有人的目光都落到你身上。时间在走。</p>',
+ q:'为什么必须保留多个频率的数据，而不能只用一个「最干净」的频率？',
+ options:[
+  {t:'单一波长的图样只给出障碍的一个「投影」，无法唯一确定形状；改变波长相当于换一把不同刻度的尺子，多组图样交叉才能反解出轮廓', ok:true,
+   clue:'一个波长只给一个投影。多把不同刻度的尺子交叉，形状才被唯一确定。'},
+  {t:'换频率主要是为了省电，延长作业时间', ok:false,
+   note:'<p><b>省电与「能不能解出形状」是两件事。</b></p>'+
+        '<p>即便电力无限，只用一个频率测量，你拿到的依然只是<em>一条曲线</em>——而这条曲线对应的可能形状有无穷多种。</p>'+
+        '<p>省电是附带收益，不是必须换频的根本理由。把手段当成目的，会让你在最需要数据的时候为了省电砍掉频率。</p>'},
+  {t:'换频率是为了避开峡湾里的环境噪声', ok:false,
+   note:'<p><b>多频确实有助于抑制噪声，但那是附带好处。</b></p>'+
+        '<p>真正的理由是<em>信息量</em>：每个波长都在用不同的「尺度」去量同一个物体。低频波对大尺度结构敏感，高频波对小尺度结构敏感。</p>'+
+        '<p>只用高频，你只能看到细节而拼不出整体；只用低频，你能看到整体却分不清细节。</p>'+
+        '<p>现在对不上的两组数据提供了<em>定位礁石真实边缘的关键信息</em>。</p>'},
+  {t:'没有意义，一次测量就足够确定轮廓了', ok:false,
+   note:'<p><b>单一波长的衍射图样是一个「积分」结果。</b></p>'+
+        '<p>它把障碍物沿整个缝口的信息压缩进一条曲线里——不同形状完全可能压出同一条曲线。这在数学上叫「解不唯一」，也叫反问题的不适定性。</p>'+
+        '<p>多组不同波长的图样，才构成一个<em>可解的方程组</em>。</p>'+
+        '<p>你现在嫌麻烦想砍掉的那几组数据，正是把「无穷多解」压成「唯一解」的那部分。</p>'}
+ ]},
+
+/* ---------- 第四幕：穿过 ---------- */
+{type:'story', shot:'wide', grade:5, title:'收敛 · 轮廓浮出来了',
+ html:'<p>把所有频率的数据叠在一起，交叉反解。</p>'+
+      '<p>屏幕上，那团模糊的轮廓终于慢慢收紧、变清晰——礁脊的真实边界浮了出来。</p>'+
+      '<div class="formula">实际缺口：宽度约 41 米，偏向左侧三分之一处<br>缺口两侧水深：足够</div>'+
+      '<p class="say">阿洛在通讯窗口里吹了声口哨：「41 米。那可比我们的船宽多了。」</p>'+
+      '<p>之前那个「12 米」，是被衍射抹平了边缘的图像骗出来的假读数。</p>'},
+
+{type:'choice', shot:'gap', grade:1, title:'抉择 · 最后一道命令', step:'航段之六：锁定「慢速+实时验证」的通过方案',
+ html:'<p>航道有了：偏左三分之一处，宽 41 米。船宽 25 米，两侧各余 8 米。</p>'+
+      '<p>但在穿过之前，还有最后一个决定。</p>',
+ q:'为了让这次穿越尽可能安全，最合理的做法是？',
+ options:[
+  {t:'降低航速、贴着缺口中线通过，同时用低频声波持续照射缺口并实时比对衍射图样的变化——一旦图样偏离标定值就立即停车修正', ok:true,
+   clue:'慢速通过 + 用衍射图样做实时监测：把「一次性测量」变成「持续验证」。'},
+  {t:'全速冲过去，减少在危险区停留的时间', ok:false,
+   note:'<p><b>「减少停留时间」听起来合理，但它把风险从「时间长」换成了「来不及」。</b></p>'+
+        '<p>41 米的缺口、25 米的船，两侧各余 8 米。全速下，一次转向修正来不及完成就已经撞上去了；而且高速航行时船体会产生明显下沉（ squatting 效应），实际吃水比静态更深，触礁风险反而上升。</p>'+
+        '<p>你刚刚反解出的轮廓基于<em>静态</em>测量。船体移动后，需要预留时间持续验证并逐次修正航向。</p>'},
+  {t:'依据刚才标定的轮廓数据，不再更新，直接按预定航线走完', ok:false,
+   note:'<p><b>你把「测量」当成了终点，但它只是起点。</b></p>'+
+        '<p>反解出的轮廓有误差——它是从有限组图样外推出来的。礁石的真实边界可能比你算出来的更靠近中线。</p>'+
+        '<p>而衍射图样有一个非常好的性质：它对障碍物的<em>微小变化极其敏感</em>。让它持续工作，就等于让整条缝一直当着你的探针。</p>'+
+        '<p>标定一次就关掉仪器，是最典型的「省掉了唯一的安全冗余」。</p>'},
+  {t:'派潜水员下去实地确认缺口宽度，再决定', ok:false,
+   note:'<p><b>方向对了，但你算错了时间。</b></p>'+
+        '<p>峡湾水深、水温低、能见度差，一次潜水作业的准备与下潜本身就是几十分钟起步，而你们的时间以分钟计。</p>'+
+        '<p>更重要的是：你手上已经有一套<em>能实时工作</em>的测量手段——衍射图样。为了确认一个已经算出来的数，去动用最慢、最危险的那条路，是资源配置上的失误。</p>'+
+        '<p>潜水员适合处理仪器无法覆盖的区域；当前航段由实时衍射测量提供连续信息。</p>'}
+ ]},
+
+/* ---------- 第五幕：让线索带船穿过去 ---------- */
+{type:'story', shot:'sonar', grade:2, title:'回收 · 六块拼图合拢',
+ html:'<p>最后一道命令下达后，航道解析板上的六块拼图依次归位。</p>'+
+      '<div class="formula">波长决定分辨率 → 子波包络形成新波前<br>衍射图样携带缝宽信息 → 波能绕过不等于船能通过<br>多频交叉反解真实边界 → 慢速航行并持续验证</div>'+
+      '<p>单独看，每条线索只解释一个现象；连在一起，它们给出了从<b>探测</b>到<b>通航</b>的完整步骤。</p>'},
+
+{type:'story', shot:'scan', grade:1, title:'展开 · 三把尺子量同一道缝',
+ html:'<p>声呐依次发出低、中、高三组频率。低频勾出礁脊的整体走向，中频定位缺口，高频补齐两侧边缘。</p>'+
+      '<p>三幅衍射图样被放到同一坐标系里，模糊区逐层收紧。</p>'+
+      '<div class="formula">缺口中心：左偏 0.28<br>可信宽度：41 m　　安全中线余量：左右各 8 m</div>'+
+      '<p>原先的“12 米”退到屏幕角落，被标记为低频衍射造成的假边界。</p>'},
+
+{type:'story', shot:'gap', grade:2, title:'对准 · 把船放进解出来的航线',
+ html:'<p>推进器降到最低稳定转速。舵手把船首缓慢移向缺口中线，声呐持续照射两侧礁缘。</p>'+
+      '<p>左侧回波增强，向右修正 0.6 米；右侧图样变窄，再向左回 0.2 米。</p>'+
+      '<p>每一次舵角变化，都由下一帧衍射图样确认。计算结果开始变成真实航迹。</p>'},
+
+{type:'story', shot:'tight', grade:3, title:'穿越 · 八米余量一寸寸移动',
+ html:'<p>船首进入狭口。左舷岩壁从视野边缘缓慢滑过，水下礁石的反光几乎贴着船身。</p>'+
+      '<div class="formula">距左礁：8.4 m → 8.1 m → 8.3 m<br>距右礁：7.6 m → 7.9 m → 7.7 m</div>'+
+      '<p>数据围绕中线小幅摆动。轮机保持低速，舵手按实时回波逐次修正。</p>'+
+      '<p class="say">领航长压低声音：“保持。现在让每一帧数据带我们往前一米。”</p>'},
+
+{type:'story', shot:'wide', grade:5, title:'待命 · 船首对准暗礁迷阵',
+ html:'<p>反演得到的缺口、建议频率和安全中线被写入导航系统。推进器保持最低转速。</p>'+
+      '<p>下一步需要把五块拼图接成完整测绘流程，再由你亲自选择频率、读取声呐并操舵穿越。</p>'+
+      '<p class="say">领航长握住扶手：“航线已经算出来了。现在由你证明这条线真的能走。”</p>'+
+      '<span class="big">航线待执行 · 船体尚未进入狭口</span>'}
+];
+
+var TOTAL_CHOICES = BEATS.filter(function(b){ return b.type==='choice'; }).length;
+
+/* ============================================================
+   运行时
+   ============================================================ */
+var bi = 0;
+var clues = [];
+var perfect = 0;
+var missionScore = 88;
+var penalized = {};
+var audioCtx=null, musicMaster=null, musicFilter=null, musicOn=true, musicTension=0, musicPingTimer=null;
+function sonarMusicPing(){
+  if(!audioCtx||!musicOn) return;
+  var o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.type='sine';
+  o.frequency.setValueAtTime(520,audioCtx.currentTime); o.frequency.exponentialRampToValueAtTime(170,audioCtx.currentTime+.65);
+  g.gain.setValueAtTime(.0001,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(.025,audioCtx.currentTime+.03); g.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+.7);
+  o.connect(g);g.connect(musicMaster);o.start();o.stop(audioCtx.currentTime+.72);
+}
+function ensureAudio(){
+  if(audioCtx){ if(audioCtx.state==='suspended') audioCtx.resume(); return; }
+  var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+  audioCtx=new AC(); musicMaster=audioCtx.createGain(); musicFilter=audioCtx.createBiquadFilter();
+  musicFilter.type='lowpass'; musicFilter.frequency.value=350; musicMaster.gain.value=.032;
+  musicFilter.connect(musicMaster); musicMaster.connect(audioCtx.destination);
+  [48,72].forEach(function(freq,i){ var o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.type=i?'sine':'triangle'; o.frequency.value=freq; g.gain.value=i?.25:.18; o.connect(g); g.connect(musicFilter); o.start(); });
+  var buf=audioCtx.createBuffer(1,audioCtx.sampleRate*2,audioCtx.sampleRate),data=buf.getChannelData(0);
+  for(var i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*.1;
+  var n=audioCtx.createBufferSource(),ng=audioCtx.createGain(); n.buffer=buf;n.loop=true;ng.gain.value=.17;n.connect(ng);ng.connect(musicFilter);n.start();
+  musicPingTimer=setInterval(sonarMusicPing,4300); sonarMusicPing();
+  document.getElementById('musicToggle').textContent='♪ 配乐 · 开'; updateMusic(musicTension);
+}
+function toggleMusic(){
+  if(!audioCtx){ ensureAudio(); musicOn=true; return; }
+  musicOn=!musicOn; musicMaster.gain.setTargetAtTime(musicOn?.032:0,audioCtx.currentTime,.25);
+  document.getElementById('musicToggle').textContent=musicOn?'♪ 配乐 · 开':'♪ 配乐 · 关';
+}
+function updateMusic(level){
+  musicTension=level||0;if(!audioCtx||!musicOn)return;
+  musicFilter.frequency.setTargetAtTime(300+musicTension*80,audioCtx.currentTime,.5);
+  musicMaster.gain.setTargetAtTime(.025+musicTension*.004,audioCtx.currentTime,.5);
+}
+document.addEventListener('pointerdown',function(e){if(e.target.id!=='musicToggle')ensureAudio();},{once:true});
+var layerA = document.getElementById('bgA');
+var layerB = document.getElementById('bgB');
+var tintEl = document.getElementById('tint');
+var frontIsA = true;
+var elTitle  = document.getElementById('stepTitle');
+var elNo     = document.getElementById('stepNo');
+var elScene  = document.getElementById('sceneText');
+var elQ      = document.getElementById('questionText');
+var elOpts   = document.getElementById('options');
+var elGain   = document.getElementById('clueGain');
+var elFoot   = document.getElementById('cardFoot');
+var elHint   = document.getElementById('footHint');
+var elComm   = document.getElementById('comm');
+var IMG_OK   = {};
+
+/* 预载：某张图若加载失败，自动回退到 wide，避免出现空白背景 */
+function preloadShots(cb){
+  var keys = Object.keys(SHOT_SRC), n = 0;
+  keys.forEach(function(k){
+    var im = new Image();
+    im.onload  = function(){ IMG_OK[k] = true;  if(++n === keys.length) cb(); };
+    im.onerror = function(){ IMG_OK[k] = false; if(++n === keys.length) cb(); };
+    im.src = SHOT_SRC[k];
+  });
+}
+
+function setShot(key, gradeIdx){
+  var sk = SHOT[key] ? key : 'wide';
+  var s  = SHOT[sk];
+  var srcKey = (IMG_OK[s.src] === false) ? 'wide' : s.src;
+  var g  = GRADE[gradeIdx] || GRADE[0];
+  var incoming = frontIsA ? layerB : layerA;
+  var outgoing = frontIsA ? layerA : layerB;
+  incoming.classList.remove('on');
+  void incoming.offsetWidth;
+  incoming.style.backgroundImage = "url('" + SHOT_SRC[srcKey] + "')";
+  incoming.style.backgroundSize = s.size;
+  incoming.style.backgroundPosition = s.pos;
+  incoming.style.filter = g.f;
+  incoming.classList.add('on');
+  outgoing.classList.remove('on');
+  frontIsA = !frontIsA;
+  tintEl.style.background = g.t;
+  var fx=document.getElementById('sceneFx');
+  fx.className='sonarfx'+((s.src==='sonar'||s.src==='gap')?' active':'')+(s.src==='sonar'?' strong':'');
+  updateMusic(gradeIdx||0);
+}
+
+function updateMissionStat(delta){
+  missionScore=Math.max(35,Math.min(100,missionScore+(delta||0)));
+  var el=document.getElementById('missionStat');
+  el.textContent=missionScore+'%';
+  el.style.color=missionScore<60?'#ff8a7a':(missionScore<85?'#ffd08a':'#c9e88f');
+}
+
+function choiceNo(i){
+  var c = 0;
+  for(var k=0;k<=i && k<BEATS.length;k++){ if(BEATS[k].type==='choice') c++; }
+  return c;
+}
+
+function renderProgress(){
+  document.getElementById('progText').textContent = clues.length + ' / ' + TOTAL_CHOICES;
+  document.getElementById('progBar').style.width = (clues.length/TOTAL_CHOICES*100) + '%';
+  document.getElementById('clueCount').textContent = clues.length;
+  var tag = document.getElementById('crisisTag');
+  if(tag){
+    var rem = TOTAL_CHOICES - clues.length;
+    var level = rem>4 ? 6 : rem;
+    var label = rem>4 ? 'Ⅰ级·危急' : (rem===4?'Ⅱ级·高':(rem===3?'Ⅲ级·中':(rem===2?'Ⅳ级·低':(rem===1?'Ⅴ级·解除':'已解除'))));
+    tag.className = 'crisis c' + level;
+    tag.textContent = label;
+  }
+}
+
+function renderClues(){
+  var box = document.getElementById('clueList');
+  if(!clues.length){
+    box.innerHTML = '<div class="empty">尚未解析出任何航段。<br>每一次正确的判断，都会在这里留下一块拼图。</div>';
+  }else{
+    box.innerHTML = clues.map(function(c,i){
+      return '<div class="clue"><b>拼图 ' + (i+1) + '</b>　' + c + '</div>';
+    }).join('');
+  }
+  renderProgress();
+}
+
+function render(){
+  var b = BEATS[bi];
+  var isChoice = (b.type === 'choice');
+  setShot(b.shot, b.grade);
+  elTitle.textContent = b.title || '';
+  elNo.textContent = isChoice ? ('抉择 ' + choiceNo(bi) + ' / ' + TOTAL_CHOICES) : ('剧情 ' + (bi+1) + ' / ' + BEATS.length);
+  elNo.className = isChoice ? 'step-no choose' : 'step-no';
+  elScene.innerHTML = b.html || '';
+  elGain.style.display = 'none';
+  elOpts.innerHTML = '';
+  elComm.classList.toggle('on', !!b.comm);
+
+  if(isChoice){
+    elQ.style.display = 'block';
+    elQ.innerHTML = '<span class="qr">◈ 需要你判断</span>' + b.q;
+    elFoot.style.display = 'none';
+    var keys = ['A','B','C','D'];
+    b.options.forEach(function(o,i){
+      var btn = document.createElement('button');
+      btn.className = 'opt';
+      btn.innerHTML = '<span class="k">' + keys[i] + '</span>' + o.t;
+      btn.onclick = (function(o,letter){ return function(){ choose(o, letter); }; })(o, keys[i]);
+      elOpts.appendChild(btn);
+    });
+  }else{
+    elQ.style.display = 'none';
+    elFoot.style.display = 'flex';
+    elHint.textContent = '';
+    var nb = document.getElementById('btnNext');
+    var last = (bi === BEATS.length - 1);
+    nb.textContent = last ? '汇总结论 ▸' : '继续 ▸';
+    nb.onclick = function(){ if(last){ finish(); } else { bi++; render(); } };
+  }
+  document.querySelector('.scroll').scrollTop = 0;
+}
+
+function choose(o, letter){
+  if(o.ok){
+    perfect++;
+    updateMissionStat(2);
+    clues.push(o.clue);
+    renderClues();
+    var b = BEATS[bi];
+    elGain.style.display = 'block';
+    elGain.innerHTML = '<b>✓ 判断成立。</b>' +
+      (b.step ? '<span class="cstep">'+b.step+'</span>' : '') + o.clue +
+      '<span class="cstep">任务反馈 · 航道置信度 +2%</span>';
+    elOpts.innerHTML = '';
+    elQ.style.display = 'none';
+    elFoot.style.display = 'flex';
+    elHint.textContent = '已记入航道解析';
+    var last = (bi === BEATS.length - 1);
+    var nb = document.getElementById('btnNext');
+    nb.textContent = last ? '汇总结论 ▸' : '继续 ▸';
+    nb.onclick = function(){ if(last){ finish(); } else { bi++; render(); } };
+  }else{
+    revealAnswer(o, letter);
+  }
+}
+
+function revealAnswer(o, letter){
+  var co = null;
+  var b = BEATS[bi];
+  if(!penalized[bi]){ penalized[bi]=true; updateMissionStat(-6); }
+  b.options.forEach(function(x){ if(x.ok) co = x; });
+  document.getElementById('noteBody').innerHTML =
+    '<p class="miss">你选了「<b>'+letter+'</b>」—— 那是一条岔路。</p>' +
+    '<span class="cstep">任务反馈 · 航道置信度 -6%</span>' +
+    '<span class="ans-line"><span class="lab">正确答案</span>' + (co ? co.t : '') + '</span>' +
+    (b.step ? '<span class="cstep">'+b.step+'</span>' : '') +
+    o.note +
+    '<span class="sig">—— 领航长 · 远望号 训话</span>';
+  document.getElementById('noteLayer').classList.add('on');
+  document.getElementById('btnRetry').onclick = function(){
+    document.getElementById('noteLayer').classList.remove('on');
+    if(co && co.clue && clues.indexOf(co.clue) < 0){ clues.push(co.clue); renderClues(); }
+    var last = (bi === BEATS.length - 1);
+    if(last){ finish(); } else { bi++; render(); }
+  };
+}
+
+var SYN_CARDS=[
+  '用多组波长照射同一片礁脊',
+  '比较不同波长产生的衍射图样',
+  '交叉反演缺口位置与真实宽度',
+  '把船首对准反演得到的安全中线',
+  '低速前进并持续用回波修正航向'
+];
+var SYN_DISPLAY=[3,0,4,2,1], synIndex=0;
+function finish(){ startSynthesis(); }
+function startSynthesis(){
+  synIndex=0;
+  document.getElementById('synthesis').classList.add('on');
+  document.getElementById('synGo').style.display='none';
+  document.getElementById('synStatus').textContent='从多频探测开始。';
+  renderSynthesis();
+}
+function renderSynthesis(){
+  var box=document.getElementById('synCards');
+  box.innerHTML='';
+  SYN_DISPLAY.forEach(function(idx){
+    var btn=document.createElement('button');
+    btn.className='syn-card'+(idx<synIndex?' done':'');
+    btn.textContent=SYN_CARDS[idx];
+    btn.onclick=function(){ chooseSynthesis(idx,btn); };
+    box.appendChild(btn);
+  });
+  document.getElementById('synChain').innerHTML=synIndex?SYN_CARDS.slice(0,synIndex).map(function(x,i){return '<b>'+(i+1)+'</b> '+x;}).join('　→　'):'等待第一块拼图……';
+}
+function chooseSynthesis(idx,btn){
+  if(idx===synIndex){
+    synIndex++; updateMissionStat(1); renderSynthesis();
+    document.getElementById('synStatus').textContent=synIndex===SYN_CARDS.length?'测绘流程闭合，穿越方案已生成。':'继续寻找下一步。';
+    if(synIndex===SYN_CARDS.length) document.getElementById('synGo').style.display='inline-block';
+  }else{
+    updateMissionStat(-2);
+    document.getElementById('synStatus').textContent='这一步还缺少前置数据。';
+    btn.classList.add('shake'); setTimeout(function(){btn.classList.remove('shake');},260);
+  }
+}
+function resetSynthesis(){ synIndex=0; document.getElementById('synGo').style.display='none'; document.getElementById('synStatus').textContent='从多频探测开始。'; renderSynthesis(); }
+
+function showVictory(){
+  /* 通关 → 通知舰桥：本关标定卡已签发（fleet.js） */
+  try{ if(window.Fleet) window.Fleet.clear(4); }catch(e){}
+  document.getElementById('recap').innerHTML =
+    '<b style="color:#bfe093">本次解析建立的关键结论：</b><br>' +
+    clues.map(function(c,i){ return (i+1) + '. ' + c; }).join('<br>') +
+    '<div style="margin-top:14px;padding-top:12px;border-top:1px dashed rgba(170,210,130,0.35);color:#c9e88f">独立解析 <b>'+perfect+'</b> / '+TOTAL_CHOICES+' 段</div>';
+  document.getElementById('win').classList.add('on');
+}
+
+/* ============================================================
+   三维实操 · 用衍射知识穿缝
+   物理：λ/d 决定衍射图样
+     长波长（低频，R=λ/d 大）→ 衍射强 → 缺口边缘糊、位置错
+     短波长（高频，R 小）      → 衍射弱 → 缺口几乎隐形
+     最优 λ/d ≈ 0.8（约 45 Hz）→ 清晰且准确
+   目标：读声呐、对齐缺口、开过去。
+   ============================================================ */
+var sim = { run:false, f:45, sx:0, d:1, over:false, last:null };
+var GAP_CX=-0.28, GAP_HW=0.11, C=1500, D_M=41;
+
+function sLambda(f){ return C/f; }
+function sRatio(f){ return C/(f*D_M); }
+function sBlur(f){ return 0.04 + 0.55*sRatio(f); }
+function sDrift(f){ return 0.30*(sRatio(f)-0.8); }
+function sVisibility(f){ var r=sRatio(f); return Math.exp(-Math.pow((r-0.8)/1.3,2)); }
+function sApparentCenter(f){ return GAP_CX + sDrift(f); }
+
+var simCanvas=document.getElementById('simCanvas');
+var sctx=simCanvas.getContext('2d');
+
+function startSim(){
+  document.getElementById('win').classList.remove('on');
+  document.getElementById('synthesis').classList.remove('on');
+  document.getElementById('sim3d').classList.add('on');
+  syncSimControls();
+  resetSimRun();
+  resizeSim();
+  if(!sim.run){ sim.run=true; sim.last=null; requestAnimationFrame(simLoop); }
+}
+
+function resetSimRun(){
+  sim.d=1; sim.over=false; sim.t=0;
+  document.getElementById('simOver').classList.remove('on');
+  document.getElementById('sRestart').textContent='↺ 重新出航';
+}
+
+function restartSim(){
+  resetSimRun();
+  syncSimControls();
+  if(!sim.run){ sim.run=true; sim.last=null; requestAnimationFrame(simLoop); }
+}
+
+function syncSimControls(){
+  var sf=document.getElementById('sFreq'), ss=document.getElementById('sSteer');
+  sim.f=parseFloat(sf.value); sim.sx=parseFloat(ss.value);
+  sf.oninput=function(){ sim.f=parseFloat(sf.value); document.getElementById('sFval').textContent=sim.f.toFixed(0)+' Hz'; markFreq(sim.f); };
+  ss.oninput=function(){ sim.sx=parseFloat(ss.value); document.getElementById('sSteerVal').textContent=sim.sx.toFixed(2); };
+  document.getElementById('sFval').textContent=sim.f.toFixed(0)+' Hz';
+  document.getElementById('sSteerVal').textContent=sim.sx.toFixed(2);
+  document.getElementById('sRestart').onclick=restartSim;
+  /* 预设频率按钮 */
+  var fbs=document.querySelectorAll('.s-fb');
+  for(var i=0;i<fbs.length;i++){
+    fbs[i].onclick=(function(btn){ return function(){
+      sim.f=parseFloat(btn.getAttribute('data-f'));
+      document.getElementById('sFreq').value=sim.f;
+      document.getElementById('sFval').textContent=sim.f.toFixed(0)+' Hz';
+      markFreq(sim.f);
+    }; })(fbs[i]);
+  }
+  markFreq(sim.f);
+}
+
+function markFreq(f){
+  var fbs=document.querySelectorAll('.s-fb');
+  for(var i=0;i<fbs.length;i++){
+    fbs[i].classList.toggle('active', parseFloat(fbs[i].getAttribute('data-f'))===Math.round(f));
+  }
+}
+
+function resizeSim(){
+  simCanvas.width=window.innerWidth;
+  simCanvas.height=window.innerHeight;
+}
+window.addEventListener('resize', resizeSim);
+
+function simLoop(ts){
+  if(!sim.run) return;
+  if(sim.last==null) sim.last=ts;
+  var dt=(ts-sim.last)/1000; sim.last=ts;
+  if(dt>0.08) dt=0.08; if(dt<0) dt=0;
+
+  if(!sim.over && sim.d>0){
+    sim.d-=dt*0.08;    /* 约 12.5 秒进到礁墙 */
+    if(sim.d<=0){
+      sim.d=0;
+      if(Math.abs(sim.sx-GAP_CX) < GAP_HW){ showOver(true); }
+      else { showOver(false); }
+      sim.over=true; sim.run=false; /* 结束后停循环，由 overlay 承接 */
+      drawSim();
+      return;
+    }
+  }
+  drawSim();
+  updateHUD();
+  requestAnimationFrame(simLoop);
+}
+
+function updateHUD(){
+  var R=sRatio(sim.f), ap=sApparentCenter(sim.f), vis=sVisibility(sim.f);
+  var gapEl=document.getElementById('sGap');
+  var pct=Math.round(ap*100);
+  var side=pct<0?'左':'右';
+  gapEl.textContent='缺口 ≈ '+side+' '+Math.abs(pct)+'%（可见度 '+(vis*100).toFixed(0)+'%）';
+  gapEl.className='s-live'+(Math.abs(ap-sim.sx)>0.3?' danger':(Math.abs(ap-sim.sx)>0.15?' warn':''));
+  document.getElementById('sDistBar').style.width=((1-sim.d)*100)+'%';
+  document.getElementById('sLda').textContent='λ/d = '+(R).toFixed(2)+'（λ='+sLambda(sim.f).toFixed(0)+' m, d=41 m）';
+  var estW=(GAP_HW*2 + 0.5*sBlur(sim.f))*D_M;
+  document.getElementById('sParams').textContent='波长 λ = '+sLambda(sim.f).toFixed(0)+' m　缝宽估计 ≈ '+(Math.round(estW))+' m（真值 41 m）';
+}
+
+function showOver(win){
+  var icon=document.getElementById('simOverIcon');
+  var h=document.getElementById('simOverH');
+  var c=document.getElementById('simOverCode');
+  var t=document.getElementById('simOverText');
+  var p=document.getElementById('simPrimary');
+  if(win){
+    icon.textContent='🧭'; h.textContent='穿越成功'; c.textContent='GAP RESOLVED';
+    t.innerHTML='你选对波长、看清了缺口，把船从 41 米的缝里开了过去。<br>这正是本关学的：<em>波长太长衍射糊、太短衍射弱</em>，只有 λ/d ≈ 1 附近才能同时「绕得进、看得清」。';
+    p.textContent='查看任务结果 ▸'; p.onclick=completeMission;
+  }else{
+    icon.textContent='🪨'; h.textContent='撞上礁墙'; c.textContent='DIFFRACTION BLIND';
+    t.innerHTML='缺口没对准。回想一下：<em>波长太长，声呐里的缺口会被衍射抹宽、位置漂移</em>；<br>波长太短，衍射太弱，缺口直接「消失」。<br>把频率调到 45 Hz 附近（λ/d≈0.8）再看一眼声呐，重新对准。';
+    p.textContent='↺ 调整后再试'; p.onclick=restartSim;
+  }
+  document.getElementById('simOver').classList.add('on');
+}
+function completeMission(){
+  document.getElementById('simOver').classList.remove('on');
+  document.getElementById('sim3d').classList.remove('on');
+  showKnowledgeGraph();
+}
+var kgTimer=null;
+function showKnowledgeGraph(){
+  var kg=document.getElementById('knowledgeGraph'),btn=document.getElementById('kgFinish');
+  btn.classList.remove('ready');kg.classList.remove('on');void kg.offsetWidth;kg.classList.add('on');
+  updateMusic(1);sonarMusicPing();clearTimeout(kgTimer);kgTimer=setTimeout(function(){btn.classList.add('ready');},5200);
+}
+function finishKnowledgeGraph(){
+  document.getElementById('knowledgeGraph').classList.remove('on');
+  updateMusic(0);showVictory();
+}
+
+/* ---------- 3D 渲染 ---------- */
+function drawSim(){
+  var W=simCanvas.width, H=simCanvas.height;
+  var yh=H*.49+Math.sin((sim.t||0)*.65)*2,cx=W*.5,d=sim.d;
+  var sky=sctx.createLinearGradient(0,0,0,yh);
+  sky.addColorStop(0,'#05090b');sky.addColorStop(.58,'#172126');sky.addColorStop(1,'#45534d');
+  sctx.fillStyle=sky; sctx.fillRect(0,0,W,yh);
+  var moon=sctx.createRadialGradient(W*.72,H*.12,2,W*.72,H*.12,W*.16);moon.addColorStop(0,'rgba(226,238,201,.38)');moon.addColorStop(.16,'rgba(207,224,184,.12)');moon.addColorStop(1,'rgba(0,0,0,0)');sctx.fillStyle=moon;sctx.fillRect(0,0,W,yh);
+  for(var fog=0;fog<5;fog++){var fg=sctx.createRadialGradient(W*(.12+fog*.22),yh*(.45+.08*Math.sin(fog)),6,W*(.12+fog*.22),yh*(.45+.08*Math.sin(fog)),W*.2);fg.addColorStop(0,'rgba(145,164,153,.12)');fg.addColorStop(1,'rgba(0,0,0,0)');sctx.fillStyle=fg;sctx.fillRect(0,0,W,yh);}
+  var wt=sctx.createLinearGradient(0,yh,0,H);
+  wt.addColorStop(0,'#173435');wt.addColorStop(.45,'#0b2527');wt.addColorStop(1,'#041315');
+  sctx.fillStyle=wt; sctx.fillRect(0,yh,W,H-yh);
+  drawFjordWater(W,H,yh);
+  var zf=1.35-d;
+  var scale=W*0.42*zf;
+  var gapCX=GAP_CX-sim.sx;
+  var gapL=cx+(gapCX-GAP_HW)*scale*2;
+  var gapR=cx+(gapCX+GAP_HW)*scale*2;
+  drawCliffMass(W,H,yh,Math.max(0,Math.min(W,gapL)),true,zf);
+  drawCliffMass(W,H,yh,Math.max(0,Math.min(W,gapR)),false,zf);
+  drawSubmergedReefs(W,H,yh,gapL,gapR,zf);
+  drawSonarCone(W,H,yh,cx,gapCX,scale);
+  drawSurveyShip(W,H,yh,cx);
+  drawSonarStrip(W,H,cx,gapCX,scale);
+  var vign=sctx.createRadialGradient(cx,H*.52,H*.18,cx,H*.52,H*.8);vign.addColorStop(.55,'rgba(0,0,0,0)');vign.addColorStop(1,'rgba(0,0,0,.74)');sctx.fillStyle=vign;sctx.fillRect(0,0,W,H);
+}
+
+function drawFjordWater(W,H,yh){
+  for(var r=0;r<22;r++){var p=(r+(((sim.t||0)*.55)%1))/22,y=yh+(H-yh)*Math.pow(p,1.55),amp=1+13*p*p;sctx.beginPath();for(var x=0;x<=W;x+=25){var yy=y+Math.sin(x*.015+r*.88+(sim.t||0)*.38)*amp;if(x===0)sctx.moveTo(x,yy);else sctx.lineTo(x,yy);}sctx.strokeStyle='rgba(140,205,190,'+(.025+.12*p)+')';sctx.lineWidth=.6+p;sctx.stroke();}
+}
+function drawCliffMass(W,H,yh,edge,left,zf){
+  var inner=[],steps=13;
+  for(var i=0;i<=steps;i++){var y=H*i/steps,jag=(Math.sin(i*2.7+(left?1:2))*18+Math.sin(i*.9)*24)*(0.45+zf*.45);inner.push([edge+(left?-1:1)*jag,y]);}
+  var grad=sctx.createLinearGradient(left?0:W,0,left?edge:edge,0);grad.addColorStop(0,'#080b0b');grad.addColorStop(.62,'#151b18');grad.addColorStop(1,'#29302a');sctx.fillStyle=grad;sctx.beginPath();sctx.moveTo(left?0:W,0);for(var j=0;j<inner.length;j++)sctx.lineTo(inner[j][0],inner[j][1]);sctx.lineTo(left?0:W,H);sctx.closePath();sctx.fill();
+  sctx.strokeStyle='rgba(150,164,130,.13)';sctx.lineWidth=1;for(var q=1;q<steps;q+=2){var pt=inner[q];sctx.beginPath();sctx.moveTo(pt[0],pt[1]);sctx.lineTo(left?Math.max(0,pt[0]-W*.18):Math.min(W,pt[0]+W*.18),pt[1]-35-Math.sin(q)*25);sctx.stroke();}
+  sctx.strokeStyle='rgba(185,205,170,.20)';sctx.lineWidth=2;sctx.beginPath();for(var k=0;k<inner.length;k++){if(k===0)sctx.moveTo(inner[k][0],inner[k][1]);else sctx.lineTo(inner[k][0],inner[k][1]);}sctx.stroke();
+}
+function drawSubmergedReefs(W,H,yh,gapL,gapR,zf){
+  sctx.save();sctx.globalCompositeOperation='screen';for(var i=0;i<12;i++){var side=i%2?-1:1,base=side<0?gapL:gapR,x=base+side*(25+(i%6)*32*zf),y=yh+35+(i%4)*48*zf,sz=(18+(i%5)*9)*zf;sctx.fillStyle='rgba(55,128,112,'+(.12+.05*(i%3))+')';sctx.beginPath();sctx.moveTo(x-sz,y+sz*.6);sctx.lineTo(x-sz*.45,y-sz*.5);sctx.lineTo(x,y-sz);sctx.lineTo(x+sz*.55,y-sz*.25);sctx.lineTo(x+sz,y+sz*.6);sctx.closePath();sctx.fill();}sctx.restore();
+}
+function drawSonarCone(W,H,yh,cx,gapCX,scale){
+  var ap=sApparentCenter(sim.f)-sim.sx,targetX=cx+ap*scale*2,vis=sVisibility(sim.f),topY=yh*.35;
+  var cone=sctx.createLinearGradient(cx,H-35,targetX,topY);cone.addColorStop(0,'rgba(170,235,145,'+(.12+.12*vis)+')');cone.addColorStop(1,'rgba(110,210,155,0)');sctx.fillStyle=cone;sctx.beginPath();sctx.moveTo(cx-16,H-42);sctx.lineTo(targetX-scale*(.17+sBlur(sim.f)),topY);sctx.lineTo(targetX+scale*(.17+sBlur(sim.f)),topY);sctx.lineTo(cx+16,H-42);sctx.closePath();sctx.fill();
+  for(var r=0;r<4;r++){var p=((sim.t||0)*.35+r*.25)%1,y=H-45-(H-topY)*p,w=(18+scale*.52*p);sctx.strokeStyle='rgba(195,240,150,'+(.28*(1-p)*vis)+')';sctx.beginPath();sctx.ellipse(cx+(targetX-cx)*p,y,w,w*.11,0,Math.PI,2*Math.PI);sctx.stroke();}
+}
+function drawSurveyShip(W,H,yh,cx){
+  var by=H-26,ww=Math.max(100,W*.095);sctx.save();sctx.shadowColor='rgba(0,0,0,.8)';sctx.shadowBlur=18;var g=sctx.createLinearGradient(cx,by-70,cx,by+10);g.addColorStop(0,'#5d6d64');g.addColorStop(.35,'#26352f');g.addColorStop(1,'#09110f');sctx.fillStyle=g;sctx.beginPath();sctx.moveTo(cx-ww*.55,by);sctx.lineTo(cx-ww*.18,by-58);sctx.lineTo(cx,by-76);sctx.lineTo(cx+ww*.18,by-58);sctx.lineTo(cx+ww*.55,by);sctx.lineTo(cx+ww*.33,by+18);sctx.lineTo(cx-ww*.33,by+18);sctx.closePath();sctx.fill();sctx.shadowBlur=0;
+  sctx.fillStyle='#b7c4b5';sctx.fillRect(cx-ww*.13,by-70,ww*.26,18);sctx.fillStyle='#1f3430';for(var i=-1;i<=1;i++)sctx.fillRect(cx+i*ww*.07-5,by-66,10,6);sctx.strokeStyle='#adc6a7';sctx.beginPath();sctx.moveTo(cx,by-70);sctx.lineTo(cx,by-98);sctx.stroke();sctx.fillStyle='rgba(205,240,160,.95)';sctx.beginPath();sctx.arc(cx,by-78,4,0,7);sctx.fill();sctx.restore();
+}
+
+function drawSonarStrip(W,H,cx,gapCX,scale){
+  var x0=16, x1=W-16, y0=14, yh=66;
+  /* 背板 */
+  sctx.fillStyle='rgba(10,8,5,0.82)';
+  sctx.fillRect(x0,y0,x1-x0,yh-y0);
+  sctx.strokeStyle='rgba(200,190,120,0.35)'; sctx.lineWidth=1;
+  sctx.strokeRect(x0+0.5,y0+0.5,x1-x0-1,yh-y0-1);
+
+  var f=sim.f, R=sRatio(f), vis=sVisibility(f);
+  var ap=GAP_CX+sDrift(f);
+  var widthHalf=GAP_HW*2 + 0.5*sBlur(f);   /* 归一化显示半宽 */
+
+  /* 中心参考线（船的位置） */
+  sctx.strokeStyle='rgba(200,190,120,0.3)'; sctx.setLineDash([3,3]);
+  sctx.beginPath(); sctx.moveTo(cx,y0+3); sctx.lineTo(cx,yh-3); sctx.stroke();
+  sctx.setLineDash([]);
+
+  /* 沿 x 画反射剖面：墙亮、缺口暗 */
+  var n=240;
+  for(var i=0;i<n;i++){
+    var px=x0+(x1-x0)*i/(n-1);
+    var wx=(px-cx)/((x1-x0)/2);           /* -1..1 世界横坐标 */
+    var gapComp=Math.exp(-Math.pow((wx-ap)/widthHalf,2));   /* 缺口的暗谷 */
+    var wall=1-gapComp;
+    var noise=(Math.random()-0.5)*0.3*(1.2-vis);            /* 可见度低时噪声大 */
+    var inten=Math.max(0,Math.min(1,wall*vis+noise));
+    var c=Math.round(90+inten*150);
+    var warmb=Math.round(60+inten*90);
+    sctx.fillStyle='rgba('+c+','+warmb+',40,'+(0.5+0.5*inten)+')';
+    sctx.fillRect(px,y0+4,1.3,yh-y0-8);
+  }
+
+  /* 声呐方向提示 */
+  sctx.strokeStyle='rgba(200,235,150,'+(0.3+0.5*vis)+')';
+  sctx.beginPath();
+  sctx.moveTo(x0+8,yh-4);
+  var spread=0.4/sRatio(f);
+  sctx.lineTo(x0+8+Math.min(300,30+spread*40),y0+8);
+  sctx.stroke();
+}
+
+/* 启动 */
+renderProgress();
+renderClues();
+render();
+preloadShots(function(){ /* 预载完成后不再重绘，避免闪动 */ });
+</script>
+
+<!-- 舰桥导航坞：回舰桥 / 看标定卡进度（嵌进顶栏，不遮挡任何控件） -->
+<script>try{ window.Fleet && window.Fleet.mountDock({label:'第四关 暗礁迷阵', host:'.topbar', hostGap:'0 0 0 10px'}); }catch(e){}</script>
+</body>
+</html>

@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第 6 关 · 稳若泰山 —— 破浪者：球鼻艏计划</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0a1626;
+      font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+      color: rgba(225, 240, 255, 0.95);
+      user-select: none;
+    }
+
+    /* ============ 场景通用 ============ */
+    .scene {
+      position: fixed;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+      background: radial-gradient(ellipse at 50% 35%, rgba(18, 55, 105, 0.5) 0%, rgba(6, 18, 42, 0.9) 60%, #040b18 100%);
+    }
+    .scene.active { opacity: 1; pointer-events: auto; }
+
+    .hud-no {
+      position: absolute;
+      top: 22px;
+      left: 28px;
+      font-size: 13px;
+      letter-spacing: 0.3em;
+      color: rgba(160, 210, 255, 0.65);
+      z-index: 5;
+    }
+
+    .btn {
+      padding: 14px 48px;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: #7fd4ff;
+      background: rgba(10, 30, 60, 0.6);
+      border: 1px solid rgba(80, 190, 255, 0.7);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .btn:hover {
+      color: #ffd54a;
+      border-color: #ffd54a;
+      box-shadow: 0 0 20px rgba(255, 213, 74, 0.4);
+    }
+    .btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .btn-skip {
+      position: absolute;
+      top: 22px;
+      right: 24px;
+      z-index: 8;
+      padding: 9px 20px;
+      font-size: 13px;
+      letter-spacing: 0.22em;
+      color: rgba(160, 210, 255, 0.75);
+      background: rgba(10, 30, 60, 0.35);
+      border: 1px solid rgba(80, 190, 255, 0.4);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .btn-skip:hover { color: #ffd54a; border-color: #ffd54a; }
+
+    /* ============ 场景一：剧情 ============ */
+    #story { cursor: pointer; z-index: 3; }
+    #storyText {
+      position: absolute;
+      left: 50%;
+      top: 38%;
+      transform: translate(-50%, -50%);
+      width: min(780px, 86vw);
+      text-align: center;
+      z-index: 6;
+      pointer-events: none;
+    }
+    #storyText .para {
+      font-size: clamp(17px, 2.4vw, 25px);
+      line-height: 2;
+      letter-spacing: 0.06em;
+      color: rgba(225, 240, 255, 0.96);
+      text-shadow: 0 2px 14px rgba(0, 0, 0, 0.65);
+      opacity: 0;
+      transform: translateY(14px);
+      animation: paraIn 0.8s ease forwards;
+    }
+    #storyText .para em {
+      font-style: normal;
+      color: #ffd54a;
+      text-shadow: 0 0 10px rgba(255, 213, 74, 0.45);
+    }
+    @keyframes paraIn { to { opacity: 1; transform: translateY(0); } }
+
+    #storyNext {
+      position: absolute;
+      left: 50%;
+      bottom: 9%;
+      transform: translateX(-50%);
+      z-index: 7;
+      font-size: 15px;
+      letter-spacing: 0.3em;
+      color: rgba(160, 220, 255, 0.85);
+      opacity: 0;
+      animation: hintPulse 1.6s ease-in-out infinite;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+    }
+    #storyNext.show { opacity: 1; }
+    @keyframes hintPulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+    /* 剧情背景：船体剖面随震颤发光 */
+    #storyCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    /* ============ 场景二：教学实验 ============ */
+    #lab { display: flex; flex-direction: column; z-index: 3; }
+    #labHeader {
+      padding: 56px 40px 6px;
+      text-align: center;
+      z-index: 4;
+    }
+    #labHeader h2 {
+      font-size: clamp(20px, 3vw, 30px);
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      color: #ffd54a;
+      text-shadow: 0 0 12px rgba(255, 213, 74, 0.35);
+    }
+    #labHeader p {
+      margin-top: 8px;
+      font-size: clamp(13px, 1.6vw, 16px);
+      line-height: 1.8;
+      color: rgba(200, 225, 255, 0.9);
+    }
+    #labHeader p em { font-style: normal; color: #ffd54a; }
+
+    /* 模式切换（先无半波损失，再有半波损失，再叠加驻波） */
+    #modeTabs {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .mode-tab {
+      padding: 9px 22px;
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      color: rgba(180, 215, 255, 0.8);
+      background: rgba(10, 30, 60, 0.45);
+      border: 1px solid rgba(80, 190, 255, 0.35);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .mode-tab:hover { border-color: rgba(140, 215, 255, 0.8); color: #d9efff; }
+    .mode-tab.on {
+      color: #2a1e00;
+      background: linear-gradient(90deg, #ffb400, #ffd54a);
+      border-color: #ffd54a;
+      font-weight: 700;
+      box-shadow: 0 0 14px rgba(255, 213, 74, 0.45);
+    }
+
+    #labCanvas {
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      display: block;
+    }
+
+    /* 控制台 */
+    #labPanel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 34px;
+      flex-wrap: wrap;
+      padding: 10px 30px 8px;
+      z-index: 4;
+    }
+    .ctrl { display: flex; align-items: center; gap: 10px; }
+    .ctrl label {
+      font-size: 14px;
+      letter-spacing: 0.1em;
+      color: rgba(170, 210, 250, 0.9);
+      white-space: nowrap;
+    }
+    .ctrl output {
+      min-width: 74px;
+      font-size: 13px;
+      color: #ffd54a;
+      font-variant-numeric: tabular-nums;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 150px;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(127, 212, 255, 0.25);
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #7fd4ff;
+      box-shadow: 0 0 8px rgba(127, 212, 255, 0.8);
+      cursor: pointer;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 15px;
+      height: 15px;
+      border: none;
+      border-radius: 50%;
+      background: #7fd4ff;
+      box-shadow: 0 0 8px rgba(127, 212, 255, 0.8);
+      cursor: pointer;
+    }
+
+    #toggles { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+    .tg {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: rgba(190, 220, 255, 0.85);
+      cursor: pointer;
+    }
+    .tg input { accent-color: #ffd54a; cursor: pointer; }
+    .tg.dim { opacity: 0.38; cursor: not-allowed; }
+    .tg.dim input { cursor: not-allowed; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+    #labFooter {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 26px;
+      padding: 6px 30px 20px;
+      z-index: 4;
+    }
+    #exploreHint {
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      color: rgba(160, 210, 255, 0.7);
+    }
+    #exploreHint.done { color: #ffd54a; }
+
+    /* ============ 场景三：破坏共振 ============ */
+    #game { display: flex; flex-direction: column; z-index: 3; }
+    #gameHeader {
+      padding: 52px 40px 4px;
+      text-align: center;
+      z-index: 4;
+    }
+    #gameHeader h2 {
+      font-size: clamp(20px, 3vw, 30px);
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      color: #ffd54a;
+      text-shadow: 0 0 12px rgba(255, 213, 74, 0.35);
+    }
+    #gameHeader p {
+      margin-top: 6px;
+      font-size: clamp(13px, 1.6vw, 16px);
+      color: rgba(200, 225, 255, 0.9);
+      line-height: 1.7;
+    }
+    #gameHeader p em { font-style: normal; color: #ffd54a; }
+
+    /* 状态栏：船体完整度 + 减震器库存 + 回合 */
+    #gameStatus {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 40px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      z-index: 4;
+    }
+    .stat { display: flex; align-items: center; gap: 10px; font-size: 14px; letter-spacing: 0.1em; color: rgba(180, 215, 255, 0.9); }
+    #integrityTrack {
+      width: 220px;
+      height: 10px;
+      background: rgba(127, 212, 255, 0.15);
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid rgba(80, 190, 255, 0.3);
+    }
+    #integrityFill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #ff5a4a, #ffb400, #ffd54a);
+      border-radius: 5px;
+      transition: width 0.2s linear;
+    }
+    #damperStock { display: flex; gap: 6px; }
+    .damper-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ffe9a8, #ffb400 60%, #b57e00);
+      box-shadow: 0 0 8px rgba(255, 190, 40, 0.7);
+      transition: all 0.3s ease;
+    }
+    .damper-icon.used {
+      background: rgba(127, 212, 255, 0.12);
+      box-shadow: none;
+      border: 1px dashed rgba(127, 212, 255, 0.4);
+    }
+
+    #gameCanvas { flex: 1; width: 100%; min-height: 0; display: block; cursor: crosshair; }
+
+    #gameFooter {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 8px 30px 22px;
+      z-index: 4;
+    }
+    #absorbInfo {
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      color: rgba(200, 225, 255, 0.9);
+      min-width: 260px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    #absorbInfo em { font-style: normal; color: #ffd54a; }
+
+    /* 胜负提示横幅 */
+    #gameBanner {
+      position: absolute;
+      left: 50%;
+      top: 44%;
+      transform: translate(-50%, -50%) scale(0.9);
+      z-index: 9;
+      padding: 30px 56px;
+      text-align: center;
+      background: linear-gradient(180deg, rgba(8, 22, 50, 0.96), rgba(4, 12, 30, 0.98));
+      border: 1px solid rgba(255, 213, 74, 0.55);
+      border-radius: 10px;
+      box-shadow: 0 0 40px rgba(255, 213, 74, 0.25);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.4s ease;
+    }
+    #gameBanner.show { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+    #gameBanner h3 {
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      color: #ffd54a;
+      text-shadow: 0 0 14px rgba(255, 213, 74, 0.5);
+    }
+    #gameBanner.fail h3 { color: #ff7a6a; text-shadow: 0 0 14px rgba(255, 110, 90, 0.5); }
+    #gameBanner.fail { border-color: rgba(255, 110, 90, 0.55); box-shadow: 0 0 40px rgba(255, 90, 70, 0.2); }
+    #gameBanner p {
+      margin: 14px 0 22px;
+      font-size: 15px;
+      line-height: 1.9;
+      color: rgba(215, 235, 255, 0.92);
+    }
+
+    /* ============ 场景四：通关 ============ */
+    #win { z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; text-align: center; padding: 0 24px; }
+    #win .win-title {
+      font-size: clamp(34px, 6vw, 64px);
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      color: #ffd54a;
+      text-shadow: 0 0 10px rgba(255, 213, 74, 0.4), 0 0 26px rgba(255, 180, 0, 0.25);
+      animation: paraIn 0.9s ease both;
+    }
+    #win .win-text {
+      max-width: 720px;
+      font-size: clamp(15px, 2vw, 19px);
+      line-height: 2;
+      color: rgba(220, 238, 255, 0.94);
+      animation: paraIn 0.9s ease 0.25s both;
+    }
+    #win .win-text em { font-style: normal; color: #ffd54a; }
+    #win .btn { animation: paraIn 0.9s ease 0.5s both; }
+  </style>
+</head>
+<body>
+  <!-- ============ 场景一：剧情 ============ -->
+  <div id="story" class="scene active">
+    <canvas id="storyCanvas"></canvas>
+    <div class="hud-no">MISSION 06 · 稳若泰山</div>
+    <button id="storySkip" class="btn-skip">跳过剧情</button>
+    <div id="storyText"></div>
+    <div id="storyNext">继续 ▸</div>
+  </div>
+
+  <!-- ============ 场景二：教学实验（反射 / 透射 / 半波损失 / 驻波） ============ -->
+  <div id="lab" class="scene">
+    <div class="hud-no">MISSION 06 · 稳若泰山</div>
+    <div id="labHeader">
+      <h2>虚拟水池 · 波的反射与透射</h2>
+      <p id="labExplain"></p>
+      <div id="modeTabs">
+        <button class="mode-tab on" data-mode="free">① 无半波损失</button>
+        <button class="mode-tab" data-mode="fixed">② 有半波损失</button>
+        <button class="mode-tab" data-mode="stand">③ 叠加 · 驻波</button>
+      </div>
+    </div>
+    <canvas id="labCanvas"></canvas>
+    <div id="labPanel">
+      <div class="ctrl">
+        <label>频率 f</label>
+        <input type="range" id="ctlF" min="0.3" max="2.0" step="0.05" value="0.8">
+        <output id="outF">0.80 Hz</output>
+      </div>
+      <div class="ctrl">
+        <label>波长 λ</label>
+        <input type="range" id="ctlL" min="90" max="380" step="5" value="220">
+        <output id="outL">220 px</output>
+      </div>
+      <div class="ctrl">
+        <label>振幅 A</label>
+        <input type="range" id="ctlA" min="18" max="78" step="2" value="46">
+        <output id="outA">46 px</output>
+      </div>
+      <div id="toggles">
+        <label class="tg"><input type="checkbox" id="tgComp" checked><span class="dot" style="background:#5aa7e8"></span>入射/反射分量</label>
+        <label class="tg"><input type="checkbox" id="tgSum" checked><span class="dot" style="background:#ffd54a"></span>叠加波形</label>
+        <label class="tg"><input type="checkbox" id="tgTrans" checked><span class="dot" style="background:#6fe3a5"></span>透射波</label>
+      </div>
+    </div>
+    <div id="labFooter">
+      <div id="exploreHint">动手调节参数，依次体验三种模式 ▸ <span id="exploreCount">0/3</span></div>
+      <button id="toGame" class="btn" disabled>进入挑战：破坏共振</button>
+    </div>
+  </div>
+
+  <!-- ============ 场景三：小游戏 · 破坏共振 ============ -->
+  <div id="game" class="scene">
+    <div class="hud-no">MISSION 06 · 稳若泰山</div>
+    <div id="gameHeader">
+      <h2>破坏共振 · 减震器部署</h2>
+      <p id="gameExplain">发动机高频振动在船体上激起<em>驻波共振模态</em>。点击船体，把有限的<em>阻尼减震器</em>钉在<em>波腹</em>（振幅最大处）上吸收能量；钉在波节上几乎无效。再次点击已放置的减震器可回收。</p>
+    </div>
+    <div id="gameStatus">
+      <div class="stat">船体完整度
+        <div id="integrityTrack"><div id="integrityFill"></div></div>
+        <span id="integrityText">100%</span>
+      </div>
+      <div class="stat">减震器 <div id="damperStock"></div></div>
+      <div class="stat">模态 <span id="roundText" style="color:#ffd54a">1 / 3</span></div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameFooter">
+      <div id="absorbInfo">能量吸收率 <em id="absorbNow">0%</em> / 目标 <em id="absorbGoal">80%</em></div>
+      <button id="submitPlan" class="btn">启动减震</button>
+    </div>
+    <div id="gameBanner">
+      <h3 id="bannerTitle">共振已破坏</h3>
+      <p id="bannerText"></p>
+      <button id="bannerBtn" class="btn">继续</button>
+    </div>
+  </div>
+
+  <!-- ============ 场景四：通关 ============ -->
+  <div id="win" class="scene">
+    <div class="win-title">稳若泰山</div>
+    <p class="win-text">
+      最后一处波腹上的减震器发出沉稳的低鸣，肆虐的驻波共振被一点点抽干能量，船体的震颤归于平静。<br>
+      警报解除。母港的灯塔穿透风暴海峡的雨幕，在正前方亮起。<br>
+      从一颗活塞的简谐振动，到驻波的波腹与波节——你用<em>波动物理学</em>亲手驯服了这片海。<br>
+      「球鼻艏计划」，圆满完成。欢迎回家，工程师。
+    </p>
+    <button class="btn" onclick="location.href='index.html'">⇱ 返回舰桥</button>
+    <button class="btn" onclick="location.reload()" style="margin-top:14px;font-size:15px;padding:11px 34px">↺ 重玩本关</button>
+  </div>
+
+  <script src="fleet.js"></script>
+  <script>
+    /* ================================================================
+     * 全局：场景切换
+     * ================================================================ */
+    const SCENES = ['story', 'lab', 'game', 'win'].map(id => document.getElementById(id));
+    function goto(sceneEl) {
+      sceneEl.classList.add('active');
+      SCENES.forEach(el => { if (el !== sceneEl) el.classList.remove('active'); });
+    }
+
+    /* ================================================================
+     * 场景一：剧情
+     * ================================================================ */
+    const STORY = [
+      '球鼻艏劈开黑色的涌浪，科考船以前所未有的极速冲出峡湾。测速仪上的数字疯狂跳动——成功了。',
+      '然而，警报声骤然撕裂了驾驶舱。<em>结构应力超限。结构应力超限。</em>',
+      '发动机的高频振动顺着龙骨传遍全身，在被约束的金属船体上来回<em>反射</em>，与入射的振动彼此叠加——',
+      '船体上，某些位置剧烈震颤、仿佛随时会撕裂；而另一些位置却诡异地静止不动。',
+      '老所长的声音从通讯器里传来，沙哑而急切：「那是<em>驻波</em>！振动在船体里形成了共振模态——振幅最大的地方叫<em>波腹</em>，几乎不动的地方叫<em>波节</em>。」',
+      '「船上的阻尼减震器不多了。记住：把减震器钉在<em>波节</em>上是浪费——它得钉在<em>波腹</em>上，才能吃掉共振的能量！」',
+      '你走向虚拟水池控制台。在动手之前，必须先亲眼看清——<em>波在边界上反射时，究竟发生了什么。</em>'
+    ];
+
+    const storyScene = document.getElementById('story');
+    const storyText = document.getElementById('storyText');
+    const storyNext = document.getElementById('storyNext');
+    const storySkip = document.getElementById('storySkip');
+    let storyIdx = -1;
+    let storyDone = false;
+    let storyAlive = true;   // 剧情背景动画循环开关（声明前置，供 finishStory 安全引用，消除 TDZ 隐患）
+
+    function showStoryPara() {
+      if (storyDone) { finishStory(); return; }
+      storyIdx++;
+      if (storyIdx < STORY.length) {
+        const p = document.createElement('p');
+        p.className = 'para';
+        p.innerHTML = STORY[storyIdx];
+        storyText.innerHTML = '';
+        storyText.appendChild(p);
+      }
+      storyNext.classList.add('show');   // 从第一段起就提示「点击继续」
+      if (storyIdx >= STORY.length - 1) {
+        storyDone = true;
+        storyNext.textContent = '进入水池 ▾';
+      }
+    }
+
+    function finishStory() {
+      storyDone = true;
+      storyAlive = false;   // 剧情不再返回，停掉背景动画循环
+      goto(document.getElementById('lab'));
+      initLab();
+    }
+
+    storyScene.addEventListener('click', showStoryPara);
+    storySkip.addEventListener('click', e => { e.stopPropagation(); finishStory(); });
+    showStoryPara();
+
+    /* 剧情背景：震颤的船体侧影（驻波形变 + 应力辉光） */
+    const sCanvas = document.getElementById('storyCanvas');
+    const sctx = sCanvas.getContext('2d');
+    function resizeStory() {
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      sCanvas.width = Math.max(1, Math.round(innerWidth * dpr));
+      sCanvas.height = Math.max(1, Math.round(innerHeight * dpr));
+      sctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // 之后一律用 CSS 像素作图
+    }
+    addEventListener('resize', resizeStory);
+    resizeStory();
+
+    function drawStory(now) {
+      if (!storyAlive) return;
+      if (!storyScene.classList.contains('active')) { requestAnimationFrame(drawStory); return; }
+      const t = now / 1000;
+      const W = innerWidth, H = innerHeight;   // 上下文已按 DPR 缩放，用 CSS 像素
+      sctx.clearRect(0, 0, W, H);
+
+      // 船体条带：三腹驻波形变（n=3 模态），夸张化
+      const cx = W / 2, cy = H * 0.72, len = Math.min(W * 0.62, 760), h = 54;
+      const env = x => Math.sin(3 * Math.PI * x / len);      // 模态包络
+      const osc = Math.sin(2 * Math.PI * 1.1 * t);           // 时间振荡
+
+      sctx.beginPath();
+      for (let x = 0; x <= len; x += 4) {
+        const y = cy - h / 2 + env(x) * 26 * osc;
+        x === 0 ? sctx.moveTo(cx - len / 2 + x, y) : sctx.lineTo(cx - len / 2 + x, y);
+      }
+      for (let x = len; x >= 0; x -= 4) {
+        const y = cy + h / 2 + env(x) * 26 * osc;
+        sctx.lineTo(cx - len / 2 + x, y);
+      }
+      sctx.closePath();
+      sctx.fillStyle = 'rgba(70, 115, 160, 0.30)';
+      sctx.fill();
+      sctx.strokeStyle = 'rgba(150, 205, 250, 0.55)';
+      sctx.lineWidth = 1.6;
+      sctx.stroke();
+
+      // 波腹处红色应力辉光，波节处青色标记
+      for (let i = 0; i < 3; i++) {
+        const x = cx - len / 2 + (i + 0.5) * len / 3;
+        const g = sctx.createRadialGradient(x, cy, 0, x, cy, 60);
+        const a = 0.25 + 0.2 * Math.abs(osc);
+        g.addColorStop(0, `rgba(255, 96, 74, ${a})`);
+        g.addColorStop(1, 'rgba(255, 96, 74, 0)');
+        sctx.fillStyle = g;
+        sctx.beginPath();
+        sctx.arc(x, cy, 60, 0, Math.PI * 2);
+        sctx.fill();
+      }
+      for (let i = 0; i <= 3; i++) {
+        const x = cx - len / 2 + i * len / 3;
+        sctx.beginPath();
+        sctx.arc(x, cy, 3.2, 0, Math.PI * 2);
+        sctx.fillStyle = 'rgba(127, 212, 255, 0.85)';
+        sctx.fill();
+      }
+      requestAnimationFrame(drawStory);
+    }
+    requestAnimationFrame(drawStory);
+
+    /* ================================================================
+     * 场景二：教学实验 —— 反射 / 透射 / 半波损失 / 驻波
+     * ================================================================ */
+    const labCanvas = document.getElementById('labCanvas');
+    const lctx = labCanvas.getContext('2d');
+    const labExplain = document.getElementById('labExplain');
+
+    const EXPLAIN = {
+      free: '波由<em>波密介质</em>射向<em>波疏介质</em>的边界（相当于自由端），反射时<em>相位不变</em>——没有半波损失。观察：边界处叠加出<em>波腹</em>，透射到波疏介质中的波波长变长。',
+      fixed: '波由<em>波疏介质</em>射向<em>波密介质</em>，反射时相位突跃 π，相当于<em>损失半个波长</em>；透射波仍然存在（相位不变、波长变短）。观察：反射波在边界处与入射波<em>反相</em>，叠加振幅最小。',
+      stand: '入射波与反射波<em>频率相同、振幅相等、反向传播</em>，叠加（和差化积）得 <em>y = 2A·sin(kx + φ/2)·cos(ωt + φ/2)</em>——不前进的<em>驻波</em>：波腹剧烈振荡，波节永远静止。'
+    };
+
+    const lab = {
+      mode: 'free',            // free | fixed | stand
+      f: 0.8, lambda: 220, A: 46,
+      showComp: true, showSum: true, showTrans: true,
+      inited: false
+    };
+
+    function initLab() {
+      if (lab.inited) return;
+      lab.inited = true;
+      resizeLab();
+      setMode('free');
+      requestAnimationFrame(drawLab);
+    }
+
+    let labW = 0, labH = 0;   // CSS 像素尺寸（作图坐标系）
+    function resizeLab() {
+      const r = labCanvas.getBoundingClientRect();
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      labW = r.width; labH = r.height;
+      labCanvas.width = Math.max(1, Math.round(r.width * dpr));
+      labCanvas.height = Math.max(1, Math.round(r.height * dpr));
+      lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    addEventListener('resize', () => { if (lab.inited) resizeLab(); });
+
+    // 模式切换：按顺序 ①→②→③，全部体验后解锁挑战按钮
+    const explored = new Set(['free']);
+    function setMode(mode) {
+      lab.mode = mode;
+      explored.add(mode);
+      document.querySelectorAll('.mode-tab').forEach(b =>
+        b.classList.toggle('on', b.dataset.mode === mode));
+      labExplain.innerHTML = EXPLAIN[mode];
+      // 空值守卫：全部体验后 #exploreHint 被整体重写，#exploreCount 可能已被销毁
+      const ec = document.getElementById('exploreCount');
+      if (ec) ec.textContent = explored.size + '/3';
+      if (explored.size >= 3) {
+        const btn = document.getElementById('toGame');
+        btn.disabled = false;
+        const hint = document.getElementById('exploreHint');
+        hint.classList.add('done');
+        // 保留 #exploreCount 结构，回看模式标签时上方计数仍能更新，不会报 null
+        hint.innerHTML = '三种模式已全部体验 ✔ 可以进入挑战 <span id="exploreCount">3/3</span>';
+      }
+      // 驻波模式下「入射/反射分量」与「透射波」不参与绘制：置灰禁用，保持 UI 与画面一致
+      const isStandMode = mode === 'stand';
+      ['tgComp', 'tgTrans'].forEach(id => {
+        const cb = document.getElementById(id);
+        cb.disabled = isStandMode;
+        cb.closest('.tg').classList.toggle('dim', isStandMode);
+      });
+    }
+    document.querySelectorAll('.mode-tab').forEach(b =>
+      b.addEventListener('click', () => setMode(b.dataset.mode)));
+
+    // 参数滑块
+    function bindSlider(id, outId, fmt, apply) {
+      const el = document.getElementById(id);
+      const out = document.getElementById(outId);
+      el.addEventListener('input', () => {
+        apply(parseFloat(el.value));
+        out.textContent = fmt(parseFloat(el.value));
+      });
+    }
+    bindSlider('ctlF', 'outF', v => v.toFixed(2) + ' Hz', v => lab.f = v);
+    bindSlider('ctlL', 'outL', v => v.toFixed(0) + ' px', v => lab.lambda = v);
+    bindSlider('ctlA', 'outA', v => v.toFixed(0) + ' px', v => lab.A = v);
+
+    ['tgComp', 'tgSum', 'tgTrans'].forEach(id => {
+      document.getElementById(id).addEventListener('change', e => {
+        if (id === 'tgComp') lab.showComp = e.target.checked;
+        if (id === 'tgSum') lab.showSum = e.target.checked;
+        if (id === 'tgTrans') lab.showTrans = e.target.checked;
+      });
+    });
+
+    document.getElementById('toGame').addEventListener('click', () => {
+      goto(document.getElementById('game'));
+      initGame();
+    });
+
+    /* 波动模型（理想化教学模型）
+     * 以边界为原点：u = x − xb（介质 1 一侧 u ≤ 0）
+     * 入射波 y_i = A·sin(ku − ωt)                  （向右传向边界）
+     * 反射波 y_r = R·A·sin(ku + ωt + φ)            （向左远离边界）
+     *   φ = π, R = 1：自由端（无半波损失）——边界处 y_r = y_i，叠加出波腹（振幅 2A），相位不变
+     *   φ = 0, R = 0.5：波密介质（有半波损失）——边界处反射波与入射波反相（相位差恒为 π），
+     *           叠加振幅最小；反射系数 R < 1，剩余能量透射进介质 2
+     * 叠加（和差化积，R = 1 时）：y = 2A·sin(ku + φ/2)·cos(ωt + φ/2)（驻波模式严格不前进）
+     * 透射波 y_t = T·A·sin(k₂u − ωt)（介质 2 一侧 u ≥ 0，相位不变、无半波损失）
+     *   自由端取 T = 2 为理想化示意（透射振幅与边界波腹一致）；波密介质取 T = 0.5，
+     *   满足边界连续条件 1 − R = T：y_i(0) + y_r(0) = y_t(0)，波形在边界处不跳变
+     */
+    function drawLab(now) {
+      // 场景切走后直接停止循环（与剧情场景 storyAlive 的启停模式一致），不再空转占帧
+      if (!document.getElementById('lab').classList.contains('active')) return;
+      const t = now / 1000;
+      const W = labW, H = labH;                   // CSS 像素（上下文已按 DPR 缩放）
+      lctx.clearRect(0, 0, W, H);
+
+      const cy = H * 0.52;
+      const xb = W * 0.64;                        // 边界位置
+      const A = lab.A;
+      const w = 2 * Math.PI * lab.f;              // 角频率
+      const k = 2 * Math.PI / lab.lambda;         // 波数（左介质）
+      // 反射相位常数：φ = π ↔ 自由端（无半波损失，边界为波腹）
+      //               φ = 0 ↔ 波密介质（有半波损失，边界处反射与入射反相、叠加最弱）
+      const phi = lab.mode === 'free' ? Math.PI : 0;
+      const isStand = lab.mode === 'stand';
+      // 反射系数：自由端 R = 1（极限：阻抗 → 0）；波密介质 R = 0.5（有限阻抗失配，φ = 0 使反射反相）；
+      // 驻波模式取 R = 1 严格全反射，形成纯驻波
+      const R = lab.mode === 'fixed' ? 0.5 : 1;
+      // 介质 2 中的波数：自由端 → 波疏介质波长更长（k₂ = 0.65k）；波密介质波长更短（k₂ = 1.6k）
+      const k2 = lab.mode === 'free' ? k * 0.65 : k * 1.6;
+      // 透射振幅：自由端取 T = 2（理想化示意，与边界波腹振幅一致）；波密介质取 T = 0.5，
+      // 均满足边界连续条件 y_i(0) + y_r(0) = y_t(0)，波形在边界处不跳变；驻波模式不画透射波
+      const T = lab.mode === 'free' ? 2 : 0.5;
+
+      // --- 介质分区底色 ---
+      lctx.fillStyle = 'rgba(70, 130, 190, 0.06)';
+      lctx.fillRect(0, 0, xb, H);
+      lctx.fillStyle = 'rgba(150, 110, 60, 0.07)';
+      lctx.fillRect(xb, 0, W - xb, H);
+
+      // 分界线 + 标注
+      lctx.setLineDash([8, 7]);
+      lctx.strokeStyle = 'rgba(255, 235, 180, 0.5)';
+      lctx.lineWidth = 1.4;
+      lctx.beginPath(); lctx.moveTo(xb, 16); lctx.lineTo(xb, H - 16); lctx.stroke();
+      lctx.setLineDash([]);
+      lctx.font = '13px "PingFang SC", sans-serif';
+      lctx.textAlign = 'center';
+      lctx.fillStyle = 'rgba(170, 210, 250, 0.85)';
+      lctx.fillText(lab.mode === 'free' ? '介质 1（波密）' : '介质 1（波疏）', xb / 2, 32);
+      lctx.fillStyle = 'rgba(255, 214, 150, 0.85)';
+      lctx.fillText(lab.mode === 'free' ? '介质 2（波疏）' : '介质 2（波密）', xb + (W - xb) / 2, 32);
+
+      // 平衡线
+      lctx.strokeStyle = 'rgba(160, 200, 240, 0.16)';
+      lctx.lineWidth = 1;
+      lctx.beginPath(); lctx.moveTo(0, cy); lctx.lineTo(W, cy); lctx.stroke();
+
+      // 以边界为原点：u = x − xb（保证边界条件与 xb、λ 的取值无关）
+      const yI = x => A * Math.sin(k * (x - xb) - w * t);                 // 入射（向边界传播）
+      const yR = x => R * A * Math.sin(k * (x - xb) + w * t + phi);       // 反射（离边界传播）
+      const ySum = x => yI(x) + yR(x);   // 和差化积 = 2A·sin(k(x−xb) + φ/2)·cos(ωt + φ/2)
+      const yT = x => T * A * Math.sin(k2 * (x - xb) - w * t);            // 透射
+
+      // --- 分量：入射波（实线蓝） + 反射波（虚线紫） ---
+      if (lab.showComp && !isStand) {
+        lctx.lineWidth = 1.6;
+        lctx.strokeStyle = 'rgba(90, 167, 232, 0.75)';
+        lctx.beginPath();
+        for (let x = 0; x <= xb; x += 2) {
+          const y = cy - yI(x);
+          x === 0 ? lctx.moveTo(x, y) : lctx.lineTo(x, y);
+        }
+        lctx.stroke();
+
+        lctx.setLineDash([6, 5]);
+        lctx.strokeStyle = 'rgba(178, 132, 240, 0.75)';
+        lctx.beginPath();
+        for (let x = 0; x <= xb; x += 2) {
+          const y = cy - yR(x);
+          x === 0 ? lctx.moveTo(x, y) : lctx.lineTo(x, y);
+        }
+        lctx.stroke();
+        lctx.setLineDash([]);
+      }
+
+      // 驻波模式：画包络线 ±2A·|sin(k(x−xb) + φ/2)|（与时间无关）
+      if (isStand) {
+        lctx.setLineDash([4, 6]);
+        lctx.strokeStyle = 'rgba(255, 213, 74, 0.4)';
+        lctx.lineWidth = 1.2;
+        [1, -1].forEach(s => {
+          lctx.beginPath();
+          for (let x = 0; x <= xb; x += 2) {
+            const y = cy - s * 2 * A * Math.abs(Math.sin(k * (x - xb) + phi / 2));
+            x === 0 ? lctx.moveTo(x, y) : lctx.lineTo(x, y);
+          }
+          lctx.stroke();
+        });
+        lctx.setLineDash([]);
+      }
+
+      // --- 叠加波形（亮金实线） ---
+      // 辉光用一条更宽的低透明度描边模拟，避免每帧 shadowBlur 的 GPU 开销
+      if (lab.showSum) {
+        lctx.beginPath();
+        for (let x = 0; x <= xb; x += 2) {
+          const y = cy - ySum(x);
+          x === 0 ? lctx.moveTo(x, y) : lctx.lineTo(x, y);
+        }
+        lctx.lineWidth = 7;
+        lctx.strokeStyle = 'rgba(255, 213, 74, 0.16)';
+        lctx.stroke();
+        lctx.lineWidth = 2.6;
+        lctx.strokeStyle = '#ffd54a';
+        lctx.stroke();
+      }
+
+      // --- 透射波（绿） ---
+      if (lab.showTrans && !isStand && T > 0) {
+        lctx.lineWidth = 2;
+        lctx.strokeStyle = 'rgba(111, 227, 165, 0.85)';
+        lctx.beginPath();
+        for (let x = xb; x <= W; x += 2) {
+          const y = cy - yT(x);
+          x === xb ? lctx.moveTo(x, y) : lctx.lineTo(x, y);
+        }
+        lctx.stroke();
+      }
+
+      // 驻波模式：标出波腹（红）与波节（青）
+      if (isStand) {
+        // 解析法：叠加 y = 2A·sin(ku + φ/2)·cos(ωt + φ/2)，u = x − xb
+        // 波节：ku + φ/2 = nπ ；波腹：ku + φ/2 = (n + 1/2)π
+        const nodeX = n => xb + (n * Math.PI - phi / 2) / k;
+        const antiX = n => xb + ((n + 0.5) * Math.PI - phi / 2) / k;
+        lctx.font = '12px "PingFang SC", sans-serif';
+        lctx.textAlign = 'center';
+        for (let n = -40; n <= 40; n++) {
+          const x = nodeX(n);
+          if (x < 0 || x > xb) continue;
+          lctx.beginPath();
+          lctx.arc(x, cy, 4, 0, Math.PI * 2);
+          lctx.fillStyle = 'rgba(127, 212, 255, 0.95)';
+          lctx.fill();
+          lctx.fillStyle = 'rgba(127, 212, 255, 0.8)';
+          lctx.fillText('波节', x, cy + 24);
+        }
+        for (let n = -40; n <= 40; n++) {
+          const x = antiX(n);
+          if (x < 0 || x > xb) continue;
+          // 红点跟随该波腹的瞬时位移：y = ±2A·cos(ωt + φ/2)
+          const s = Math.sign(Math.sin(k * (x - xb) + phi / 2)) || 1;
+          const yy = cy - 2 * A * Math.cos(w * t + phi / 2) * s;
+          lctx.beginPath();
+          lctx.arc(x, yy, 4.5, 0, Math.PI * 2);
+          lctx.fillStyle = 'rgba(255, 96, 74, 0.95)';
+          lctx.fill();
+          lctx.fillStyle = 'rgba(255, 130, 110, 0.85)';
+          // 钳制标注 y 坐标下限，防止大振幅 / 矮窗口时画出 canvas 上边界被裁掉
+          lctx.fillText('波腹', x, Math.max(cy - 2 * A - 14, 16));
+        }
+      }
+
+      // 图例
+      const legend = [];
+      if (lab.showComp && !isStand) legend.push(['rgba(90,167,232,1)', '入射波 →'], ['rgba(178,132,240,1)', '← 反射波']);
+      if (lab.showSum) legend.push(['#ffd54a', '叠加波形']);
+      if (isStand) legend.push(['rgba(255,213,74,0.45)', '包络线 ±2A']);
+      if (lab.showTrans && !isStand && T > 0) legend.push(['rgba(111,227,165,1)', '透射波 →']);
+      lctx.textAlign = 'left';
+      lctx.font = '13px "PingFang SC", sans-serif';
+      legend.forEach(([c, txt], i) => {
+        const y = H - 26 - (legend.length - 1 - i) * 20;
+        lctx.fillStyle = c;
+        lctx.fillRect(22, y - 9, 18, 3);
+        lctx.fillStyle = 'rgba(210, 230, 255, 0.9)';
+        lctx.fillText(txt, 48, y - 4);
+      });
+
+      // 参数读数
+      lctx.textAlign = 'right';
+      lctx.fillStyle = 'rgba(160, 210, 255, 0.75)';
+      lctx.fillText(`f = ${lab.f.toFixed(2)} Hz    λ = ${lab.lambda.toFixed(0)} px    A = ${lab.A.toFixed(0)} px    v = fλ = ${(lab.f * lab.lambda).toFixed(0)} px/s`, W - 22, H - 24);
+
+      requestAnimationFrame(drawLab);
+    }
+
+    /* ================================================================
+     * 场景三：小游戏 —— 破坏共振
+     * ================================================================ */
+    const gameCanvas = document.getElementById('gameCanvas');
+    const gctx = gameCanvas.getContext('2d');
+
+    const ROUNDS = [
+      // 减震器数与波腹数一致：一腹一器，全部钉准即满分
+      { n: 2, name: '二阶模态', dampers: 2, goal: 0.80, drain: 2.2 },
+      { n: 3, name: '三阶模态', dampers: 3, goal: 0.80, drain: 2.8 },
+      { n: 4, name: '四阶模态', dampers: 4, goal: 0.80, drain: 3.4 }
+    ];
+
+    const game = {
+      round: 0,              // 当前回合索引
+      integrity: 100,        // 船体完整度
+      dampers: [],           // 已放置减震器 [{u}]，u ∈ (0,1) 归一化船体坐标
+      state: 'idle',         // idle | playing | banner
+      freq: 1.6,             // 振动频率（视觉）
+      inited: false
+    };
+
+    function roundCfg() { return ROUNDS[game.round]; }
+
+    let gameW = 0, gameH = 0;   // CSS 像素尺寸（作图坐标系）
+    let gameDpr = 1;            // 当前画布 DPR（重建辉光渐变缓存时用于复位变换）
+    function resizeGame() {
+      const r = gameCanvas.getBoundingClientRect();
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      gameDpr = dpr;
+      gameW = r.width; gameH = r.height;
+      gameCanvas.width = Math.max(1, Math.round(r.width * dpr));
+      gameCanvas.height = Math.max(1, Math.round(r.height * dpr));
+      gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    addEventListener('resize', () => { if (game.inited) resizeGame(); });
+
+    function initGame() {
+      if (game.inited) { return; }
+      game.inited = true;
+      resizeGame();
+      startRound(0);
+      requestAnimationFrame(drawGame);
+    }
+
+    function startRound(idx) {
+      game.round = idx;
+      game.integrity = 100;
+      game.dampers = [];
+      game.state = 'playing';
+      game.successAt = 0;   // 清除上一回合的成功衰减标记，恢复满振幅振荡
+      document.getElementById('roundText').textContent = `${idx + 1} / ${ROUNDS.length}（${roundCfg().name}）`;
+      updateGameHUD();   // 目标百分比由 updateGameHUD 统一更新，无需在此单独赋值
+    }
+
+    // 完整度 HUD：仅在整数百分比变化时才写 DOM，避免逐帧刷新造成闪烁
+    let lastIntegrityShown = -1;
+    function updateIntegrityHUD() {
+      const v = Math.max(Math.round(game.integrity), 0);
+      if (v === lastIntegrityShown) return;
+      lastIntegrityShown = v;
+      document.getElementById('integrityFill').style.width = v + '%';
+      document.getElementById('integrityText').textContent = v + '%';
+    }
+
+    function updateGameHUD() {
+      const cfg = roundCfg();
+      updateIntegrityHUD();
+      const stock = document.getElementById('damperStock');
+      stock.innerHTML = '';
+      for (let i = 0; i < cfg.dampers; i++) {
+        const d = document.createElement('div');
+        d.className = 'damper-icon' + (i < game.dampers.length ? ' used' : '');
+        stock.appendChild(d);
+      }
+      // 用 textContent 分别更新两个静态 <em>，避免 innerHTML 重建导致 id 引用失效
+      document.getElementById('absorbNow').textContent = Math.round(absorbRate() * 100) + '%';
+      document.getElementById('absorbGoal').textContent = Math.round(cfg.goal * 100) + '%';
+    }
+
+    // 吸收率：各减震器位置处驻波振幅（归一化）之和 / 减震器总数
+    function absorbRate() {
+      const cfg = roundCfg();
+      if (!game.dampers.length) return 0;
+      const sum = game.dampers.reduce((s, d) => s + Math.abs(Math.sin(cfg.n * Math.PI * d.u)), 0);
+      return sum / cfg.dampers;
+    }
+
+    // 几何：船体矩形（归一化坐标 ↔ 像素）
+    function hullGeom() {
+      const W = gameW, H = gameH;
+      const len = Math.min(W * 0.78, 860);
+      const h = Math.min(H * 0.34, 150);
+      return { x0: (W - len) / 2, cy: H * 0.52, len, h };
+    }
+
+    gameCanvas.addEventListener('click', e => {
+      if (game.state !== 'playing') return;
+      const r = gameCanvas.getBoundingClientRect();
+      const px = e.clientX - r.left;
+      const py = e.clientY - r.top;
+      const { x0, cy, len, h } = hullGeom();
+      const u = (px - x0) / len;
+      if (u < 0 || u > 1) return;
+      // 纵向命中校验：只有点在船体条带附近（含形变余量）才生效
+      if (Math.abs(py - cy) > h / 2 + 40) return;
+
+      // 点击已有减震器 → 回收
+      const hit = game.dampers.findIndex(d => Math.abs(d.u - u) < 0.035);
+      if (hit >= 0) {
+        game.dampers.splice(hit, 1);
+      } else if (game.dampers.length < roundCfg().dampers) {
+        game.dampers.push({ u });
+      }
+      updateGameHUD();
+    });
+
+    document.getElementById('submitPlan').addEventListener('click', () => {
+      if (game.state !== 'playing') return;
+      if (!game.dampers.length) return;
+      if (absorbRate() >= roundCfg().goal) {
+        // 成功：共振破坏，进入下一回合或通关
+        game.state = 'banner';
+        game.successAt = performance.now();   // 成功后振荡包络开始衰减（见 drawGame）
+        const last = game.round >= ROUNDS.length - 1;
+        showBanner(
+          last ? '全部模态已稳定' : '共振已破坏',
+          last
+            ? '三处共振模态全部被瓦解，船体应力回落至安全线以下。'
+            : `${roundCfg().name}的驻波共振被瓦解！但发动机转速变化激起了新的模态——波腹的位置变了，保持警惕。`,
+          last ? '驶向母港' : '下一模态',
+          () => {
+            hideBanner();
+            if (last) {
+              /* 通关 → 通知舰桥（fleet.js）：六池全部拿下 */
+              try { if (window.Fleet) window.Fleet.clear(6); } catch (e) {}
+              goto(document.getElementById('win'));
+            }
+            else startRound(game.round + 1);
+          }
+        );
+      } else {
+        // 吸收不足：减震器震脱，船体受损
+        game.integrity -= 18;
+        game.dampers = [];
+        updateGameHUD();
+        if (game.integrity <= 0) {
+          failRound();
+        } else {
+          shakeScreen();
+        }
+      }
+    });
+
+    function failRound() {
+      game.state = 'banner';
+      showBanner(
+        '船体解体',
+        '局部震颤撕裂了船壳。重新分析波腹的位置——减震器必须钉在振幅最大的地方。',
+        '重新部署',
+        () => { hideBanner(); startRound(game.round); },
+        true
+      );
+    }
+
+    const banner = document.getElementById('gameBanner');
+    function showBanner(title, text, btnText, cb, fail) {
+      document.getElementById('bannerTitle').textContent = title;
+      document.getElementById('bannerText').textContent = text;
+      const btn = document.getElementById('bannerBtn');
+      btn.textContent = btnText;
+      banner.classList.toggle('fail', !!fail);
+      banner.classList.add('show');
+      btn.onclick = cb;
+    }
+    function hideBanner() { banner.classList.remove('show'); }
+
+    let shakeUntil = 0;
+    let lastGameNow = 0;   // 上一帧时间戳，用于按真实帧间隔流失完整度
+    function shakeScreen() {
+      shakeUntil = performance.now() + 450;
+      updateGameHUD();
+    }
+
+    // 波腹辉光渐变缓存：中心/半径仅取决于几何（n、x0、cy、h），呼吸亮度改用 globalAlpha 实现，
+    // 避免每帧为每个波腹重建渐变对象。注意 Canvas 渐变会烘焙创建时刻的变换矩阵，重建时须先复位变换。
+    let glowCache = { key: '', grads: [] };
+
+    function drawGame(now) {
+      // 场景切走后直接停止循环（与剧情场景 storyAlive 的启停模式一致），不再空转占帧
+      if (!document.getElementById('game').classList.contains('active')) return;
+      const t = now / 1000;
+      const dt = lastGameNow ? Math.min((now - lastGameNow) / 1000, 0.1) : 0;
+      lastGameNow = now;
+      const W = gameW, H = gameH;
+      gctx.clearRect(0, 0, W, H);
+      gctx.save();
+      if (now < shakeUntil) {
+        gctx.translate((Math.random() - 0.5) * 7, (Math.random() - 0.5) * 5);
+      }
+
+      const cfg = roundCfg();
+      const { x0, cy, len, h } = hullGeom();
+      const playing = game.state === 'playing';
+
+      // 完整度随时间流失（仅游戏进行中，按真实帧间隔 dt 计算，与帧率无关）
+      if (playing) {
+        game.integrity -= cfg.drain * dt;
+        if (game.integrity <= 0) {
+          game.integrity = 0;
+          updateIntegrityHUD();
+          failRound();
+        } else {
+          updateIntegrityHUD();   // 内部有缓存，仅百分比变化时写 DOM
+        }
+      }
+
+      // 驻波模态形变：包络 sin(nπu) × 时间振荡；放置减震器后局部衰减
+      const damp = u => {
+        // 每个减震器使其附近约 ±1/(2.2n) 范围内的振动视觉衰减（与下方衰减公式一致）
+        let k = 1;
+        game.dampers.forEach(d => {
+          const dist = Math.abs(d.u - u);
+          k *= Math.max(0.08, Math.min(1, dist * cfg.n * 2.2));
+        });
+        return k;
+      };
+      const osc = Math.sin(2 * Math.PI * game.freq * t);
+      // 成功（共振已破坏）后振荡包络指数衰减至静止，与「共振被瓦解」的叙事一致；
+      // 失败横幅不设置 successAt，船体保持满振幅震颤（正在撕裂），两种结局视觉可区分
+      const envelope = game.successAt ? Math.exp(-(now - game.successAt) / 700) : 1;
+      const disp = u => Math.sin(cfg.n * Math.PI * u) * (h * 0.42) * osc * envelope * damp(u);
+
+      // 船体（俯视，形变的甲板条带）
+      gctx.beginPath();
+      for (let i = 0; i <= 200; i++) {
+        const u = i / 200;
+        const x = x0 + u * len;
+        const y = cy - h / 2 + disp(u);
+        i === 0 ? gctx.moveTo(x, y) : gctx.lineTo(x, y);
+      }
+      for (let i = 200; i >= 0; i--) {
+        const u = i / 200;
+        const x = x0 + u * len;
+        const y = cy + h / 2 + disp(u);
+        gctx.lineTo(x, y);
+      }
+      gctx.closePath();
+      const hullGrad = gctx.createLinearGradient(0, cy - h, 0, cy + h);
+      hullGrad.addColorStop(0, 'rgba(96, 138, 175, 0.5)');
+      hullGrad.addColorStop(0.5, 'rgba(60, 95, 130, 0.55)');
+      hullGrad.addColorStop(1, 'rgba(34, 63, 85, 0.6)');
+      gctx.fillStyle = hullGrad;
+      gctx.fill();
+      gctx.strokeStyle = 'rgba(150, 205, 250, 0.6)';
+      gctx.lineWidth = 1.6;
+      gctx.stroke();
+
+      // 船艏标记
+      gctx.font = '13px "PingFang SC", sans-serif';
+      gctx.textAlign = 'center';
+      gctx.fillStyle = 'rgba(170, 210, 250, 0.75)';
+      gctx.fillText('艏', x0 + len - 14, cy + h / 2 + 26);
+      gctx.fillText('艉', x0 + 14, cy + h / 2 + 26);
+
+      // 波腹辉光（按瞬时 |形变| 呼吸），提示危险区域
+      const glowR = h * 0.9;
+      const glowKey = `${cfg.n}|${x0}|${cy}|${glowR}`;
+      if (glowCache.key !== glowKey) {   // 几何变化（回合/窗口尺寸）时才重建渐变
+        glowCache.key = glowKey;
+        glowCache.grads = [];
+        gctx.save();
+        gctx.setTransform(gameDpr, 0, 0, gameDpr, 0, 0);   // 渐变按创建时变换烘焙，先复位到基准坐标系
+        for (let i = 0; i < cfg.n; i++) {
+          const gx = x0 + (i + 0.5) / cfg.n * len;
+          const gg = gctx.createRadialGradient(gx, cy, 0, gx, cy, glowR);
+          gg.addColorStop(0, 'rgba(255, 96, 74, 0.38)');   // 中心 alpha 取呼吸上限 0.38
+          gg.addColorStop(1, 'rgba(255, 96, 74, 0)');
+          glowCache.grads.push(gg);
+        }
+        gctx.restore();
+      }
+      for (let i = 0; i < cfg.n; i++) {
+        const u = (i + 0.5) / cfg.n;
+        const x = x0 + u * len;
+        const glow = (0.16 + 0.22 * Math.abs(osc) * damp(u)) * envelope;
+        gctx.save();
+        gctx.globalAlpha = glow / 0.38;   // 呼吸亮度由 globalAlpha 控制
+        gctx.fillStyle = glowCache.grads[i];
+        gctx.beginPath();
+        gctx.arc(x, cy, glowR, 0, Math.PI * 2);
+        gctx.fill();
+        gctx.restore();
+      }
+
+      // 已放置的减震器
+      game.dampers.forEach(d => {
+        const x = x0 + d.u * len;
+        const y = cy + disp(d.u);
+        // 减震器位置随波形逐帧移动，渐变无法按尺寸缓存；
+        // 用「金色底 + 左上高光点」两层圆代替径向渐变，避免每帧重建渐变对象
+        gctx.beginPath();
+        gctx.arc(x, y, 11, 0, Math.PI * 2);
+        gctx.fillStyle = '#ffb400';
+        gctx.fill();
+        gctx.beginPath();
+        gctx.arc(x - 3.5, y - 3.5, 5.5, 0, Math.PI * 2);
+        gctx.fillStyle = '#ffe9a8';
+        gctx.fill();
+        gctx.beginPath();
+        gctx.arc(x, y, 11, 0, Math.PI * 2);
+        gctx.strokeStyle = 'rgba(255, 240, 200, 0.8)';
+        gctx.lineWidth = 1.4;
+        gctx.stroke();
+        // 该点吸收效率标注
+        const eff = Math.abs(Math.sin(cfg.n * Math.PI * d.u));
+        gctx.fillStyle = eff > 0.85 ? 'rgba(120, 255, 170, 0.95)' : eff > 0.5 ? 'rgba(255, 213, 74, 0.95)' : 'rgba(255, 110, 90, 0.95)';
+        gctx.font = 'bold 13px "PingFang SC", sans-serif';
+        gctx.fillText(Math.round(eff * 100) + '%', x, y - 18);
+      });
+
+      // 库存提示
+      if (playing) {
+        gctx.fillStyle = 'rgba(170, 210, 250, 0.7)';
+        gctx.font = '13px "PingFang SC", sans-serif';
+        gctx.textAlign = 'left';
+        gctx.fillText(`剩余减震器：${roundCfg().dampers - game.dampers.length} 个（点击船体放置 / 再次点击回收）`, 24, H - 22);
+      }
+
+      gctx.restore();
+      requestAnimationFrame(drawGame);
+    }
+  </script>
+
+  <!-- 舰桥导航坞：回舰桥 / 看标定卡进度 -->
+  <script>try{ window.Fleet && window.Fleet.mountDock({label:'第六关 稳若泰山'}); }catch(e){}</script>
+</body>
+</html>

@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>破浪实验室 · 第三关：破壳而出（兴波阻力的真面目）</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{font-family:"Segoe UI","Microsoft YaHei",sans-serif;background:#060f13;color:#dcf2ef;overflow:hidden;}
+
+  /* ============ 背景：双层交叉淡入 ============ */
+  #stage{position:fixed;inset:0;overflow:hidden;}
+  .bgl{position:absolute;inset:0;background-repeat:no-repeat;background-position:50% 50%;background-size:cover;
+       opacity:0;transition:opacity 1.15s ease,filter .8s ease;will-change:opacity,transform;}
+  .bgl.on{opacity:1;animation:slowzoom 22s linear forwards;}
+  @keyframes slowzoom{from{transform:scale(1.02);}to{transform:scale(1.11);}}
+  #stage .scrim{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(4,10,14,0.90) 0%,rgba(4,10,14,0.68) 30%,rgba(4,10,14,0.22) 62%,rgba(4,10,14,0.04) 100%),radial-gradient(140% 110% at 62% 50%,transparent 56%,rgba(3,8,10,0.32) 100%);}
+  #stage .scan{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,0.017) 0 1px,transparent 1px 3px);}
+  #stage .tint{position:absolute;inset:0;pointer-events:none;background:transparent;transition:background .8s ease;}
+  .wavefx{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .7s ease;
+    background:repeating-radial-gradient(ellipse at 76% 78%,transparent 0 48px,rgba(110,235,220,.18) 50px 52px,transparent 55px 78px);mix-blend-mode:screen;animation:wavemove 5s linear infinite;}
+  .wavefx.active{opacity:.42}.wavefx.strong{opacity:.72}
+  @keyframes wavemove{from{transform:scale(.92);filter:blur(.2px)}to{transform:scale(1.12);filter:blur(1px)}}
+
+  /* ============ 顶栏 ============ */
+  .topbar{position:absolute;top:16px;left:26px;right:26px;display:flex;align-items:center;justify-content:space-between;gap:16px;z-index:6;}
+  .hud-title{font-size:17px;color:#9fe8e0;letter-spacing:1px;font-weight:600;}
+  .hud-title span{display:block;font-size:11px;color:#6ea8a2;letter-spacing:3px;font-weight:400;margin-top:3px;}
+  .hud-progress{font-size:12px;color:#7fb8b0;letter-spacing:1px;background:linear-gradient(180deg,rgba(7,19,23,0.88),rgba(5,14,18,0.82));border:1px solid rgba(130,225,220,0.22);border-left:2px solid rgba(130,235,220,0.7);border-radius:3px;padding:9px 16px;backdrop-filter:blur(8px);}
+  .hud-progress b{color:#8fe8dc;font-size:14px;}
+  .mission-stat{margin-top:5px;font-size:10px;color:#6ea8a2}.mission-stat b{transition:.25s;color:#ffd08a}
+  .music-toggle{padding:8px 12px;font-size:11px;letter-spacing:1px;white-space:nowrap;background:rgba(7,19,23,.82)}
+  .bar{width:150px;height:3px;background:rgba(255,255,255,0.1);margin-top:6px;overflow:hidden;}
+  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#3fa89f,#8ff0e2);transition:width .4s;}
+
+  /* ============ 主卡片 ============ */
+  .card{position:absolute;left:4vw;bottom:30px;width:min(640px,48vw);max-height:calc(100vh - 150px);z-index:5;
+    background:linear-gradient(180deg,rgba(7,19,23,0.91),rgba(5,14,18,0.85));
+    backdrop-filter:blur(14px) saturate(1.15);
+    border:1px solid rgba(130,225,220,0.26);border-left:2px solid rgba(130,235,220,0.8);border-radius:3px;
+    box-shadow:0 26px 70px rgba(0,0,0,0.66),inset 0 1px 0 rgba(180,255,250,0.07);
+    padding:20px 24px 18px;display:flex;flex-direction:column;overflow:hidden;}
+  .card::before,.card::after{content:'';position:absolute;width:16px;height:16px;pointer-events:none;}
+  .card::before{top:-1px;right:-1px;border-top:1px solid rgba(150,245,235,0.7);border-right:1px solid rgba(150,245,235,0.7);}
+  .card::after{bottom:-1px;left:-1px;border-bottom:1px solid rgba(150,245,235,0.45);border-left:1px solid rgba(150,245,235,0.45);}
+  .card-head{display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid rgba(130,225,220,0.18);margin-bottom:14px;flex:none;}
+  .dot{width:9px;height:9px;border-radius:50%;background:#6fe8d8;box-shadow:0 0 12px rgba(111,232,216,0.85);flex:none;animation:blip 2.2s infinite;}
+  @keyframes blip{0%,100%{opacity:1}50%{opacity:.32}}
+  .step-title{font-size:14px;color:#9fe8e0;letter-spacing:1px;font-weight:600;}
+  .step-no{margin-left:auto;font-size:10px;color:#8fe8dc;border:1px solid rgba(130,225,220,0.35);border-radius:2px;padding:3px 10px;letter-spacing:2px;font-family:Consolas,monospace;white-space:nowrap;}
+  .step-no.choose{color:#ffd08a;border-color:rgba(255,190,90,0.5);}
+  .scroll{overflow-y:auto;padding-right:8px;flex:0 1 auto;min-height:0;}
+  .scroll::-webkit-scrollbar{width:7px;}
+  .scroll::-webkit-scrollbar-thumb{background:rgba(130,235,220,0.3);border-radius:4px;}
+  .scene{font-size:13.8px;line-height:1.92;color:#cfe6e2;}
+  .scene p{margin-bottom:9px;}
+  .scene b{color:#8fe8dc;font-weight:600;}
+  .scene em{color:#ffd08a;font-style:normal;font-weight:700;}
+  .scene .big{display:block;font-size:16px;color:#ff9a7a;font-weight:700;letter-spacing:1px;margin:13px 0;padding:11px 15px;background:rgba(200,60,40,0.13);border-left:2px solid #ff8a6a;}
+  .scene .say{border-left:2px solid rgba(130,235,220,0.6);padding-left:14px;color:#a8d5cf;font-style:normal;margin:11px 0;}
+  .formula{background:rgba(9,26,30,0.55);border-left:2px solid rgba(130,235,220,0.62);padding:9px 14px;margin:11px 0;font-family:Consolas,"Courier New",monospace;font-size:13.5px;color:#d6f4f0;line-height:1.75;}
+  .question{font-size:15px;line-height:1.95;color:#eafffb;font-weight:600;padding:12px 15px;background:rgba(130,235,220,0.07);border:1px solid rgba(130,225,220,0.22);border-left:2px solid #8fe8dc;margin-bottom:14px;}
+  .qr{font-size:11px;color:#ffd08a;letter-spacing:2px;display:block;margin-bottom:7px;font-family:Consolas,monospace;}
+  .options{display:flex;flex-direction:column;gap:9px;}
+  .opt{text-align:left;font-family:inherit;font-size:14px;line-height:1.8;padding:13px 17px;border-radius:3px;cursor:pointer;transition:.15s;
+    border:1px solid rgba(130,225,220,0.28);background:rgba(20,52,56,0.45);color:#dcf2ef;}
+  .opt:hover{background:rgba(48,140,136,0.45);border-color:rgba(160,255,245,0.7);transform:translateX(3px);}
+  .opt .k{display:inline-block;width:22px;color:#8fe8dc;font-weight:700;font-family:Consolas,monospace;}
+  .clue-gain{margin-top:14px;padding:12px 15px;background:rgba(80,230,200,0.09);border:1px solid rgba(80,230,200,0.35);border-left:2px solid #6fe8d8;font-size:13.5px;line-height:1.9;color:#c9f5ee;}
+  .card-foot{margin-top:14px;padding-top:13px;border-top:1px solid rgba(130,225,220,0.18);display:flex;align-items:center;gap:14px;flex:none;}
+  button{font-family:inherit;font-size:14px;letter-spacing:2px;padding:10px 26px;border-radius:3px;border:1px solid rgba(130,235,220,0.5);background:rgba(28,104,100,0.45);color:#dff9f5;cursor:pointer;transition:.15s;}
+  button:hover{background:rgba(48,152,144,0.6);border-color:rgba(160,255,245,0.85);}
+
+  /* ============ 右栏：线索板 + 通讯窗口 ============ */
+  .rightcol{position:absolute;right:26px;top:98px;bottom:26px;width:min(330px,25vw);display:flex;flex-direction:column;gap:13px;z-index:5;}
+  .clueboard{flex:1;min-height:0;display:flex;flex-direction:column;
+    background:linear-gradient(180deg,rgba(7,19,23,0.88),rgba(5,14,18,0.82));backdrop-filter:blur(10px);
+    border:1px solid rgba(130,225,220,0.22);border-left:2px solid rgba(130,235,220,0.6);border-radius:3px;padding:15px 17px;
+    box-shadow:0 16px 40px rgba(0,0,0,0.5);}
+  .clueboard h3{font-size:12px;color:#8fe8dc;letter-spacing:3px;margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid rgba(130,225,220,0.18);font-weight:600;flex:none;}
+  .clueboard h3 span{float:right;color:#6ea8a2;letter-spacing:1px;}
+  #clueList{overflow-y:auto;min-height:0;}
+  #clueList::-webkit-scrollbar{width:6px;}
+  #clueList::-webkit-scrollbar-thumb{background:rgba(130,235,220,0.28);border-radius:4px;}
+  .clue{font-size:12.5px;line-height:1.85;color:#a8d5cf;padding:9px 11px;margin-bottom:8px;background:rgba(30,70,72,0.35);border-left:2px solid rgba(130,235,220,0.5);border-radius:0 2px 2px 0;animation:fadein .5s ease;}
+  .clue b{color:#8fe8dc;}
+  .empty{font-size:12px;color:#5f8f8a;line-height:1.9;}
+  @keyframes fadein{from{opacity:0;transform:translateX(10px);}to{opacity:1;transform:none;}}
+
+  .comm{flex:none;position:relative;border:1px solid rgba(130,225,220,0.3);border-left:2px solid rgba(130,235,220,0.85);border-radius:3px;overflow:hidden;
+    box-shadow:0 16px 40px rgba(0,0,0,0.6);opacity:0;transform:translateY(14px);transition:.6s ease;pointer-events:none;background:#08181c;}
+  .comm.on{opacity:1;transform:none;}
+  .comm img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;filter:saturate(1.05) contrast(1.05);}
+  .comm .frm{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,0.16) 0 1px,transparent 1px 3px),linear-gradient(180deg,transparent 55%,rgba(4,12,16,0.72) 100%);}
+  .comm .lbl{position:absolute;left:11px;bottom:9px;font-size:11px;color:#9fe8e0;letter-spacing:2px;text-shadow:0 2px 8px rgba(0,0,0,0.9);}
+  .comm .lbl i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#6fe8d8;box-shadow:0 0 9px #6fe8d8;margin-right:7px;animation:blip 1.6s infinite;}
+  .comm .corner{position:absolute;top:8px;right:9px;font-size:10px;color:#8fe8dc;letter-spacing:1px;font-family:Consolas,monospace;opacity:.85;}
+
+  /* ============ 纸条 ============ */
+  #noteLayer{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:rgba(3,8,10,0.84);backdrop-filter:blur(7px);padding:26px;}
+  #noteLayer.on{display:flex;}
+  .note{position:relative;max-width:660px;width:100%;max-height:86vh;overflow-y:auto;
+    background:linear-gradient(170deg,#f4ead4 0%,#eadfc4 55%,#e2d5b6 100%);color:#2c2317;padding:30px 34px 26px;border-radius:2px;
+    box-shadow:0 30px 80px rgba(0,0,0,0.7),inset 0 0 60px rgba(150,120,70,0.16);
+    font-family:"Kaiti SC","KaiTi","STKaiti","Microsoft YaHei",serif;transform:rotate(-1.1deg);animation:notein .32s ease;}
+  @keyframes notein{from{opacity:0;transform:rotate(-1.1deg) translateY(26px) scale(.97);}to{opacity:1;transform:rotate(-1.1deg) translateY(0) scale(1);}}
+  .note::before{content:'';position:absolute;top:-13px;left:50%;margin-left:-52px;width:104px;height:27px;
+    background:rgba(214,208,180,0.6);border-left:1px dashed rgba(90,80,60,0.25);border-right:1px dashed rgba(90,80,60,0.25);
+    box-shadow:0 3px 8px rgba(0,0,0,0.32);transform:rotate(-2.4deg);}
+  .note-head{font-size:15px;font-weight:700;letter-spacing:3px;color:#8c2f1c;padding-bottom:12px;margin-bottom:16px;border-bottom:2px dashed rgba(140,47,28,0.32);}
+  .note-body{font-size:15px;line-height:2.05;color:#33291c;}
+  .note-body p{margin-bottom:10px;}
+  .note-body b{color:#8c2f1c;font-weight:700;}
+  .note-body em{font-style:normal;background:rgba(200,170,90,0.34);padding:1px 5px;border-radius:2px;}
+  .note-body .fml{background:rgba(120,100,64,0.13);border-left:3px solid rgba(140,47,28,0.5);padding:8px 13px;margin:11px 0;font-family:Consolas,"Courier New",monospace;font-size:13.5px;line-height:1.75;}
+  .note-body .sig{display:block;margin-top:16px;text-align:right;font-size:13px;color:#6b5a3e;letter-spacing:1px;}
+  .note-foot{margin-top:20px;padding-top:16px;border-top:2px dashed rgba(140,47,28,0.32);text-align:right;}
+  .note-foot button{border:1px solid #8c2f1c;background:rgba(140,47,28,0.1);color:#8c2f1c;font-family:"Microsoft YaHei",sans-serif;}
+  .note-foot button:hover{background:#8c2f1c;color:#f4ead4;}
+  .note-body .miss{font-size:14px;color:#7a4a2a;margin-bottom:9px;line-height:1.8;}
+  .note-body .miss b{color:#8c2f1c;}
+  .note-body .ans-line{display:block;margin:6px 0;padding:11px 14px;background:rgba(44,107,74,0.12);border-left:3px solid #2c6b4a;color:#2c4828;font-size:14px;line-height:1.85;font-weight:600;}
+  .note-body .ans-line .lab{display:block;font-size:12px;letter-spacing:2px;color:#2c6b4a;font-weight:700;margin-bottom:3px;}
+  .note-body .cstep{display:block;margin:9px 0 4px;font-size:13px;color:#5a6b2a;letter-spacing:1px;}
+
+  /* 危机等级徽标 */
+  .crisis{display:inline-block;font-size:11px;font-weight:700;letter-spacing:1px;padding:2px 9px;border-radius:2px;margin-left:4px;vertical-align:1px;}
+  .crisis.c6{background:rgba(255,107,94,0.24);color:#ff8a7a;border:1px solid rgba(255,107,94,0.5);}
+  .crisis.c5{background:rgba(255,150,80,0.22);color:#ffb27a;border:1px solid rgba(255,150,80,0.45);}
+  .crisis.c4{background:rgba(255,205,90,0.2);color:#ffd68a;border:1px solid rgba(255,205,90,0.42);}
+  .crisis.c3{background:rgba(220,224,110,0.18);color:#e6e69a;border:1px solid rgba(220,224,110,0.4);}
+  .crisis.c2{background:rgba(160,236,140,0.18);color:#bcf2a4;border:1px solid rgba(160,236,140,0.42);}
+  .crisis.c1{background:rgba(111,232,190,0.2);color:#8ff0d0;border:1px solid rgba(111,232,190,0.5);}
+  .crisis.c0{background:rgba(111,232,216,0.24);color:#6fe8d8;border:1px solid rgba(111,232,216,0.6);}
+  .clue-gain .cstep{display:block;margin:2px 0 5px;font-size:12.5px;color:#8fe8dc;letter-spacing:1px;}
+
+  /* ============ 通关 ============ */
+  #win{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(3,8,10,0.9);backdrop-filter:blur(8px);padding:26px;}
+  #win.on{display:flex;}
+  .winbox{max-width:600px;text-align:center;background:linear-gradient(180deg,rgba(8,22,26,0.97),rgba(5,14,18,0.97));
+    border:1px solid rgba(130,225,220,0.28);border-left:2px solid rgba(130,235,220,0.85);border-radius:3px;padding:38px;box-shadow:0 30px 80px rgba(0,0,0,0.7);}
+  .winbox h2{color:#9fe8e0;letter-spacing:4px;margin:14px 0 8px;font-size:23px;}
+  .winbox .code{color:#8fe8dc;font-family:Consolas,monospace;font-size:12px;letter-spacing:3px;margin-bottom:20px;}
+  .winbox p{color:#a8c9c4;font-size:14.5px;line-height:2.0;}
+  .winbox .recap{margin:20px 0;text-align:left;font-size:13px;line-height:1.95;color:#9fd8d0;background:rgba(30,70,72,0.3);border-left:2px solid rgba(130,235,220,0.5);padding:14px 18px;}
+
+  /* ============ 三维实操 ============ */
+  #sim3d{position:fixed;inset:0;z-index:400;display:none;background:#07111a;}
+  #sim3d.on{display:block;}
+  #simCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  .sim-hud{position:absolute;z-index:5;font-family:"Segoe UI","Microsoft YaHei",sans-serif;}
+  .sim-top{top:16px;left:24px;right:24px;display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none;}
+  .s-title{font-size:16px;color:#9fe8e0;letter-spacing:1px;font-weight:600;background:linear-gradient(180deg,rgba(7,19,23,0.85),rgba(5,14,18,0.78));border:1px solid rgba(130,225,220,0.22);border-left:2px solid rgba(130,235,220,0.75);border-radius:3px;padding:12px 18px;backdrop-filter:blur(8px);}
+  .s-title span{display:block;font-size:11px;color:#6ea8a2;letter-spacing:2px;font-weight:400;margin-top:3px;}
+  .s-live{font-size:13px;color:#8fe8dc;letter-spacing:1px;background:linear-gradient(180deg,rgba(7,19,23,0.85),rgba(5,14,18,0.78));border:1px solid rgba(130,225,220,0.22);border-radius:3px;padding:10px 16px;backdrop-filter:blur(8px);}
+  .s-live.warn{color:#ffcf6a;}
+  .s-live.danger{color:#ff8a7a;animation:blip 0.7s infinite;}
+  .sim-ctrl{left:24px;bottom:24px;width:min(360px,92vw);background:linear-gradient(180deg,rgba(7,19,23,0.90),rgba(5,14,18,0.85));backdrop-filter:blur(12px);border:1px solid rgba(130,225,220,0.26);border-left:2px solid rgba(130,235,220,0.8);border-radius:3px;padding:16px 18px;box-shadow:0 20px 50px rgba(0,0,0,0.55);}
+  .s-row{margin-bottom:14px;}
+  .s-row label{display:flex;justify-content:space-between;font-size:13px;color:#a8d5cf;margin-bottom:7px;letter-spacing:1px;}
+  .s-row label b{color:#8fe8dc;font-size:14px;font-family:Consolas,monospace;}
+  .s-row input[type=range]{width:100%;accent-color:#3fa89f;cursor:pointer;}
+  .s-gauge label{font-family:Consolas,monospace;color:#7fb8b0;font-size:12.5px;}
+  .s-big{font-size:40px;font-weight:700;font-family:Consolas,monospace;color:#8fe8dc;line-height:1.15;text-shadow:0 0 22px rgba(111,232,216,0.4);}
+  .s-big.amber{color:#ffcf6a;text-shadow:0 0 22px rgba(255,200,100,0.45);}
+  .s-big.red{color:#ff8a7a;text-shadow:0 0 22px rgba(255,120,100,0.5);animation:blip 0.7s infinite;}
+  .s-bars{margin:12px 0;}
+  .s-bar{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px;color:#7fb8b0;}
+  .s-bar span{width:38px;flex:none;}
+  .s-bar .bt{flex:1;height:10px;background:#0a1c1a;border:1px solid rgba(130,225,220,0.25);border-radius:2px;overflow:hidden;}
+  .s-bar .bt i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ffd08a,#ff9a6a,#ff6b5e);transition:width .2s;}
+  .s-params{font-size:11.5px;color:#6ea8a2;font-family:Consolas,monospace;letter-spacing:1px;margin-bottom:12px;line-height:1.7;}
+  .s-btn{width:100%;font-family:inherit;font-size:13px;letter-spacing:2px;padding:9px 0;border-radius:3px;border:1px solid rgba(130,235,220,0.5);background:rgba(28,104,100,0.45);color:#dff9f5;cursor:pointer;}
+  .s-btn:hover{background:rgba(48,152,144,0.6);}
+  #simOver{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;background:rgba(3,8,10,0.88);backdrop-filter:blur(8px);padding:26px;}
+  #simOver.on{display:flex;}
+  #synthesis{position:fixed;inset:0;z-index:320;display:none;align-items:center;justify-content:center;background:rgba(3,8,10,.92);backdrop-filter:blur(9px);padding:24px}
+  #synthesis.on{display:flex}.synbox{width:min(760px,94vw);background:rgba(7,19,23,.97);border:1px solid rgba(130,225,220,.3);border-left:2px solid #8fe8dc;padding:28px;box-shadow:0 30px 80px rgba(0,0,0,.7)}
+  .synbox h2{color:#9fe8e0;letter-spacing:3px;margin-bottom:8px}.synbox>p{color:#9ac9c2;line-height:1.8;margin-bottom:16px}.syn-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.syn-card{padding:12px 14px;text-align:left;letter-spacing:0;line-height:1.55}.syn-card.done{opacity:.35;pointer-events:none}.syn-chain{min-height:70px;margin:16px 0;padding:12px;background:rgba(30,70,72,.28);border:1px dashed rgba(130,235,220,.35);color:#bfeee8;line-height:1.8}.syn-status{color:#ffd08a;font-size:13px;min-height:22px;margin-top:10px}.syn-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:12px}.shake{animation:shake .25s linear}@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+  #knowledgeGraph{position:fixed;inset:0;z-index:470;display:none;background:radial-gradient(circle at 50% 45%,#12313a 0,#07151a 52%,#03090c 100%);overflow:hidden;color:#dff9f5}
+  #knowledgeGraph.on{display:block;animation:kgFade 1.2s ease both}.kg-head{position:absolute;top:5%;left:50%;transform:translateX(-50%);text-align:center;z-index:3}.kg-head h2{color:#9fe8e0;letter-spacing:4px;font-size:22px}.kg-head p{color:#6ea8a2;margin-top:7px;font-size:13px}.kg-canvas{position:absolute;left:6%;right:6%;top:17%;bottom:17%;border:1px solid rgba(130,225,220,.15);background-image:linear-gradient(rgba(130,225,220,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(130,225,220,.035) 1px,transparent 1px);background-size:34px 34px}.kg-lines{position:absolute;inset:0;width:100%;height:100%}.kg-edge{stroke:#69d8cc;stroke-width:.65;stroke-dasharray:120;stroke-dashoffset:120;filter:drop-shadow(0 0 5px rgba(105,216,204,.7))}.on .kg-edge{animation:kgDraw 1s ease forwards}.kg-node{position:absolute;width:150px;min-height:58px;padding:10px 12px;transform:translate(-50%,-50%) scale(.72);opacity:0;background:rgba(9,33,38,.93);border:1px solid rgba(130,235,220,.42);border-left:2px solid #8fe8dc;box-shadow:0 10px 28px rgba(0,0,0,.5);font-size:12px;line-height:1.55;text-align:center}.kg-node b{display:block;color:#9fe8e0;font-size:13px;margin-bottom:2px}.on .kg-node{animation:kgNode .75s ease forwards}.kg-vessel{position:absolute;left:4%;bottom:4%;font-size:32px;opacity:0}.on .kg-vessel{animation:kgSail 5.2s ease forwards}.kg-finish{position:absolute;bottom:5%;left:50%;transform:translateX(-50%);opacity:0;pointer-events:none}.kg-finish.ready{opacity:1;pointer-events:auto;transition:opacity .8s}.kg-note{position:absolute;bottom:10%;left:50%;transform:translateX(-50%);color:#8ecfc7;font-size:12px;letter-spacing:2px}.on .kg-note{animation:kgPulse 2s ease-in-out infinite}@keyframes kgFade{from{opacity:0}to{opacity:1}}@keyframes kgDraw{to{stroke-dashoffset:0}}@keyframes kgNode{to{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes kgSail{0%{opacity:0;transform:translateX(0)}15%{opacity:1}100%{opacity:1;transform:translateX(72vw)}}@keyframes kgPulse{50%{opacity:.45}}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div class="bgl" id="bgA"></div>
+  <div class="bgl" id="bgB"></div>
+  <div class="scrim"></div>
+  <div class="scan"></div>
+  <div class="tint" id="tint"></div>
+  <div class="wavefx" id="sceneFx"></div>
+
+  <div class="topbar">
+    <div class="hud-title">◎ 第三关 · 破壳而出<span>兴波阻力的真面目</span></div>
+    <button class="music-toggle" id="musicToggle" onclick="toggleMusic()">♪ 配乐 · 待启动</button>
+    <div class="hud-progress">已化解危机 <b id="progText">0 / 6</b><span class="crisis c6" id="crisisTag">Ⅰ级·危急</span><div class="bar"><i id="progBar"></i></div><div class="mission-stat">预计燃料余量 <b id="missionStat">88%</b></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="dot"></span>
+      <span class="step-title" id="stepTitle"></span>
+      <span class="step-no" id="stepNo"></span>
+    </div>
+    <div class="scroll">
+      <div class="scene" id="sceneText"></div>
+      <div class="question" id="questionText" style="display:none"></div>
+      <div class="options" id="options"></div>
+      <div class="clue-gain" id="clueGain" style="display:none"></div>
+    </div>
+    <div class="card-foot" id="cardFoot">
+      <button id="btnNext">继续 ▸</button>
+      <span style="font-size:12px;color:#6ea8a2" id="footHint"></span>
+    </div>
+  </div>
+
+  <div class="rightcol">
+    <div class="clueboard">
+      <h3>线索板 <span id="clueCount">0</span></h3>
+      <div id="clueList"><div class="empty">尚未记录任何线索。<br>每一次正确的判断，都会在这里留下一条。</div></div>
+    </div>
+    <div class="comm" id="comm">
+      <img src="assets/img/alo.jpg" alt="阿洛 · 随船机械师">
+      <div class="frm"></div>
+      <div class="lbl"><i></i>通讯 · 阿洛 / 随船机械师</div>
+      <div class="corner">◉ LIVE</div>
+    </div>
+  </div>
+</div>
+
+<div id="noteLayer">
+  <div class="note">
+    <div class="note-head">⚓ 舰长训话 · 揭晓</div>
+    <div class="note-body" id="noteBody"></div>
+    <div class="note-foot"><button id="btnRetry">明白了，继续 ▸</button></div>
+  </div>
+</div>
+
+<div id="synthesis">
+  <div class="synbox">
+    <h2>把线索接成因果链</h2>
+    <p>按物理过程依次点击五张卡片。完整因果链将生成压载调整方案。</p>
+    <div class="syn-cards" id="synCards"></div>
+    <div class="syn-chain" id="synChain">等待第一条线索……</div>
+    <div class="syn-status" id="synStatus"></div>
+    <div class="syn-actions"><button onclick="resetSynthesis()">↺ 重排</button><button id="synGo" style="display:none" onclick="startSim()">执行方案 · 进入实操 ▸</button></div>
+  </div>
+</div>
+
+<div id="knowledgeGraph">
+  <div class="kg-head"><h2>航行知识图谱 · 兴波阻力</h2><p>线索正在汇入同一条物理因果链</p></div>
+  <div class="kg-canvas">
+    <svg class="kg-lines" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <line class="kg-edge" style="animation-delay:.5s" x1="12" y1="50" x2="30" y2="28"/><line class="kg-edge" style="animation-delay:1.1s" x1="30" y1="28" x2="49" y2="50"/><line class="kg-edge" style="animation-delay:1.7s" x1="49" y1="50" x2="68" y2="28"/><line class="kg-edge" style="animation-delay:2.3s" x1="68" y1="28" x2="87" y2="50"/><line class="kg-edge" style="animation-delay:2.9s" x1="30" y1="28" x2="49" y2="78"/><line class="kg-edge" style="animation-delay:3.5s" x1="49" y1="78" x2="77" y2="78"/>
+    </svg>
+    <div class="kg-node" style="left:12%;top:50%;animation-delay:.2s"><b>船体扰水</b>排开水体形成周期扰动</div>
+    <div class="kg-node" style="left:30%;top:28%;animation-delay:.8s"><b>源头振幅 A₀</b>吃水决定初始波幅</div>
+    <div class="kg-node" style="left:49%;top:50%;animation-delay:1.4s"><b>表面机械波</b>扰动向外传播</div>
+    <div class="kg-node" style="left:68%;top:28%;animation-delay:2s"><b>能量通量</b>能量随波前离开船体</div>
+    <div class="kg-node" style="left:87%;top:50%;animation-delay:2.6s"><b>兴波阻力</b>推进能量转入尾流</div>
+    <div class="kg-node" style="left:49%;top:78%;animation-delay:3.2s"><b>控制变量</b>固定航速扫描吃水</div>
+    <div class="kg-node" style="left:77%;top:78%;animation-delay:3.8s"><b>最优工作点</b>波强与油耗同时降低</div>
+    <div class="kg-vessel">⛴</div>
+  </div>
+  <div class="kg-note">知识节点正在逐步锁定</div>
+  <button class="kg-finish" id="kgFinish" onclick="finishKnowledgeGraph()">收束本关 · 查看胜利 ▸</button>
+</div>
+
+<div id="win">
+  <div class="winbox">
+    <div style="font-size:44px">🌊</div>
+    <h2>兴波 · 遏制达成</h2>
+    <div class="code">WAVE RADIATION · SUPPRESSED</div>
+    <p>吃水优化到位后，船体向外辐射的机械能大幅回落，燃料消耗重回正常区间。<br>主洋流区的「隐形燃油黑洞」被堵住了。</p>
+    <div class="recap" id="recap"></div>
+    <p style="color:#7fb8b0;font-size:13px">第三关 · 破壳而出 · 兴波阻力的真面目 —— 破解完成 ✅</p>
+    <div style="margin-top:22px">
+      <button onclick="startSim()" style="background:rgba(40,150,130,0.55);border-color:rgba(150,255,235,0.7)">▶ 再次实操</button>
+      <button onclick="location.href='lab4.html'" style="margin-left:8px">下一关 ▸ 暗礁迷阵</button>
+      <button onclick="location.reload()" style="margin-left:8px">↺ 重玩本关</button>
+      <button onclick="location.href='index.html'" style="margin-left:8px">⇱ 返回舰桥</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 三维实操 ============ -->
+<div id="sim3d">
+  <canvas id="simCanvas"></canvas>
+  <div class="sim-hud sim-top">
+    <div class="s-title">◎ 三维实验舱 · 用兴波阻力知识开船<span>目标：穿越 100 标段，燃料不耗尽</span></div>
+    <div class="s-live" id="sFuel">燃料 100%</div>
+  </div>
+
+  <div class="sim-hud sim-ctrl">
+    <div class="s-row">
+      <label>吃水深度 <b id="sDval">6.0 m</b></label>
+      <input type="range" id="sDraft" min="2" max="8" step="0.1" value="6">
+    </div>
+    <div class="s-row">
+      <label>航速 <b id="sVval">5.0</b></label>
+      <input type="range" id="sSpeed" min="1" max="10" step="0.1" value="5">
+    </div>
+    <div class="s-row s-gauge">
+      <label>波强 I = ½ρvω²A²</label>
+      <div class="s-big" id="sIval">—</div>
+    </div>
+    <div class="s-bars">
+      <div class="s-bar"><span>燃料</span><div class="bt"><i id="sFuelBar"></i></div></div>
+      <div class="s-bar"><span>航程</span><div class="bt"><i id="sProgBar" style="background:linear-gradient(90deg,#3fa89f,#8ff0e2)"></i></div></div>
+    </div>
+    <div class="s-params" id="sParams">A = —　ω = —　油耗率 = —</div>
+    <button class="s-btn" id="sRestart">↺ 重新出航</button>
+  </div>
+</div>
+
+<div id="simOver">
+  <div class="winbox">
+    <div style="font-size:44px" id="simOverIcon">🛰️</div>
+    <h2 id="simOverH">航线穿越成功</h2>
+    <div class="code" id="simOverCode">OPTIMAL DRAFT · FOUND</div>
+    <p id="simOverText"></p>
+    <div style="margin-top:22px">
+      <button id="simPrimary" onclick="restartSim()">↺ 再试一次</button>
+      <button onclick="location.href='lab4.html'" style="margin-left:8px">下一关 ▸</button>
+    </div>
+  </div>
+</div>
+
+<!-- 舰桥进度内核：全站解锁状态的唯一真源（见 fleet.js） -->
+<script src="fleet.js"></script>
+<script>
+/* ============================================================
+   背景镜头表
+   每个节拍引用一个 shot；换 shot 时双层交叉淡入。
+   五个剧情阶段分别使用独立场景图，切换时双层交叉淡入。
+   ============================================================ */
+var SHOT_SRC = {
+  wide : "assets/img/level3-wide.jpg",
+  sky  : "assets/img/level3-calm.jpg",
+  ship : "assets/img/level3-hull.jpg",
+  rings: "assets/img/level3-wave-radiation.jpg",
+  water: "assets/img/level3-underwater.jpg"
+};
+/* 每张场景图保留完整构图，并为左侧界面留出暗部 */
+var SHOT = {
+  wide : {pos:'50% 50%', size:'cover'},
+  sky  : {pos:'50% 50%', size:'cover'},
+  ship : {pos:'50% 50%', size:'cover'},
+  rings: {pos:'50% 50%', size:'cover'},
+  water: {pos:'50% 50%', size:'cover'}
+};
+/* 每个节拍的色调 */
+var GRADE = [
+  {f:'saturate(1) brightness(1)',                          t:'rgba(4,12,16,0)'},
+  {f:'saturate(1.1) brightness(1.06)',                     t:'rgba(12,66,78,0.14)'},
+  {f:'saturate(1.18) brightness(0.98)',                    t:'rgba(20,80,96,0.16)'},
+  {f:'saturate(1.3) hue-rotate(-20deg) brightness(0.92)',  t:'rgba(155,48,34,0.24)'},
+  {f:'saturate(0.68) brightness(0.78)',                    t:'rgba(3,8,15,0.36)'},
+  {f:'saturate(0.9) hue-rotate(-12deg) brightness(1.02)',  t:'rgba(66,96,122,0.18)'}
+];
+
+/* ============================================================
+   节拍表：story = 剧情推进；choice = 抉择点
+   ============================================================ */
+var BEATS = [
+
+/* ---------- 第一幕：异常 ---------- */
+{type:'story', shot:'wide', grade:0, title:'序幕 · 胶质海原的尽头',
+ html:'<p>「远望号」在胶质海原里爬了六个小时。那是一片半透明的、缓慢起伏的介质，船体每前进一米，都要把黏稠的东西推开。</p>'+
+      '<p>声呐员忽然抬头：<b>「前方……是空的。」</b></p>'+
+      '<p>前方出现一条清晰的分界线。线的一侧是灰绿色的胶质，另一侧，是真正的、会流动的海水。</p>'+
+      '<p>你们冲了出去。</p>'},
+
+{type:'story', shot:'sky', grade:0, title:'主洋流区 · 无风的航段',
+ html:'<p>真正的海面在船首下展开，一直铺到灰色的天际线。</p>'+
+      '<p>这里是<b>主洋流区</b>——水深三千米，无风，涌浪不到半米。航海图上把它标注为「最省油的航段」。</p>'+
+      '<p class="say">船长把手按在推进杆上：「空旷，无浪，深水。这种地方不提速，等着过年吗？」</p>'+
+      '<p>推进杆推到 90%。</p>'},
+
+{type:'story', shot:'ship', grade:1, title:'九十秒 · 一切正常',
+ html:'<p>螺旋桨转速稳定爬升。舰桥里没人说话，所有人都在看仪表。</p>'+
+      '<p>30 秒。<br>60 秒。<br>90 秒。</p>'+
+      '<p>轮机长的手停在油量表上方，眉头慢慢皱了起来。</p>'},
+
+{type:'story', shot:'rings', grade:3, title:'告警 · 三分钟后的三分钟',
+ html:'<p>告警响了。</p>'+
+      '<span class="big">燃料消耗率：巡航状态的 7 倍</span>'+
+      '<p>而且在涨。每过十几秒就翻一截，像有人把油管接上了抽水机。</p>'+
+      '<p class="say">轮机长一把拽下耳机：「油路漏了。停机，拆检。」</p>'+
+      '<p>船长看向你。你只剩 <em>40 分钟</em> 的燃料。</p>'},
+
+{type:'choice', shot:'rings', grade:3, title:'抉择 · 谁在偷油？', step:'危机之一解除：锁定「船与水的作用力」',
+ html:'<p>你没有立刻同意拆检，而是先调出三组数据：</p>'+
+      '<div class="formula">油舱液位实测：随航速同步下降（燃料是真的在少）<br>怠速静止工况：油耗完全正常<br>油路压力自检：无异常</div>'+
+      '<p class="say">轮机长指着第一行：「你看，油是真的在少，那就是漏了。」</p>',
+ q:'这组证据最先排除了什么？又把嫌疑指向了哪里？',
+ options:[
+  {t:'排除油路泄漏与引擎本体故障；异常只随「航速」出现，嫌疑指向船体与水之间的作用力', ok:true,
+   clue:'异常项与航速强相关、与管路无关 —— 元凶在船与水之间。'},
+  {t:'排除引擎故障；但泄漏是「压力相关」的，高速时油压高，所以漏得更凶', ok:false,
+   note:'<p><b>「压力相关的泄漏」站不住。</b></p>'+
+        '<p>泄漏对压力的响应是<em>连续</em>的。怠速时油压不为零，若真有压力驱动的渗漏，怠速工况就该测到相应泄漏，不会出现「怠速完全正常」这样的断崖。</p>'+
+        '<p>更要命的是<em>量级与形状</em>。管路渗漏率随压差大致线性变化，或按压差平方根变化——而你看到的是随航速<em>指数级</em>攀升。指数增长不是管路渗漏的数学特征，它属于「被某个变量持续放大」的一类过程。</p>'+
+        '<p>先把「管路」这一支划掉。你还有 40 分钟，别浪费在拆管上。</p>'},
+  {t:'说明引擎在高转速下热效率下降，这是内燃机固有的物理现象', ok:false,
+   note:'<p><b>热效率解释不了「指数」两个字。</b></p>'+
+        '<p>热效率随转速的下降是<em>渐进</em>的，量级通常在百分之几——它绝无可能造成 7 倍以上、且呈指数上升的恶化。</p>'+
+        '<p>还有一个更直接的判据：如果问题出在发动机本体，那么<em>空载高转速</em>（螺旋桨不加载）时也应同步恶化。而你的怠速数据是干净的。</p>'+
+        '<p>发动机是被冤枉的。它输出的功确实变多了，只是这些功没能留在船上。</p>'},
+  {t:'说明仪表在高频振动下失准，实际油耗并没有这么高', ok:false,
+   note:'<p><b>油舱液位是直接测量，与油耗仪表相互独立。</b></p>'+
+        '<p>两个独立通道同时指向「燃料在减少」，这已经排除了单纯仪表失准的可能。</p>'+
+        '<p>退一步说，即便仪表有系统偏差，偏差也不会恰好长成一条<em>指数曲线</em>，更不会与航速严格同步。你看到的规律性，本身就是真实物理过程留下的指纹。</p>'+
+        '<p>不要用「仪器坏了」去消解一个正在成立的规律。</p>'}
+ ]},
+
+/* ---------- 第二幕：波的真身 ---------- */
+{type:'story', shot:'water', grade:0, title:'排查 · 划掉两个嫌疑人',
+ html:'<p>你没有让他们拆管。</p>'+
+      '<p>液位在降，说明燃料是真的在少——但「少」的方式不对。泄漏是一条缓慢的斜线，而你们看到的是一条向上的陡坡。</p>'+
+      '<p>你在纸上写下三种可能：管路、发动机、还有别的什么东西。</p>'+
+      '<p>然后划掉了前两个。</p>'+
+      '<p class="say">「去查船底。」你说。</p>'},
+
+{type:'story', shot:'ship', grade:2, comm:true, title:'船底 · 水下的画面',
+ html:'<p>水下摄像机的画面传回舰桥。</p>'+
+      '<p>船首两侧的海面上，有两道整齐的、从船体向外扩散的<b>波</b>——船体推水形成的兴波。它们的间距随着加速而拉大，边缘锋利得不自然。</p>'+
+      '<p class="say">阿洛在通讯窗口里说：「船长，我下去看了一眼……这不是漏水。是水在<em>吃</em>我们的动能。」</p>'+
+      '<p>舰桥安静了一下。大副忽然开口，语气里带着一丝兴奋。</p>'},
+
+{type:'choice', shot:'rings', grade:2, title:'抉择 · 能不能「借浪前进」？', step:'危机之二解除：确认波只传能量、不搬水',
+ html:'<p class="say">「浪是我们自己激起的。那就<b>骑上去</b>——让船压在波峰上，让波把我们往前推，不就省油了吗？」</p>'+
+      '<p>有人已经在点头。</p>',
+ q:'这个方案的根本错误在哪里？',
+ options:[
+  {t:'波传播的是振动状态与能量，介质质点只在平衡位置附近往复振动、不随波迁移。水面没有整体跟着波跑，也就不存在「推着船走」的水流', ok:true,
+   clue:'兴波只搬运能量，不搬运水。船要靠螺旋桨做功，而波把这部分功偷走了。'},
+  {t:'方案可行，只要船速超过波速，就能「冲上」波峰借力', ok:false,
+   note:'<p><b>「船速超过波速就能骑浪」混淆了两件事：波的传播，与水的输运。</b></p>'+
+        '<p>波峰确实以波速 c 前进，但<em>构成这个波峰的水质点并没有跟着移动</em>。深水波中质点做近似圆周运动，浅水波中做椭圆运动，一个完整周期后<em>净位移为零</em>——波峰过去了，原来那个水质点仍留在原处附近。</p>'+
+        '<p>所以「冲上波峰」只是让船占据了某个相位，并不会换来来自水的持续推力。</p>'+
+        '<p>这与冲浪不同：冲浪板借的是<em>波破碎后</em>重力势能转化的水流，是另一套机制，需要波陡超过极限、波形崩塌。平静的兴波不会给你这个。</p>'},
+  {t:'波浪确实携带水体一起向前运动，只是方向不稳定，不够可靠', ok:false,
+   note:'<p><b>这条恰好说反了。</b></p>'+
+        '<p>在机械波的基本模型中，<em>质点不随波迁移</em>，波传播的是相位与能量。水面上下起伏，物质本身并没有被搬走。</p>'+
+        '<p>诚实地说，真实海洋里确实存在一种二阶效应——<em>斯托克斯漂移</em>，水质点在波传播方向上有极小的净输运。但它正比于振幅的平方，量级是每秒几厘米。</p>'+
+        '<p>拿每秒几厘米的水流去推动数千吨的科考船，等于指望蚂蚁推卡车。它在物理上真实，在工程上无用。</p>'},
+  {t:'方案可行，只是受波长与船长匹配关系的限制，需要精确设计', ok:false,
+   note:'<p><b>波长匹配是真实存在的考量，但它建立在「波能提供推力」这个前提上。</b></p>'+
+        '<p>波长与船长的关系确实重要——它决定船体与波是共振还是错开，直接影响兴波阻力的大小。这一点后面还会用到。</p>'+
+        '<p>但前提不成立，讨论匹配就无从谈起。你不能先假设「波推船」成立，再去优化推的方式。</p>'+
+        '<p>正确的推理顺序是：<em>先证伪前提，再谈参数</em>。</p>'}
+ ]},
+
+/* ---------- 第三幕：把能量揪出来 ---------- */
+{type:'story', shot:'rings', grade:1, title:'追踪 · 屏幕上的同心圆',
+ html:'<p>大副的方案被否掉了，但问题还在：能量到底跑哪去了？</p>'+
+      '<p>你要求声呐给出船首周围海面的相位图。</p>'+
+      '<p>屏幕上出现了一组<b>同心圆</b>——一圈一圈，从船首向外荡开，规整得不像自然现象。</p>'+
+      '<p>「等相位线。」声呐员说，「同一时刻振动状态相同的点，连起来就是这样。」</p>'},
+
+{type:'choice', shot:'rings', grade:1, title:'抉择 · 波线该往哪画？', step:'危机之三解除：能量沿半径向外辐射',
+ html:'<p>要遏制兴波，先得说清能量往哪跑。屏幕上这组以船首为圆心的同心圆就是<em>波前</em>。</p>'+
+      '<p>现在需要标出<b>波线</b>，用来指示能量流动的方向。</p>',
+ q:'波线应该怎么画？',
+ options:[
+  {t:'波线是垂直于波前、由波源指向外的半径方向直线', ok:true,
+   clue:'波前是「等相位的面」，波线垂直于它、指向能量流动的方向。'},
+  {t:'波线与波前平行，沿着圆周方向延伸', ok:false,
+   note:'<p><b>若波线沿圆周，就意味着「沿着波线走，相位不变」。</b></p>'+
+        '<p>而沿着同一个波前走，相位当然不变——那正是「<em>等相位面</em>」这个定义本身的意思。</p>'+
+        '<p>所以圆周方向是<em>波前自身的方向</em>，不是传播方向。把两者混为一谈，等于宣称波沿着自己的等相位面传播，也就是相位不随时间推进。</p>'+
+        '<p>相位不推进的东西，不叫波。</p>'},
+  {t:'波线是连接相邻波前的曲线，与波前可以成任意夹角', ok:false,
+   note:'<p><b>波线必须垂直于波阵面（在各向同性介质中）。</b></p>'+
+        '<p>垂直线与波阵面成 90°。这个角度来自波线与波阵面的定义。</p>'+
+        '<p>波线的定义就是「波的传播方向线」，它要求：<em>沿波线方向，相位变化最快</em>。只有垂直于等相位面，才能取到这个最快变化方向。</p>'+
+        '<p>允许「任意夹角」，等于放弃了判定传播方向的唯一依据。</p>'},
+  {t:'波线沿着船体纵轴方向，也就是航行方向', ok:false,
+   note:'<p><b>航行方向是船体运动的方向，波传播方向是波的方向，这是两回事。</b></p>'+
+        '<p>船向前开，兴波却向<em>两侧</em>散开——两者夹角接近 90°，显然不同向。你眼前的同心圆以船首为圆心向外扩，就已经说明了这一点。</p>'+
+        '<p>把「物体往哪走」当成「波往哪传」，是本题最基础的概念混淆。顺着这个错误往下走，你会把能量辐射的方向整个算反。</p>'}
+ ]},
+
+/* ---------- 第四幕：量化 ---------- */
+{type:'story', shot:'water', grade:0, title:'试验 · 拿船当试验台',
+ html:'<p>方向定了：能量沿半径向外流，一刻不停。</p>'+
+      '<p>你在笔记本上写下第一个量化目标——<b>必须知道能量流失的速率</b>。没有这个数，任何方案都是猜。</p>'+
+      '<p>舰桥没有试验池。但船上有可调压载水舱。</p>'+
+      '<p>你决定用<em>船本身</em>当试验台。</p>'},
+
+{type:'choice', shot:'ship', grade:1, title:'抉择 · 平方律的杀伤力', step:'危机之四解除：抓到 I ∝ A² 的杠杆',
+ html:'<p>你做了第一组对照：把船首激波的<em>振幅压到原来的一半</em>，其它条件全部保持不变。</p>'+
+      '<div class="formula">测量结果：单位时间向外辐射的能量 → 降为原来的 <b>1/4</b></div>'+
+      '<p class="say">工程师盯着这个 1/4：「这正好是个平方。」</p>',
+ q:'这个「四分之一」说明了什么？它对方案设计意味着什么？',
+ options:[
+  {t:'波强 I ∝ A²；而 I = ½ρvω²A² 中 ω 同样是平方项。压低振幅与压低频率都有效，但改变吃水能直接、可控地压低 A', ok:true,
+   clue:'I ∝ A²ω²。压低振幅是当前工况下最可控的第一杠杆。'},
+  {t:'说明波强 I ∝ A，振幅减半能量就该减半，测到的四分之一是测量误差', ok:false,
+   note:'<p><b>「减半 → 四分之一」这个精确的比例，恰恰是最有力的证据，不是误差。</b></p>'+
+        '<p>三个候选模型会给出三个<em>不同的数</em>：</p>'+
+        '<div class="fml">若 I ∝ A&nbsp;&nbsp;&nbsp;&nbsp;→ 减半后应为 0.500<br>若 I ∝ A^1.5 → 减半后应为 0.354<br>若 I ∝ A²&nbsp;&nbsp;&nbsp;→ 减半后应为 0.250 &nbsp;← 实测</div>'+
+        '<p>把落在 0.250 上的数据说成「误差」，等于主动丢掉了实验最有判别力的部分。</p>'+
+        '<p>而且误差通常表现为<em>离散</em>——围绕真值上下跳动。你这里看到的是干净利落地落在某个幂律上，那是规律，不是噪声。</p>'},
+  {t:'说明波强只与振幅有关，频率对能量辐射没有影响', ok:false,
+   note:'<p><b>漏掉 ω² 会导致严重误判。</b></p>'+
+        '<p>在 I = ½ρvω²A² 中，<em>ω² 同样位于分子</em>，频率的影响与振幅同等强势。</p>'+
+        '<p>这不是学术细节。如果你为了抢时间而提高推进节奏，激励频率上升会让 ω² 迅速变大，<em>吃掉</em>你从振幅上辛苦挣来的全部收益，甚至净亏。</p>'+
+        '<p>换言之：本关真正的陷阱，就是只顾着压振幅、却把频率放开。</p>'},
+  {t:'说明波强正比于波速 v，与振幅基本无关', ok:false,
+   note:'<p><b>波速 v 确实在分子上，但它只是一次项。</b></p>'+
+        '<p>更关键的是，在深水重力波中 v 本身还与波长相关（v 与波长的平方根成正比），它不是你可以独立调节的旋钮。</p>'+
+        '<p>而「与振幅基本无关」这个说法，与你刚刚亲手测到的结果<em>直接矛盾</em>——振幅减半，能量掉到四分之一，这是一条极强的依赖关系。</p>'+
+        '<p>不要用一个未经验证的猜想，去否定一个刚刚亲手做出的测量。</p>'}
+ ]},
+
+{type:'story', shot:'sky', grade:4, title:'外推 · 越来越小的波',
+ html:'<p>你把这个 1/4 记下来，继续往外推。</p>'+
+      '<p>然后把测量点往远处挪——数据开始不对劲：<b>同一道波，离船越远，振幅越小</b>。</p>'+
+      '<p class="say">有人在旁边说：「方程里 A 是常数啊，那肯定是海水黏性把它磨没了。」</p>'+
+      '<p>你摇了摇头。这个说法，你听过太多次了。</p>'},
+
+{type:'choice', shot:'water', grade:4, title:'抉择 · 为什么振幅必须衰减', step:'危机之五解除：确认要从源头压低 A₀',
+ html:'<p>摆在面前的是一个矛盾：</p>'+
+      '<div class="formula">远场近似：y = A·cos(ωt − kx)，此处 A 是常数<br>实测：船首附近的兴波振幅，随离船距离迅速减小</div>',
+ q:'把衰减归因于海水黏性，错在哪里？',
+ options:[
+  {t:'错在把「几何扩散」当成了「介质耗散」。能量守恒要求波前随距离增大时，同样的能量摊在更大的波前上，振幅必须下降——这在理想无黏流体中同样成立', ok:true,
+   clue:'能量守恒 ⇒ 波前扩散 ⇒ 振幅衰减。想省油，必须从源头的 A₀ 下手。'},
+  {t:'没有错，振幅衰减确实主要由海水黏性耗散造成', ok:false,
+   note:'<p><b>黏性耗散真实存在，但它是次要效应。</b></p>'+
+        '<p>这里有一个干净的判据：<em>把黏性去掉，现象还在不在？</em></p>'+
+        '<p>把流体设为理想无黏，重新计算柱面波——振幅依然按 1/√r 衰减（球面波则按 1/r）。这说明主因是<em>几何扩散</em>：能量守恒要求同一份能量分布到不断扩大的波前上。</p>'+
+        '<p>「拿掉这个因素，现象是否消失」——这是区分主因与次因最锋利的刀。别让它生锈。</p>'},
+  {t:'错在平面波方程本身不成立，真实波都不该用常数振幅描述', ok:false,
+   note:'<p><b>平面波方程没有问题，它是「远场近似」。</b></p>'+
+        '<p>当观测点到波源的距离远大于观测范围时，柱面波的一小段弧可以被当作平面处理，此时把 A 视作常数是合理的简化。这正是工程上大量使用平面波的原因。</p>'+
+        '<p>错误来自近似范围：你把<em>「远场近似」当成了「全局真理」</em>，再拿它回头去反推近场行为。</p>'+
+        '<p>每个近似都有它的适用域。越界使用，结论就会反过来咬你。</p>'},
+  {t:'错在振幅由船速决定，本来就与距离无关', ok:false,
+   note:'<p><b>「振幅与距离无关」直接违反能量守恒。</b></p>'+
+        '<p>柱面波的波前是周长 2πr 的圆。r 增大时周长线性增长——如果振幅保持不变，那么穿过波前的总能量将随 r <em>线性增长</em>。</p>'+
+        '<p>那等于说，波在传播过程中凭空创造能量。</p>'+
+        '<p>船速决定的是<em>初始</em>振幅 A₀，它回答「源头激起多大的波」；而振幅随后随距离怎么变，是能量守恒说了算。两者不冲突，也不能互相取代。</p>'}
+ ]},
+
+/* ---------- 第五幕：下手 ---------- */
+{type:'story', shot:'ship', grade:5, title:'收敛 · 只剩一个旋钮',
+ html:'<p>机理闭合了。</p>'+
+      '<p>能量以机械波的形式持续辐射出去，速率由<em>源头振幅 A₀</em> 决定。而 A₀ 由船体对水面的扰动深度决定——也就是<b>吃水</b>。</p>'+
+      '<p>远场衰减你改不了，频率你不敢动，波速不是旋钮。</p>'+
+      '<p>剩下的可操作量，只有一个。</p>'+
+      '<p>舰桥里抛出两个方案，等你拍板。</p>'},
+
+{type:'choice', shot:'ship', grade:5, title:'抉择 · 怎么找到最优吃水', step:'危机之六解除：锁定「找最优吃水」的方法',
+ html:'<div class="formula">方案甲：既然 I ∝ A²，那就把吃水调到<b>最小</b>，越小越好<br>方案乙：把吃水和航速<b>一起扫一遍</b>，二维找最优组合，效率更高</div>',
+ q:'哪种做法才能真正找到最优吃水？',
+ options:[
+  {t:'固定航速等其它条件，只改变吃水，逐点测量波高与油耗，找出 I(吃水) 的最小值', ok:true,
+   clue:'控制变量 + 逐点寻优：先分离因果，再找极小值。'},
+  {t:'直接把吃水调到最小——因为 I ∝ A²，振幅越小越好，这是单调关系', ok:false,
+   note:'<p><b>兴波阻力随吃水<em>不是单调</em>关系，所以不能推到边界。</b></p>'+
+        '<p>吃水过浅，船体会更贴近水面，反而容易激起更强的<em>破碎波与飞溅</em>，把 A 重新抬高；同时稳性下降、螺旋桨易吸气，安全上也不能接受。</p>'+
+        '<p>注意 I ∝ A² 的适用范围：它是在<em>其它条件固定</em>时成立的比例关系。而吃水本身正是在改变 A——你把 A 当成了可以单调外推的自由变量，这一步偷换了前提。</p>'+
+        '<p>正确做法是实测出 I(吃水) 这条曲线，并在完整测量区间内<em>寻找极小值</em>。</p>'},
+  {t:'同时改变吃水和航速做二维扫描，找到最优组合，比单变量扫描效率更高', ok:false,
+   note:'<p><b>同时改变两个变量，会造成因果混淆。</b></p>'+
+        '<p>油耗变化了，你无法判断它究竟来自吃水，还是来自航速。扫出来的所谓「最优组合」，可能只是某个偶然的配对。</p>'+
+        '<p>而且这两个变量并不独立：航速会改变兴波的<em>频率 ω</em>，而 ω² 又以平方的力度影响波强。两个因素耦合在一起，你分不清哪个在起主导作用。</p>'+
+        '<p>正确顺序是<em>控制变量</em>：先固定航速，单独标定吃水的影响，再换一个航速复核。效率看起来低，但它给出的结论站得住。</p>'},
+  {t:'依据经验公式直接算出最优吃水，不必实测，省时间', ok:false,
+   note:'<p><b>经验公式的适用域有限，外推误差不可控。</b></p>'+
+        '<p>兴波阻力的经验公式依赖船型、傅汝德数、水深等一整套前提。把这些公式搬到你这艘船、这个工况上，偏差有多大没人能保证。</p>'+
+        '<p>更根本的一点：本关的任务是<em>验证物理机制</em>——I ∝ A²ω² 在你的船上到底成不成立、吃水的最优点落在哪里。这是公式回答不了的问题，它只能回答「按某个模型该是多少」。</p>'+
+        '<p>模型给出预期，实测给出真相。40 分钟够做一轮单变量扫描，别把时间押在一个未经校验的公式上。</p>'}
+ ]},
+
+/* ---------- 第六幕：把结论变成航线 ---------- */
+{type:'story', shot:'rings', grade:1, title:'回收 · 六条线索同时亮起',
+ html:'<p>最后一个判断记入线索板。六条记录从上到下依次亮起。</p>'+
+      '<div class="formula">船体扰水 → 激起机械波 → 波携带能量外传<br>波前向外扩展 → 振幅随距离衰减<br>源头强度 I ∝ A₀²ω² → 吃水控制 A₀<br>控制航速 → 单独扫描吃水 → 寻找极小值</div>'+
+      '<p>这些线索终于连成一条完整的因果链。目标是找到<b>兴波能量最低的工作点</b>。</p>'},
+
+{type:'story', shot:'water', grade:2, title:'部署 · 一次只动一个变量',
+ html:'<p>轮机组锁定航速，压载舱按 0.5 米为一档调整吃水。每到一个档位，船保持直航 40 秒。</p>'+
+      '<p>声呐记录尾流波高，轮机舱记录燃料流量，舰桥把两组数据叠在同一条时间轴上。</p>'+
+      '<div class="formula">6.0 m → 5.5 m → 5.0 m → 4.5 m → 4.0 m</div>'+
+      '<p>每次只改变吃水，曲线上的起伏便有了明确来源。</p>'},
+
+{type:'story', shot:'ship', grade:1, title:'显影 · 谷底出现',
+ html:'<p>吃水从 6.0 米降到 5.0 米时，尾流波高持续下降；调到 4.5 米，曲线落到最低点。</p>'+
+      '<p>继续减到 4.0 米，船首飞溅突然增多，燃料流量重新上升。</p>'+
+      '<div class="formula">最优吃水：4.5 m<br>尾流波高：下降 38%　　燃料消耗率：下降 31%</div>'+
+      '<p class="say">轮机长敲了敲屏幕：“谷底找到了。它就在中间，不在边界。”</p>'},
+
+{type:'story', shot:'wide', grade:0, title:'验证 · 把偶然变成证据',
+ html:'<p>船保持 4.5 米吃水，再以相同航速跑过一段等长航程。</p>'+
+      '<p>第一分钟，燃料告警由红转黄；第三分钟，流量稳定在新的平台；第五分钟，尾流的 V 形波纹收窄，远处波峰明显变低。</p>'+
+      '<p>随后换一个航速复测，最低点仍落在同一片区间。两轮结果互相咬合，方案通过验证。</p>'},
+
+{type:'story', shot:'sky', grade:5, title:'待命 · 把方案交给驾驶台',
+ html:'<p>压载方案、目标吃水和建议航速被写入驾驶台。推进杆停在待命位置。</p>'+
+      '<p>下一步需要把五条因果线索接成完整操作链，再由你亲自控制吃水与航速完成验证航段。</p>'+
+      '<p class="say">船长把驾驶席让开：“曲线已经告诉我们方向。现在由你把船开到谷底。”</p>'+
+      '<span class="big">方案待执行 · 燃料危机仍在计时</span>'}
+];
+
+var TOTAL_CHOICES = BEATS.filter(function(b){ return b.type==='choice'; }).length;
+
+/* ============================================================
+   运行时
+   ============================================================ */
+var bi = 0;
+var clues = [];
+var perfect = 0;
+var missionScore = 88;
+var penalized = {};
+var audioCtx=null, musicMaster=null, musicFilter=null, musicOn=true, musicTension=0;
+function ensureAudio(){
+  if(audioCtx){ if(audioCtx.state==='suspended') audioCtx.resume(); return; }
+  var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+  audioCtx=new AC(); musicMaster=audioCtx.createGain(); musicFilter=audioCtx.createBiquadFilter();
+  musicFilter.type='lowpass'; musicFilter.frequency.value=420; musicMaster.gain.value=.035;
+  musicFilter.connect(musicMaster); musicMaster.connect(audioCtx.destination);
+  [55,82.4].forEach(function(freq,i){ var o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.type=i?'sine':'triangle'; o.frequency.value=freq; g.gain.value=i?.32:.22; o.connect(g); g.connect(musicFilter); o.start(); });
+  var buf=audioCtx.createBuffer(1,audioCtx.sampleRate*2,audioCtx.sampleRate),data=buf.getChannelData(0);
+  for(var i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*.12;
+  var n=audioCtx.createBufferSource(),ng=audioCtx.createGain(); n.buffer=buf;n.loop=true;ng.gain.value=.18;n.connect(ng);ng.connect(musicFilter);n.start();
+  document.getElementById('musicToggle').textContent='♪ 配乐 · 开';
+  updateMusic(musicTension);
+}
+function toggleMusic(){
+  if(!audioCtx){ ensureAudio(); musicOn=true; return; }
+  musicOn=!musicOn; musicMaster.gain.setTargetAtTime(musicOn?.035:0,audioCtx.currentTime,.25);
+  document.getElementById('musicToggle').textContent=musicOn?'♪ 配乐 · 开':'♪ 配乐 · 关';
+}
+function updateMusic(level){
+  musicTension=level||0; if(!audioCtx||!musicOn) return;
+  musicFilter.frequency.setTargetAtTime(360+musicTension*85,audioCtx.currentTime,.5);
+  musicMaster.gain.setTargetAtTime(.028+musicTension*.004,audioCtx.currentTime,.5);
+}
+document.addEventListener('pointerdown',function(e){if(e.target.id!=='musicToggle')ensureAudio();},{once:true});
+var layerA = document.getElementById('bgA');
+var layerB = document.getElementById('bgB');
+var tintEl = document.getElementById('tint');
+var frontIsA = true;
+var elTitle  = document.getElementById('stepTitle');
+var elNo     = document.getElementById('stepNo');
+var elScene  = document.getElementById('sceneText');
+var elQ      = document.getElementById('questionText');
+var elOpts   = document.getElementById('options');
+var elGain   = document.getElementById('clueGain');
+var elFoot   = document.getElementById('cardFoot');
+var elHint   = document.getElementById('footHint');
+var elComm   = document.getElementById('comm');
+
+/* 交叉淡入切换背景镜头 */
+function setShot(key, gradeIdx){
+  var sk = SHOT[key] ? key : 'wide';
+  var s  = SHOT[sk];
+  var g  = GRADE[gradeIdx] || GRADE[0];
+  var incoming = frontIsA ? layerB : layerA;
+  var outgoing = frontIsA ? layerA : layerB;
+  incoming.classList.remove('on');
+  void incoming.offsetWidth;
+  incoming.style.backgroundImage = "url('" + SHOT_SRC[sk] + "')";
+  incoming.style.backgroundSize = s.size;
+  incoming.style.backgroundPosition = s.pos;
+  incoming.style.filter = g.f;
+  incoming.classList.add('on');
+  outgoing.classList.remove('on');
+  frontIsA = !frontIsA;
+  tintEl.style.background = g.t;
+  var fx=document.getElementById('sceneFx');
+  fx.className='wavefx'+((sk==='rings'||sk==='ship'||sk==='water')?' active':'')+(sk==='rings'?' strong':'');
+  updateMusic(gradeIdx||0);
+}
+
+function updateMissionStat(delta){
+  missionScore=Math.max(35,Math.min(100,missionScore+(delta||0)));
+  var el=document.getElementById('missionStat');
+  el.textContent=missionScore+'%';
+  el.style.color=missionScore<60?'#ff8a7a':(missionScore<85?'#ffd08a':'#8fe8dc');
+}
+
+function choiceNo(i){
+  var c = 0;
+  for(var k=0;k<=i && k<BEATS.length;k++){ if(BEATS[k].type==='choice') c++; }
+  return c;
+}
+
+function renderProgress(){
+  document.getElementById('progText').textContent = clues.length + ' / ' + TOTAL_CHOICES;
+  document.getElementById('progBar').style.width = (clues.length/TOTAL_CHOICES*100) + '%';
+  document.getElementById('clueCount').textContent = clues.length;
+  var tag = document.getElementById('crisisTag');
+  if(tag){
+    var rem = TOTAL_CHOICES - clues.length;
+    var level = rem>4 ? 6 : rem;    /* 6..1，0 表示全解除 */
+    var label = rem>4 ? 'Ⅰ级·危急' : (rem===4?'Ⅱ级·高':(rem===3?'Ⅲ级·中':(rem===2?'Ⅳ级·低':(rem===1?'Ⅴ级·解除':'已解除'))));
+    tag.className = 'crisis c' + level;
+    tag.textContent = label;
+  }
+}
+
+function renderClues(){
+  var box = document.getElementById('clueList');
+  if(!clues.length){
+    box.innerHTML = '<div class="empty">尚未记录任何线索。<br>每一次正确的判断，都会在这里留下一条。</div>';
+  }else{
+    box.innerHTML = clues.map(function(c,i){
+      return '<div class="clue"><b>线索 ' + (i+1) + '</b>　' + c + '</div>';
+    }).join('');
+  }
+  renderProgress();
+}
+
+function render(){
+  var b = BEATS[bi];
+  var isChoice = (b.type === 'choice');
+  setShot(b.shot, b.grade);
+  elTitle.textContent = b.title || '';
+  elNo.textContent = isChoice ? ('抉择 ' + choiceNo(bi) + ' / ' + TOTAL_CHOICES) : ('剧情 ' + (bi+1) + ' / ' + BEATS.length);
+  elNo.className = isChoice ? 'step-no choose' : 'step-no';
+  elScene.innerHTML = b.html || '';
+  elGain.style.display = 'none';
+  elOpts.innerHTML = '';
+  elComm.classList.toggle('on', !!b.comm);
+
+  if(isChoice){
+    elQ.style.display = 'block';
+    elQ.innerHTML = '<span class="qr">◈ 需要你判断</span>' + b.q;
+    elFoot.style.display = 'none';
+    var keys = ['A','B','C','D'];
+    b.options.forEach(function(o,i){
+      var btn = document.createElement('button');
+      btn.className = 'opt';
+      btn.innerHTML = '<span class="k">' + keys[i] + '</span>' + o.t;
+      btn.onclick = (function(o,letter){ return function(){ choose(o, letter); }; })(o, keys[i]);
+      elOpts.appendChild(btn);
+    });
+  }else{
+    elQ.style.display = 'none';
+    elFoot.style.display = 'flex';
+    elHint.textContent = '';
+    var nb = document.getElementById('btnNext');
+    var last = (bi === BEATS.length - 1);
+    nb.textContent = last ? '汇总结论 ▸' : '继续 ▸';
+    nb.onclick = function(){ if(last){ finish(); } else { bi++; render(); } };
+  }
+  document.querySelector('.scroll').scrollTop = 0;
+}
+
+function choose(o, letter){
+  if(o.ok){
+    perfect++;
+    updateMissionStat(2);
+    clues.push(o.clue);
+    renderClues();
+    var b = BEATS[bi];
+    elGain.style.display = 'block';
+    elGain.innerHTML = '<b>✓ 判断成立。</b>' +
+      (b.step ? '<span class="cstep">'+b.step+'</span>' : '') + o.clue +
+      '<span class="cstep">任务反馈 · 预计燃料余量 +2%</span>';
+    elOpts.innerHTML = '';
+    elQ.style.display = 'none';
+    elFoot.style.display = 'flex';
+    elHint.textContent = '已记录到线索板';
+    var last = (bi === BEATS.length - 1);
+    var nb = document.getElementById('btnNext');
+    nb.textContent = last ? '汇总结论 ▸' : '继续 ▸';
+    nb.onclick = function(){ if(last){ finish(); } else { bi++; render(); } };
+  }else{
+    revealAnswer(o, letter);
+  }
+}
+
+function revealAnswer(o, letter){
+  var co = null;
+  var b = BEATS[bi];
+  if(!penalized[bi]){ penalized[bi]=true; updateMissionStat(-6); }
+  b.options.forEach(function(x){ if(x.ok) co = x; });
+  document.getElementById('noteBody').innerHTML =
+    '<p class="miss">你选了「<b>'+letter+'</b>」—— 那是一条岔路。</p>' +
+    '<span class="cstep">任务反馈 · 预计燃料余量 -6%</span>' +
+    '<span class="ans-line"><span class="lab">正确答案</span>' + (co ? co.t : '') + '</span>' +
+    (b.step ? '<span class="cstep">'+b.step+'</span>' : '') +
+    o.note +
+    '<span class="sig">—— 舰长 · 破浪号 训话</span>';
+  document.getElementById('noteLayer').classList.add('on');
+  document.getElementById('btnRetry').onclick = function(){
+    document.getElementById('noteLayer').classList.remove('on');
+    /* 点破后同样记入线索并推进 */
+    if(co && co.clue && clues.indexOf(co.clue) < 0){ clues.push(co.clue); renderClues(); }
+    var last = (bi === BEATS.length - 1);
+    if(last){ finish(); } else { bi++; render(); }
+  };
+}
+
+var SYN_CARDS=[
+  '船体排开水并形成周期扰动',
+  '扰动形成向外传播的机械波',
+  '机械波持续带走推进能量',
+  '源头振幅决定兴波能量损失',
+  '固定航速并扫描吃水寻找极小值'
+];
+var SYN_DISPLAY=[2,0,4,1,3], synIndex=0;
+function finish(){ startSynthesis(); }
+function startSynthesis(){
+  synIndex=0;
+  document.getElementById('synthesis').classList.add('on');
+  document.getElementById('synGo').style.display='none';
+  document.getElementById('synStatus').textContent='从扰动的源头开始。';
+  renderSynthesis();
+}
+function renderSynthesis(){
+  var box=document.getElementById('synCards');
+  box.innerHTML='';
+  SYN_DISPLAY.forEach(function(idx){
+    var btn=document.createElement('button');
+    btn.className='syn-card'+(idx<synIndex?' done':'');
+    btn.textContent=SYN_CARDS[idx];
+    btn.onclick=function(){ chooseSynthesis(idx,btn); };
+    box.appendChild(btn);
+  });
+  document.getElementById('synChain').innerHTML=synIndex?SYN_CARDS.slice(0,synIndex).map(function(x,i){return '<b>'+(i+1)+'</b> '+x;}).join('　→　'):'等待第一条线索……';
+}
+function chooseSynthesis(idx,btn){
+  if(idx===synIndex){
+    synIndex++; updateMissionStat(1); renderSynthesis();
+    document.getElementById('synStatus').textContent=synIndex===SYN_CARDS.length?'因果链闭合，压载方案已生成。':'继续寻找下一环。';
+    if(synIndex===SYN_CARDS.length) document.getElementById('synGo').style.display='inline-block';
+  }else{
+    updateMissionStat(-2);
+    document.getElementById('synStatus').textContent='这条线索尚未接上当前因果链。';
+    btn.classList.add('shake'); setTimeout(function(){btn.classList.remove('shake');},260);
+  }
+}
+function resetSynthesis(){ synIndex=0; document.getElementById('synGo').style.display='none'; document.getElementById('synStatus').textContent='从扰动的源头开始。'; renderSynthesis(); }
+
+function showVictory(){
+  /* 通关 → 通知舰桥：本关标定卡已签发（fleet.js） */
+  try{ if(window.Fleet) window.Fleet.clear(3); }catch(e){}
+  document.getElementById('recap').innerHTML =
+    '<b style="color:#8fe8dc">本次调查建立的关键结论：</b><br>' +
+    clues.map(function(c,i){ return (i+1) + '. ' + c; }).join('<br>') +
+    '<div style="margin-top:14px;padding-top:12px;border-top:1px dashed rgba(130,235,220,0.3);color:#8fe8dc">独立破解 <b>'+perfect+'</b> / '+TOTAL_CHOICES+' 问</div>';
+  document.getElementById('win').classList.add('on');
+}
+
+/* ============================================================
+   三维实操 · 用兴波阻力知识开船
+   物理：I = ½ρvω²A²
+     ω(v) = 0.5 + 0.2·v   （航速决定激励频率）
+     A(d) = 0.3 + 0.06·(d−4.5)²   （吃水决定振幅，4.5m 处最小）
+   目标：航程到 100，燃料不耗尽。
+   ============================================================ */
+var sim = { run:false, v:5, d:6, fuel:100, prog:0, t:0, arcs:[], acc:0, last:null, lastI:-1 };
+
+function sOmega(v){ return 0.5 + 0.2*v; }
+function sAmp(d){ return 0.3 + 0.06*Math.pow(d-4.5,2); }
+function sIntensity(d,v){ return 40*sOmega(v)*sOmega(v)*sAmp(d)*sAmp(d); }
+
+var simCanvas = document.getElementById('simCanvas');
+var sctx = simCanvas.getContext('2d');
+
+function startSim(){
+  document.getElementById('win').classList.remove('on');
+  document.getElementById('synthesis').classList.remove('on');
+  document.getElementById('sim3d').classList.add('on');
+  syncSimFromSliders();
+  resetSimRun();
+  resizeSim();
+  if(!sim.run){ sim.run=true; sim.last=null; requestAnimationFrame(simLoop); }
+}
+
+function resetSimRun(){
+  sim.fuel=100; sim.prog=0; sim.t=0; sim.arcs=[]; sim.acc=0; sim.lastI=-1;
+  document.getElementById('simOver').classList.remove('on');
+  document.getElementById('sRestart').textContent='↺ 重新出航';
+}
+
+function restartSim(){
+  resetSimRun();
+  syncSimFromSliders();
+  if(!sim.run){ sim.run=true; sim.last=null; requestAnimationFrame(simLoop); }
+}
+
+function syncSimFromSliders(){
+  var sd=document.getElementById('sDraft'), sv=document.getElementById('sSpeed');
+  sim.d=parseFloat(sd.value); sim.v=parseFloat(sv.value);
+  sd.oninput=function(){ sim.d=parseFloat(sd.value); document.getElementById('sDval').textContent=sim.d.toFixed(1)+' m'; };
+  sv.oninput=function(){ sim.v=parseFloat(sv.value); document.getElementById('sVval').textContent=sim.v.toFixed(1); };
+  document.getElementById('sDval').textContent=sim.d.toFixed(1)+' m';
+  document.getElementById('sVval').textContent=sim.v.toFixed(1);
+  document.getElementById('sRestart').onclick=restartSim;
+}
+
+function resizeSim(){
+  simCanvas.width=window.innerWidth;
+  simCanvas.height=window.innerHeight;
+}
+window.addEventListener('resize', resizeSim);
+
+function simLoop(ts){
+  if(!sim.run) return;
+  if(sim.last==null) sim.last=ts;
+  var dt=(ts-sim.last)/1000; sim.last=ts;
+  if(dt>0.08) dt=0.08;
+  if(dt<0) dt=0;
+
+  /* 只在游戏进行中推进物理（未结束） */
+  if(sim.fuel>0 && sim.prog<100){
+    var I=sIntensity(sim.d, sim.v);
+    var A=sAmp(sim.d), W=sOmega(sim.v);
+    var drain=(0.3+0.5*I)*dt;
+    sim.fuel-=drain;
+    sim.prog+=sim.v*dt;       /* 速度 1~10，目标 100 */
+    sim.t+=dt;
+
+    /* 周期性生成扩散波前 */
+    sim.acc+=dt;
+    if(sim.acc>0.45){ sim.acc=0; sim.arcs.push({r:18, a:A, o:1}); }
+    /* 波前扩散 + 几何衰减 */
+    for(var i=sim.arcs.length-1;i>=0;i--){
+      var ar=sim.arcs[i];
+      ar.r+= (6+sim.v*1.1)*dt;
+      ar.o=38/Math.max(ar.r,18);   /* ∝1/r 几何扩散 */
+      if(ar.o<0.03) sim.arcs.splice(i,1);
+    }
+
+    sim.lastI=I;
+
+    if(sim.fuel<=0){
+      sim.fuel=0;
+      showSimOver(false);
+      sim.run=false; return;
+    }
+    if(sim.prog>=100){
+      sim.prog=100;
+      showSimOver(true);
+      sim.run=false; return;
+    }
+  }else{
+    /* 结束态仍然渲染画面 */
+  }
+
+  drawSim();
+  updateSimHUD();
+  requestAnimationFrame(simLoop);
+}
+
+function updateSimHUD(){
+  var I=sim.lastI>=0?sim.lastI:sIntensity(sim.d,sim.v);
+  var A=sAmp(sim.d), W=sOmega(sim.v);
+  var drain=0.3+0.5*I;
+  var elI=document.getElementById('sIval');
+  elI.textContent=Math.round(I)+' W/m²';
+  elI.className='s-big'+(I>=30?' red':(I>=18?' amber':''));
+  document.getElementById('sFuelBar').style.width=(sim.fuel)+'%';
+  document.getElementById('sProgBar').style.width=(sim.prog)+'%';
+  var f=document.getElementById('sFuel');
+  f.textContent='燃料 '+(sim.fuel<0?0:sim.fuel).toFixed(0)+'%';
+  f.className='s-live'+(sim.fuel<25?' danger':(sim.fuel<55?' warn':''));
+  document.getElementById('sParams').textContent =
+    'A = '+A.toFixed(2)+' m　ω = '+W.toFixed(2)+'　油耗率 = '+drain.toFixed(1)+'/s';
+}
+
+function showSimOver(win){
+  var icon=document.getElementById('simOverIcon');
+  var h=document.getElementById('simOverH');
+  var c=document.getElementById('simOverCode');
+  var t=document.getElementById('simOverText');
+  var p=document.getElementById('simPrimary');
+  if(win){
+    icon.textContent='🛰️'; h.textContent='航线穿越成功'; c.textContent='OPTIMAL DRAFT · FOUND';
+    t.innerHTML='你找到了吃水 <b style="color:#8fe8dc">'+sim.d.toFixed(1)+' m</b> 与航速 <b style="color:#8fe8dc">'+sim.v.toFixed(1)+'</b> 的甜点——<br>波强被压在安全区，激起的机械能没再把油吃掉。<br>这正是 I = ½ρvω²A²：<em>振幅最小化 × 频率不失控</em>。';
+    p.textContent='查看任务结果 ▸'; p.onclick=completeMission;
+  }else{
+    icon.textContent='⛽'; h.textContent='燃料耗尽 · 搁浅'; c.textContent='RADIATION LOSS · CRITICAL';
+    t.innerHTML='波强 <b style="color:#ff8a7a">'+Math.round(sim.lastI)+' W/m²</b> 把油抽干了。<br>回想刚学的两条：<em>吃水偏离最优点，A² 会爆炸；航速拉满，ω² 会爆炸</em>。<br>把吃水调回 4.5 m 附近、航速降到中低速，再试一次。';
+    p.textContent='↺ 调整后再试'; p.onclick=restartSim;
+  }
+  document.getElementById('simOver').classList.add('on');
+}
+function completeMission(){
+  document.getElementById('simOver').classList.remove('on');
+  document.getElementById('sim3d').classList.remove('on');
+  showKnowledgeGraph();
+}
+var kgTimer=null;
+function showKnowledgeGraph(){
+  var kg=document.getElementById('knowledgeGraph'),btn=document.getElementById('kgFinish');
+  btn.classList.remove('ready'); kg.classList.remove('on'); void kg.offsetWidth; kg.classList.add('on');
+  updateMusic(1); clearTimeout(kgTimer); kgTimer=setTimeout(function(){btn.classList.add('ready');},5200);
+}
+function finishKnowledgeGraph(){
+  document.getElementById('knowledgeGraph').classList.remove('on');
+  updateMusic(0); showVictory();
+}
+
+/* ---------- 3D 透视渲染 ---------- */
+function drawSim(){
+  var W=simCanvas.width, H=simCanvas.height;
+  var bob=Math.sin(sim.t*.75)*2.5, yh=H*0.48+bob, cx=W*0.5;
+  var sky=sctx.createLinearGradient(0,0,0,yh);
+  sky.addColorStop(0,'#02070d');sky.addColorStop(.52,'#102631');sky.addColorStop(1,'#33515a');
+  sctx.fillStyle=sky; sctx.fillRect(0,0,W,yh);
+  /* 云层与远方冷光 */
+  for(var c=0;c<7;c++){
+    var cg=sctx.createRadialGradient(W*(.08+c*.15),yh*(.22+.08*Math.sin(c)),8,W*(.08+c*.15),yh*(.22+.08*Math.sin(c)),W*.2);
+    cg.addColorStop(0,'rgba(70,99,108,.20)');cg.addColorStop(1,'rgba(5,12,18,0)');sctx.fillStyle=cg;sctx.fillRect(0,0,W,yh);
+  }
+  var hz=sctx.createLinearGradient(0,yh-55,0,yh+25);hz.addColorStop(0,'rgba(145,205,210,0)');hz.addColorStop(.6,'rgba(145,205,210,.16)');hz.addColorStop(1,'rgba(145,205,210,0)');sctx.fillStyle=hz;sctx.fillRect(0,yh-55,W,80);
+  var wt=sctx.createLinearGradient(0,yh,0,H);
+  wt.addColorStop(0,'#112d35');wt.addColorStop(.45,'#092129');wt.addColorStop(1,'#031017');
+  sctx.fillStyle=wt; sctx.fillRect(0,yh,W,H-yh);
+  drawOceanSurface(W,H,yh,cx);
+  drawKelvinWake(W,H,yh,cx);
+  for(var j=0;j<sim.arcs.length;j++){
+    var ar=sim.arcs[j];
+    if(ar.o<=0) continue;
+    var R=ar.r;
+    sctx.strokeStyle='rgba(160,245,238,'+(ar.o*.72).toFixed(3)+')';sctx.lineWidth=.8+ar.a*4;
+    sctx.beginPath();
+    sctx.ellipse(cx,yh+R*.42,R*1.8,R*.52,0,Math.PI,2*Math.PI);
+    sctx.stroke();
+  }
+  drawResearchShip(W,H,yh,cx);
+  var I=sim.lastI>=0?sim.lastI:sIntensity(sim.d,sim.v);
+  var glow=Math.min(I/60,1);
+  var grd=sctx.createRadialGradient(cx,yh+34,5,cx,yh+34,170);grd.addColorStop(0,I>=30?'rgba(255,126,82,'+(.2+.35*glow)+')':'rgba(100,235,220,'+(.16+.28*glow)+')');grd.addColorStop(1,'rgba(0,0,0,0)');sctx.fillStyle=grd;sctx.beginPath();sctx.arc(cx,yh+34,170,0,7);sctx.fill();
+  var vign=sctx.createRadialGradient(cx,H*.52,H*.15,cx,H*.52,H*.78);vign.addColorStop(.55,'rgba(0,0,0,0)');vign.addColorStop(1,'rgba(0,4,8,.72)');sctx.fillStyle=vign;sctx.fillRect(0,0,W,H);
+}
+
+function drawOceanSurface(W,H,yh,cx){
+  for(var r=0;r<24;r++){
+    var p=(r+((sim.t*sim.v*.13)%1))/24,y=yh+(H-yh)*Math.pow(p,1.65),amp=1+20*p*p;
+    sctx.beginPath();
+    for(var x=0;x<=W;x+=24){var yy=y+Math.sin(x*.012+r*.83+sim.t*(.45+sim.v*.04))*amp;if(x===0)sctx.moveTo(x,yy);else sctx.lineTo(x,yy);}
+    sctx.strokeStyle='rgba(112,210,211,'+(.025+.15*p)+')';sctx.lineWidth=.6+1.2*p;sctx.stroke();
+  }
+  for(var k=0;k<35;k++){var px=(k*97+sim.t*sim.v*18)%W,py=yh+((k*53)%Math.max(1,H-yh));sctx.fillStyle='rgba(180,245,238,'+(.03+(py-yh)/(H-yh)*.08)+')';sctx.fillRect(px,py,18+(k%5)*7,1);}
+}
+function drawKelvinWake(W,H,yh,cx){
+  var A=sAmp(sim.d),spread=.22+A*.13;
+  sctx.save();sctx.globalCompositeOperation='screen';
+  for(var side=-1;side<=1;side+=2){for(var n=0;n<5;n++){sctx.beginPath();sctx.moveTo(cx+side*18,yh+35);sctx.quadraticCurveTo(cx+side*W*(.10+n*.025),H*.70,cx+side*W*(spread+n*.045),H);sctx.strokeStyle='rgba(180,245,238,'+(.18-n*.025)+')';sctx.lineWidth=1.2+n*.35;sctx.stroke();}}
+  for(var f=0;f<70;f++){var q=((f*37+sim.t*sim.v*34)%100)/100,side=f%2?-1:1,x=cx+side*(28+q*q*W*(spread+.06*Math.sin(f))),y=yh+38+q*(H-yh-35);sctx.fillStyle='rgba(220,255,250,'+(.12+.3*(1-q))+')';sctx.beginPath();sctx.ellipse(x,y,2+q*6,1+q*2,.2*side,0,7);sctx.fill();}
+  sctx.restore();
+}
+function drawResearchShip(W,H,yh,cx){
+  var d=sim.d,sink=(d-4.5)*5,hullY=yh+32+sink,ww=Math.max(170,W*.19),hh=ww*.58;
+  sctx.save();sctx.shadowColor='rgba(0,0,0,.65)';sctx.shadowBlur=22;
+  var hg=sctx.createLinearGradient(cx,hullY-hh*.2,cx,hullY+hh*.55);hg.addColorStop(0,'#42636b');hg.addColorStop(.35,'#18343c');hg.addColorStop(1,'#07191f');sctx.fillStyle=hg;
+  sctx.beginPath();sctx.moveTo(cx-ww*.54,hullY-hh*.18);sctx.quadraticCurveTo(cx-ww*.47,hullY+hh*.45,cx,hullY+hh*.60);sctx.quadraticCurveTo(cx+ww*.47,hullY+hh*.45,cx+ww*.54,hullY-hh*.18);sctx.closePath();sctx.fill();sctx.shadowBlur=0;
+  var deck=sctx.createLinearGradient(0,hullY-hh*.55,0,hullY);deck.addColorStop(0,'#6d8990');deck.addColorStop(1,'#243f47');sctx.fillStyle=deck;sctx.beginPath();sctx.moveTo(cx-ww*.48,hullY-hh*.18);sctx.lineTo(cx-ww*.36,hullY-hh*.42);sctx.lineTo(cx+ww*.36,hullY-hh*.42);sctx.lineTo(cx+ww*.48,hullY-hh*.18);sctx.closePath();sctx.fill();
+  sctx.fillStyle='#d4e2df';sctx.fillRect(cx-ww*.16,hullY-hh*.68,ww*.32,hh*.27);sctx.fillStyle='#163642';for(var w=-2;w<=2;w++)sctx.fillRect(cx+w*ww*.052-ww*.018,hullY-hh*.62,ww*.036,hh*.065);
+  sctx.strokeStyle='#a9c7c9';sctx.lineWidth=2;sctx.beginPath();sctx.moveTo(cx,hullY-hh*.68);sctx.lineTo(cx,hullY-hh*.98);sctx.moveTo(cx-ww*.09,hullY-hh*.86);sctx.lineTo(cx+ww*.09,hullY-hh*.86);sctx.stroke();sctx.fillStyle='#75e3d7';sctx.beginPath();sctx.arc(cx,hullY-hh*.99,4,0,7);sctx.fill();
+  sctx.strokeStyle='rgba(220,245,242,.45)';sctx.lineWidth=1;for(var rr=-1;rr<=1;rr+=2){sctx.beginPath();sctx.moveTo(cx+rr*ww*.4,hullY-hh*.42);sctx.lineTo(cx+rr*ww*.5,hullY-hh*.2);sctx.stroke();}
+  var A=sAmp(d),ampPx=10+A*45;sctx.strokeStyle='rgba(210,255,250,'+(.48+Math.min(A,.8)*.4)+')';sctx.lineWidth=2+Math.min(A*4,6);sctx.beginPath();sctx.moveTo(cx-ww*.52,hullY-hh*.12);sctx.quadraticCurveTo(cx-ww*.78,hullY-ampPx*.25,cx-ww*1.02,hullY+ampPx*.42);sctx.moveTo(cx+ww*.52,hullY-hh*.12);sctx.quadraticCurveTo(cx+ww*.78,hullY-ampPx*.25,cx+ww*1.02,hullY+ampPx*.42);sctx.stroke();
+  sctx.setLineDash([5,4]);sctx.strokeStyle='rgba(130,245,230,.65)';sctx.lineWidth=1;sctx.beginPath();sctx.moveTo(cx-ww*.53,hullY);sctx.lineTo(cx+ww*.53,hullY);sctx.stroke();sctx.setLineDash([]);sctx.restore();
+}
+
+/* 启动 */
+renderProgress();
+renderClues();
+render();
+</script>
+
+<!-- 舰桥导航坞：回舰桥 / 看标定卡进度（嵌进顶栏，不遮挡任何控件） -->
+<script>try{ window.Fleet && window.Fleet.mountDock({label:'第三关 破壳而出', host:'.topbar', hostGap:'0 0 0 10px'}); }catch(e){}</script>
+</body>
+</html>
